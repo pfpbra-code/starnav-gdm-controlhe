@@ -62,6 +62,7 @@ import MaintenanceAnalysis from './pages/MaintenanceAnalysis';
 import SupplierDashboard from './pages/SupplierDashboard';
 import SupplierMaterials from './pages/SupplierMaterials';
 import VesselDashboard from './pages/VesselDashboard';
+import VesselGDMs from './pages/VesselGDMs';
 import __Layout from './Layout.jsx';
 
 
@@ -81,6 +82,7 @@ export const PAGES = {
     "SupplierDashboard": SupplierDashboard,
     "SupplierMaterials": SupplierMaterials,
     "VesselDashboard": VesselDashboard,
+    "VesselGDMs": VesselGDMs,
 }
 
 export const pagesConfig = {
