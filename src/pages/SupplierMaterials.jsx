@@ -1,0 +1,384 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  Package,
+  Search,
+  Eye,
+  DollarSign,
+  Upload,
+  Loader2,
+  CheckCircle,
+  Ship
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Skeleton } from "@/components/ui/skeleton";
+
+export default function SupplierMaterials() {
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('awaiting');
+  const [showQuoteDialog, setShowQuoteDialog] = useState(false);
+  const [selectedGDM, setSelectedGDM] = useState(null);
+  const [quoteData, setQuoteData] = useState({
+    quote_value: '',
+    quote_document_url: '',
+    technical_report_url: ''
+  });
+  const [uploading, setUploading] = useState(false);
+
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: gdms = [], isLoading } = useQuery({
+    queryKey: ['supplierGDMs', user?.supplier_id],
+    queryFn: () => base44.entities.GDM.filter({ supplier_id: user?.supplier_id }),
+    enabled: !!user?.supplier_id,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.GDM.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supplierGDMs'] });
+      toast.success('Cotação enviada com sucesso!');
+      setShowQuoteDialog(false);
+    },
+    onError: () => toast.error('Erro ao enviar cotação')
+  });
+
+  const awaitingGDMs = gdms.filter(g => g.status === 'awaiting_quote');
+  const sentGDMs = gdms.filter(g => ['quote_analysis', 'approved', 'rejected', 'completed'].includes(g.status));
+
+  const filteredGDMs = (activeTab === 'awaiting' ? awaitingGDMs : sentGDMs).filter(gdm =>
+    gdm.gdm_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    gdm.equipment_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleFileUpload = async (e, field) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const result = await base44.integrations.Core.UploadFile({ file });
+      setQuoteData(prev => ({ ...prev, [field]: result.file_url }));
+      toast.success('Arquivo enviado!');
+    } catch (error) {
+      toast.error('Erro ao enviar arquivo');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmitQuote = () => {
+    if (!quoteData.quote_value) {
+      toast.error('Informe o valor da cotação');
+      return;
+    }
+
+    const history = [
+      ...(selectedGDM.history || []),
+      {
+        action: 'quote_received',
+        user: user?.email,
+        timestamp: new Date().toISOString(),
+        details: `Cotação recebida: R$ ${parseFloat(quoteData.quote_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+      }
+    ];
+
+    updateMutation.mutate({
+      id: selectedGDM.id,
+      data: {
+        status: 'quote_analysis',
+        quote_value: parseFloat(quoteData.quote_value),
+        quote_document_url: quoteData.quote_document_url,
+        technical_report_url: quoteData.technical_report_url,
+        history
+      }
+    });
+  };
+
+  const openQuoteDialog = (gdm) => {
+    setSelectedGDM(gdm);
+    setQuoteData({
+      quote_value: gdm.quote_value?.toString() || '',
+      quote_document_url: gdm.quote_document_url || '',
+      technical_report_url: gdm.technical_report_url || ''
+    });
+    setShowQuoteDialog(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <Card>
+          <CardContent className="p-6">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-16 mb-4" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Materiais Recebidos</h1>
+        <p className="text-slate-500 mt-1">Gerencie os materiais e envie cotações</p>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="awaiting" className="relative">
+            Aguardando Cotação
+            {awaitingGDMs.length > 0 && (
+              <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
+                {awaitingGDMs.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="sent">Cotações Enviadas</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Search */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Buscar por número ou equipamento..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50">
+              <TableHead>GDM</TableHead>
+              <TableHead>Equipamento</TableHead>
+              <TableHead>Embarcação</TableHead>
+              <TableHead>Data Recebimento</TableHead>
+              <TableHead>Status</TableHead>
+              {activeTab === 'sent' && <TableHead>Valor</TableHead>}
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredGDMs.map((gdm) => (
+              <TableRow key={gdm.id} className="hover:bg-slate-50">
+                <TableCell className="font-medium">{gdm.gdm_number}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-slate-400" />
+                    {gdm.equipment_name}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Ship className="h-4 w-4 text-slate-400" />
+                    {gdm.vessel_name}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {gdm.sent_to_supplier_date
+                    ? format(new Date(gdm.sent_to_supplier_date), "dd/MM/yyyy", { locale: ptBR })
+                    : '-'}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={gdm.status} />
+                </TableCell>
+                {activeTab === 'sent' && (
+                  <TableCell>
+                    <span className="font-semibold text-green-600">
+                      R$ {gdm.quote_value?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '-'}
+                    </span>
+                  </TableCell>
+                )}
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    {activeTab === 'awaiting' && (
+                      <Button
+                        size="sm"
+                        className="bg-sky-600 hover:bg-sky-700"
+                        onClick={() => openQuoteDialog(gdm)}
+                      >
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        Enviar Cotação
+                      </Button>
+                    )}
+                    <Link to={createPageUrl(`GDMDetail?id=${gdm.id}`)}>
+                      <Button size="sm" variant="ghost">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {filteredGDMs.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={activeTab === 'sent' ? 7 : 6} className="h-32 text-center">
+                  <Package className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                  <p className="text-slate-500">
+                    {activeTab === 'awaiting' 
+                      ? 'Nenhum material aguardando cotação' 
+                      : 'Nenhuma cotação enviada'}
+                  </p>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Quote Dialog */}
+      <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar Cotação</DialogTitle>
+            <DialogDescription>
+              GDM: {selectedGDM?.gdm_number}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-slate-50 rounded-lg">
+              <p className="text-sm text-slate-500">Equipamento</p>
+              <p className="font-medium">{selectedGDM?.equipment_name}</p>
+              <p className="text-sm text-slate-500 mt-2">Tratativa</p>
+              <StatusBadge status={selectedGDM?.treatment} type="treatment" />
+            </div>
+
+            {selectedGDM?.discount_percentage && (
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-sm text-amber-800 font-medium">
+                  ⚠️ Desconto de {selectedGDM.discount_percentage}% solicitado
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Valor da Cotação (R$) *</Label>
+              <Input
+                type="number"
+                value={quoteData.quote_value}
+                onChange={(e) => setQuoteData(prev => ({ ...prev, quote_value: e.target.value }))}
+                placeholder="0,00"
+                step="0.01"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Documento da Cotação</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={quoteData.quote_document_url}
+                  onChange={(e) => setQuoteData(prev => ({ ...prev, quote_document_url: e.target.value }))}
+                  placeholder="URL do documento ou faça upload"
+                  disabled={uploading}
+                />
+                <div>
+                  <input
+                    type="file"
+                    id="quote-doc"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, 'quote_document_url')}
+                    disabled={uploading}
+                  />
+                  <label htmlFor="quote-doc">
+                    <Button type="button" variant="outline" asChild disabled={uploading}>
+                      <span>
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Laudo Técnico</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={quoteData.technical_report_url}
+                  onChange={(e) => setQuoteData(prev => ({ ...prev, technical_report_url: e.target.value }))}
+                  placeholder="URL do laudo técnico ou faça upload"
+                  disabled={uploading}
+                />
+                <div>
+                  <input
+                    type="file"
+                    id="tech-report"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, 'technical_report_url')}
+                    disabled={uploading}
+                  />
+                  <label htmlFor="tech-report">
+                    <Button type="button" variant="outline" asChild disabled={uploading}>
+                      <span>
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowQuoteDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-sky-600 hover:bg-sky-700"
+              onClick={handleSubmitQuote}
+              disabled={updateMutation.isPending || !quoteData.quote_value}
+            >
+              {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Enviar Cotação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

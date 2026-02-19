@@ -53,6 +53,15 @@ import CreateGDM from './pages/CreateGDM';
 import GDMDetail from './pages/GDMDetail';
 import Vessels from './pages/Vessels';
 import Equipment from './pages/Equipment';
+import Suppliers from './pages/Suppliers';
+import Users from './pages/Users';
+import AuditLogs from './pages/AuditLogs';
+import Settings from './pages/Settings';
+import ServicesTreatments from './pages/ServicesTreatments';
+import MaintenanceAnalysis from './pages/MaintenanceAnalysis';
+import SupplierDashboard from './pages/SupplierDashboard';
+import SupplierMaterials from './pages/SupplierMaterials';
+import VesselDashboard from './pages/VesselDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -63,6 +72,15 @@ export const PAGES = {
     "GDMDetail": GDMDetail,
     "Vessels": Vessels,
     "Equipment": Equipment,
+    "Suppliers": Suppliers,
+    "Users": Users,
+    "AuditLogs": AuditLogs,
+    "Settings": Settings,
+    "ServicesTreatments": ServicesTreatments,
+    "MaintenanceAnalysis": MaintenanceAnalysis,
+    "SupplierDashboard": SupplierDashboard,
+    "SupplierMaterials": SupplierMaterials,
+    "VesselDashboard": VesselDashboard,
 }
 
 export const pagesConfig = {
