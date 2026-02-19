@@ -28,6 +28,7 @@ const menuItems = {
     { icon: Package, label: "Equipamentos", page: "Equipment" },
     { icon: Building2, label: "Fornecedores", page: "Suppliers" },
     { icon: History, label: "Auditoria", page: "AuditLogs" },
+    { icon: Settings, label: "Políticas de Senha", page: "PasswordPolicies" },
     { icon: Settings, label: "Configurações", page: "Settings" },
   ],
   coordinator: [
