@@ -13,6 +13,7 @@ const statusConfig = {
   completed: { label: "Concluído", color: "bg-slate-100 text-slate-800 border-slate-200" },
   active: { label: "Ativo", color: "bg-green-100 text-green-800 border-green-200" },
   inactive: { label: "Inativo", color: "bg-gray-100 text-gray-800 border-gray-200" },
+  suspended: { label: "Suspenso", color: "bg-orange-100 text-orange-800 border-orange-200" },
   maintenance: { label: "Em Manutenção", color: "bg-orange-100 text-orange-800 border-orange-200" },
 };
 

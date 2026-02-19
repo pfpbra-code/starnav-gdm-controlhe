@@ -23,6 +23,7 @@ const pageTitles = {
   SupplierMaterials: "Materiais Recebidos",
   VesselDashboard: "Painel da Embarcação",
   VesselGDMs: "Minhas GDMs",
+  PasswordPolicies: "Políticas de Senha",
 };
 
 export default function Layout({ children, currentPageName }) {

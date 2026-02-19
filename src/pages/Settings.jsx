@@ -62,6 +62,13 @@ const settingsGroups = [
         icon: Shield,
         color: "amber",
         page: "AuditLogs"
+      },
+      {
+        title: "Políticas de Senha",
+        description: "Configurar regras de segurança",
+        icon: Shield,
+        color: "green",
+        page: "PasswordPolicies"
       }
     ]
   }

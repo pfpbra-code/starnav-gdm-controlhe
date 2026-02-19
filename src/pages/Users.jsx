@@ -31,9 +31,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Users as UsersIcon, Plus, Search, Edit, Trash2, Loader2, UserPlus, Mail } from 'lucide-react';
+import { Users as UsersIcon, Plus, Search, Edit, Trash2, Loader2, UserPlus, Mail, History, Shield, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
+import UserActivityLog from '@/components/users/UserActivityLog';
+import UserPermissions from '@/components/users/UserPermissions';
 
 const roleLabels = {
   admin: "Administrador",
@@ -59,9 +61,12 @@ export default function Users() {
   const queryClient = useQueryClient();
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showActivityDialog, setShowActivityDialog] = useState(false);
+  const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
   const [editFormData, setEditFormData] = useState({
     role: '',
@@ -151,11 +156,27 @@ export default function Users() {
     updateMutation.mutate({ id: editingUser.id, data: editFormData });
   };
 
+  const handleSavePermissions = (permissions) => {
+    updateMutation.mutate({
+      id: editingUser.id,
+      data: { permissions }
+    });
+    setShowPermissionsDialog(false);
+  };
+
+  const handleSuspendUser = (user) => {
+    updateMutation.mutate({
+      id: user.id,
+      data: { status: 'suspended' }
+    });
+  };
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
+    const matchesStatus = statusFilter === 'all' || (user.status || 'active') === statusFilter;
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
   const isAdmin = currentUser?.role === 'admin';
@@ -217,7 +238,7 @@ export default function Users() {
               />
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full md:w-48">
+              <SelectTrigger className="w-full md:w-40">
                 <SelectValue placeholder="Perfil" />
               </SelectTrigger>
               <SelectContent>
@@ -225,6 +246,17 @@ export default function Users() {
                 {Object.entries(roleLabels).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="active">Ativo</SelectItem>
+                <SelectItem value="inactive">Inativo</SelectItem>
+                <SelectItem value="suspended">Suspenso</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -240,6 +272,7 @@ export default function Users() {
               <TableHead>Perfil</TableHead>
               <TableHead>Departamento</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Permissões</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -280,17 +313,66 @@ export default function Users() {
                   <TableCell>
                     <StatusBadge status={user.status || 'active'} />
                   </TableCell>
+                  <TableCell>
+                    {user.permissions?.length > 0 ? (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        +{user.permissions.length}
+                      </Badge>
+                    ) : (
+                      <span className="text-slate-400 text-sm">Padrão</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          setEditingUser(user);
+                          setShowActivityDialog(true);
+                        }}
+                        title="Histórico"
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          setEditingUser(user);
+                          setShowPermissionsDialog(true);
+                        }}
+                        title="Permissões"
+                      >
+                        <Shield className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleEdit(user)}
+                        title="Editar"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      {(user.status === 'active' || !user.status) && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleSuspendUser(user)}
+                          className="text-orange-600 hover:text-orange-700"
+                          title="Suspender"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
             })}
             {filteredUsers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center">
+                <TableCell colSpan={6} className="h-32 text-center">
                   <UsersIcon className="h-8 w-8 mx-auto text-slate-300 mb-2" />
                   <p className="text-slate-500">Nenhum usuário encontrado</p>
                 </TableCell>
@@ -492,6 +574,7 @@ export default function Users() {
                   <SelectContent>
                     <SelectItem value="active">Ativo</SelectItem>
                     <SelectItem value="inactive">Inativo</SelectItem>
+                    <SelectItem value="suspended">Suspenso</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -512,6 +595,22 @@ export default function Users() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Activity Log Dialog */}
+      <UserActivityLog
+        user={editingUser}
+        open={showActivityDialog}
+        onOpenChange={setShowActivityDialog}
+      />
+
+      {/* Permissions Dialog */}
+      <UserPermissions
+        user={editingUser}
+        open={showPermissionsDialog}
+        onOpenChange={setShowPermissionsDialog}
+        onSave={handleSavePermissions}
+        isSaving={updateMutation.isPending}
+      />
     </div>
   );
 }
