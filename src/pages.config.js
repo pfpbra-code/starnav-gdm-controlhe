@@ -64,6 +64,8 @@ import SupplierMaterials from './pages/SupplierMaterials';
 import VesselDashboard from './pages/VesselDashboard';
 import VesselGDMs from './pages/VesselGDMs';
 import PasswordPolicies from './pages/PasswordPolicies';
+import Notifications from './pages/Notifications';
+import NotificationPreferences from './pages/NotificationPreferences';
 import __Layout from './Layout.jsx';
 
 
@@ -85,6 +87,8 @@ export const PAGES = {
     "VesselDashboard": VesselDashboard,
     "VesselGDMs": VesselGDMs,
     "PasswordPolicies": PasswordPolicies,
+    "Notifications": Notifications,
+    "NotificationPreferences": NotificationPreferences,
 }
 
 export const pagesConfig = {

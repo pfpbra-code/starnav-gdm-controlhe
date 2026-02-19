@@ -24,6 +24,8 @@ const pageTitles = {
   VesselDashboard: "Painel da Embarcação",
   VesselGDMs: "Minhas GDMs",
   PasswordPolicies: "Políticas de Senha",
+  Notifications: "Notificações",
+  NotificationPreferences: "Preferências de Notificação",
 };
 
 export default function Layout({ children, currentPageName }) {
