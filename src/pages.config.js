@@ -47,8 +47,26 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import Dashboard from './pages/Dashboard';
+import GDMList from './pages/GDMList';
+import CreateGDM from './pages/CreateGDM';
+import GDMDetail from './pages/GDMDetail';
+import Vessels from './pages/Vessels';
+import Equipment from './pages/Equipment';
+import __Layout from './Layout.jsx';
 
-export const pagesConfig = {
-	Pages: {}
+
+export const PAGES = {
+    "Dashboard": Dashboard,
+    "GDMList": GDMList,
+    "CreateGDM": CreateGDM,
+    "GDMDetail": GDMDetail,
+    "Vessels": Vessels,
+    "Equipment": Equipment,
 }
 
+export const pagesConfig = {
+    mainPage: "Dashboard",
+    Pages: PAGES,
+    Layout: __Layout,
+};
