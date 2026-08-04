@@ -64,6 +64,7 @@ export default function GDMDetail() {
 
   const [coordinatorNotes, setCoordinatorNotes] = useState('');
   const [destination, setDestination] = useState('');
+  const [repairReturn, setRepairReturn] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [quoteValue, setQuoteValue] = useState('');
@@ -115,15 +116,20 @@ export default function GDMDetail() {
 
   // Coordinator Actions
   const handleCoordinatorApprove = () => {
+    const fullDestination = destination === 'reparo' && repairReturn
+      ? `${destination} - ${repairReturn}`
+      : destination;
     updateMutation.mutate({
       status: 'pending_services',
       coordinator_notes: coordinatorNotes,
-      destination,
+      destination: fullDestination,
       coordinator_approved_by: user?.email,
       coordinator_approved_at: new Date().toISOString(),
-      history: addHistoryEntry('coordinator_approved', `Aprovado pelo coordenador. Destino: ${destination}`)
+      history: addHistoryEntry('coordinator_approved', `Aprovado pelo coordenador. Destino: ${fullDestination}`)
     });
     setShowApproveDialog(false);
+    setDestination('');
+    setRepairReturn('');
   };
 
   const handleCoordinatorReject = () => {
@@ -504,13 +510,38 @@ export default function GDMDetail() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Destino do Material</Label>
-              <Input
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="Ex: Almoxarifado Central"
-              />
+              <Label>Destino do Material *</Label>
+              <Select value={destination} onValueChange={(value) => {
+                setDestination(value);
+                setRepairReturn('');
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o destino do material" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="reparo">Reparo</SelectItem>
+                  <SelectItem value="calibracao">Calibração</SelectItem>
+                  <SelectItem value="descarte">Descarte</SelectItem>
+                  <SelectItem value="retorno_estoque">Retorno para Estoque</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {destination === 'reparo' && (
+              <div className="space-y-2">
+                <Label>Retorno após reparo *</Label>
+                <Select value={repairReturn} onValueChange={setRepairReturn}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o destino após reparo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="retorno_bordo">Retorno para Bordo</SelectItem>
+                    <SelectItem value="retorno_estoque">Retorno para Estoque</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea
@@ -527,7 +558,7 @@ export default function GDMDetail() {
             <Button
               className="bg-green-600 hover:bg-green-700"
               onClick={handleCoordinatorApprove}
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || !destination || (destination === 'reparo' && !repairReturn)}
             >
               {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Aprovar
