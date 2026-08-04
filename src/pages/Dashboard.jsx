@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import StatsCard from '@/components/dashboard/StatsCard';
+import GDMKanban from '@/components/dashboard/GDMKanban';
 import GDMCard from '@/components/gdm/GDMCard';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -135,6 +136,16 @@ export default function Dashboard() {
           icon={CheckCircle}
           color="green"
         />
+      </div>
+
+      {/* Kanban Board */}
+      <div>
+        <h2 className="text-xl font-semibold text-slate-900 mb-4">Fluxo de GDMs por Status</h2>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <GDMKanban gdms={gdms} />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Charts */}
