@@ -29,14 +29,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Building2, Plus, Search, Edit, Trash2, Loader2, Mail, Phone } from 'lucide-react';
+import { Building2, Plus, Search, Edit, Trash2, Loader2, Mail, Phone, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
+import SupplierGDMs from '@/components/suppliers/SupplierGDMs';
 
 export default function Suppliers() {
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [showGdmsDialog, setShowGdmsDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     company_name: '',
@@ -207,12 +210,25 @@ export default function Suppliers() {
                     <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
                       <Building2 className="h-5 w-5 text-indigo-600" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium">{supplier.company_name}</p>
                       {supplier.trading_name && (
                         <p className="text-sm text-slate-500">{supplier.trading_name}</p>
                       )}
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="ml-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedSupplier(supplier);
+                        setShowGdmsDialog(true);
+                      }}
+                    >
+                      <Package className="h-4 w-4 mr-1" />
+                      Equipamentos
+                    </Button>
                   </div>
                 </TableCell>
                 <TableCell>{supplier.cnpj}</TableCell>
@@ -382,6 +398,15 @@ export default function Suppliers() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <SupplierGDMs
+        supplier={selectedSupplier}
+        open={showGdmsDialog}
+        onClose={() => {
+          setShowGdmsDialog(false);
+          setSelectedSupplier(null);
+        }}
+      />
     </div>
   );
 }

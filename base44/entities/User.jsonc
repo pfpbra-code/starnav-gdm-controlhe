@@ -1,0 +1,106 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "coordinator",
+        "services",
+        "maintenance",
+        "supplier_user",
+        "vessel_user",
+        "user"
+      ],
+      "default": "user"
+    },
+    "department": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "suspended"
+      ],
+      "default": "active"
+    },
+    "assigned_vessels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "supplier_id": {
+      "type": "string"
+    },
+    "vessel_id": {
+      "type": "string"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Permiss\u00f5es espec\u00edficas al\u00e9m do role"
+    },
+    "login_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "last_login": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "password_changed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "password_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "require_password_change": {
+      "type": "boolean",
+      "default": false
+    },
+    "failed_login_attempts": {
+      "type": "number",
+      "default": 0
+    },
+    "account_locked_until": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "department",
+    "assigned_vessels",
+    "supplier_id",
+    "vessel_id",
+    "permissions",
+    "login_history",
+    "last_login",
+    "password_changed_at",
+    "password_expires_at",
+    "account_locked_until"
+  ]
+}

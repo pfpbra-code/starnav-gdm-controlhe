@@ -1,0 +1,47 @@
+{
+  "name": "Vessel",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome da embarca\u00e7\u00e3o"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo identificador \u00fanico"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "PSV",
+        "AHTS",
+        "RSV",
+        "OSRV",
+        "FSV",
+        "Outro"
+      ],
+      "description": "Tipo de embarca\u00e7\u00e3o"
+    },
+    "coordinator_id": {
+      "type": "string",
+      "description": "ID do coordenador respons\u00e1vel"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "maintenance"
+      ],
+      "default": "active"
+    },
+    "login_password": {
+      "type": "string",
+      "description": "Senha de acesso da embarca\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "name",
+    "code"
+  ]
+}

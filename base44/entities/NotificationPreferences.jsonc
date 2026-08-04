@@ -1,0 +1,69 @@
+{
+  "name": "NotificationPreferences",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio"
+    },
+    "gdm_pending": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notificar sobre GDMs pendentes"
+    },
+    "gdm_approved": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notificar sobre GDMs aprovadas"
+    },
+    "gdm_rejected": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notificar sobre GDMs rejeitadas"
+    },
+    "supplier_sent": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notificar quando material \u00e9 enviado ao fornecedor"
+    },
+    "quote_received": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notificar sobre cota\u00e7\u00f5es recebidas"
+    },
+    "quote_analysis": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notificar sobre an\u00e1lise de cota\u00e7\u00f5es"
+    },
+    "password_expiring": {
+      "type": "boolean",
+      "default": true,
+      "description": "Alertar sobre senha expirando"
+    },
+    "system_alerts": {
+      "type": "boolean",
+      "default": true,
+      "description": "Receber alertas do sistema"
+    },
+    "email_notifications": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enviar notifica\u00e7\u00f5es por email"
+    },
+    "digest_frequency": {
+      "type": "string",
+      "enum": [
+        "realtime",
+        "daily",
+        "weekly",
+        "never"
+      ],
+      "default": "realtime",
+      "description": "Frequ\u00eancia de resumo de notifica\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "user_id"
+  ]
+}

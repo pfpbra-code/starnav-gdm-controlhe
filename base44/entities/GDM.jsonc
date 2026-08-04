@@ -1,0 +1,168 @@
+{
+  "name": "GDM",
+  "type": "object",
+  "properties": {
+    "gdm_number": {
+      "type": "string",
+      "description": "N\u00famero \u00fanico da GDM"
+    },
+    "vessel_id": {
+      "type": "string",
+      "description": "ID da embarca\u00e7\u00e3o"
+    },
+    "vessel_name": {
+      "type": "string",
+      "description": "Nome da embarca\u00e7\u00e3o"
+    },
+    "equipment_id": {
+      "type": "string",
+      "description": "ID do equipamento"
+    },
+    "equipment_name": {
+      "type": "string",
+      "description": "Nome do equipamento"
+    },
+    "serial_number": {
+      "type": "string",
+      "description": "N\u00famero de s\u00e9rie"
+    },
+    "disembark_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de desembarque"
+    },
+    "treatment": {
+      "type": "string",
+      "enum": [
+        "repair",
+        "discard",
+        "stock_return"
+      ],
+      "description": "Tratativa: reparo, descarte ou retorno ao estoque"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do problema/motivo"
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs das fotos anexadas"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_coordinator",
+        "pending_services",
+        "sent_to_supplier",
+        "awaiting_quote",
+        "quote_analysis",
+        "approved",
+        "rejected",
+        "completed"
+      ],
+      "default": "pending_coordinator"
+    },
+    "coordinator_notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es do coordenador"
+    },
+    "coordinator_approved_by": {
+      "type": "string",
+      "description": "Email do coordenador que aprovou"
+    },
+    "coordinator_approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "destination": {
+      "type": "string",
+      "description": "Destino definido pelo coordenador"
+    },
+    "supplier_id": {
+      "type": "string",
+      "description": "ID do fornecedor"
+    },
+    "supplier_name": {
+      "type": "string"
+    },
+    "invoice_number": {
+      "type": "string",
+      "description": "N\u00famero da nota fiscal"
+    },
+    "sent_to_supplier_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "sent_by": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio de servi\u00e7os que enviou"
+    },
+    "quote_value": {
+      "type": "number",
+      "description": "Valor da cota\u00e7\u00e3o"
+    },
+    "quote_document_url": {
+      "type": "string",
+      "description": "URL do documento de cota\u00e7\u00e3o"
+    },
+    "technical_report_url": {
+      "type": "string",
+      "description": "URL do laudo t\u00e9cnico"
+    },
+    "maintenance_decision": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "discount_requested",
+        "rejected"
+      ],
+      "description": "Decis\u00e3o da manuten\u00e7\u00e3o"
+    },
+    "discount_percentage": {
+      "type": "number",
+      "description": "Percentual de desconto solicitado"
+    },
+    "maintenance_notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es da manuten\u00e7\u00e3o (interno)"
+    },
+    "maintenance_decided_by": {
+      "type": "string"
+    },
+    "maintenance_decided_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "service_notes": {
+      "type": "string",
+      "description": "Registro de tratativas do setor de servi\u00e7os"
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Hist\u00f3rico de a\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "gdm_number"
+  ]
+}

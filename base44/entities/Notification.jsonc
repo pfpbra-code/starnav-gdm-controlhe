@@ -1,0 +1,80 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que receber\u00e1 a notifica\u00e7\u00e3o"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "gdm_pending",
+        "gdm_approved",
+        "gdm_rejected",
+        "supplier_sent",
+        "quote_received",
+        "quote_analysis",
+        "password_expiring",
+        "account_suspended",
+        "maintenance_decision",
+        "system_alert"
+      ],
+      "description": "Tipo de notifica\u00e7\u00e3o"
+    },
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo da notifica\u00e7\u00e3o"
+    },
+    "message": {
+      "type": "string",
+      "description": "Mensagem detalhada"
+    },
+    "link": {
+      "type": "string",
+      "description": "Link para a\u00e7\u00e3o relacionada"
+    },
+    "link_text": {
+      "type": "string",
+      "description": "Texto do link"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "medium"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false
+    },
+    "read_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "related_entity_type": {
+      "type": "string"
+    },
+    "related_entity_id": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Dados adicionais da notifica\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "user_id",
+    "type",
+    "title",
+    "message"
+  ]
+}

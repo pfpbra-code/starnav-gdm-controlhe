@@ -1,0 +1,56 @@
+{
+  "name": "Supplier",
+  "type": "object",
+  "properties": {
+    "company_name": {
+      "type": "string",
+      "description": "Raz\u00e3o social"
+    },
+    "trading_name": {
+      "type": "string",
+      "description": "Nome fantasia"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email principal"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Nome do contato principal"
+    },
+    "address": {
+      "type": "string"
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Categorias de servi\u00e7o"
+    },
+    "login_password": {
+      "type": "string",
+      "description": "Senha de acesso"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "company_name",
+    "cnpj",
+    "email"
+  ]
+}

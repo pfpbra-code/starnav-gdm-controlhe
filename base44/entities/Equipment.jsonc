@@ -1,0 +1,43 @@
+{
+  "name": "Equipment",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do equipamento"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo do equipamento"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "navigation",
+        "communication",
+        "safety",
+        "deck",
+        "engine",
+        "electrical",
+        "hydraulic",
+        "other"
+      ],
+      "description": "Categoria do equipamento"
+    },
+    "description": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "name",
+    "code"
+  ]
+}

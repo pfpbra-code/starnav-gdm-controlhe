@@ -1,0 +1,42 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "description": "Tipo de a\u00e7\u00e3o realizada"
+    },
+    "entity_type": {
+      "type": "string",
+      "description": "Tipo de entidade afetada"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID da entidade afetada"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio que realizou a a\u00e7\u00e3o"
+    },
+    "user_role": {
+      "type": "string",
+      "description": "Perfil do usu\u00e1rio"
+    },
+    "details": {
+      "type": "string",
+      "description": "Detalhes da a\u00e7\u00e3o em JSON"
+    },
+    "ip_address": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "action",
+    "entity_type",
+    "user_email"
+  ]
+}
