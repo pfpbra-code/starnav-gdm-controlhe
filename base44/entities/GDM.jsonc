@@ -274,5 +274,122 @@
   },
   "required": [
     "gdm_number"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "coordinator"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "services"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maintenance"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vessel_user"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.vessel_id": "{{user.data.vessel_id}}"
+        },
+        {
+          "data.supplier_id": "{{user.data.supplier_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "coordinator"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "services"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maintenance"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.vessel_id": "{{user.data.vessel_id}}"
+        },
+        {
+          "data.supplier_id": "{{user.data.supplier_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "coordinator"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "services"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maintenance"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "coordinator"
+          }
+        }
+      ]
+    }
+  }
 }
