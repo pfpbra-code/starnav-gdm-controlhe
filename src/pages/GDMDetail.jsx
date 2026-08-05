@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import GDMTimeline from '@/components/gdm/GDMTimeline';
+import GDMPdfButton from '@/components/gdm/GDMPdfButton';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -254,7 +255,8 @@ export default function GDMDetail() {
         </div>
 
         {/* Action Buttons based on status and role */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          <GDMPdfButton gdm={gdm} variant="outline" label="Gerar PDF" />
           {gdm.status === 'pending_coordinator' && canCoordinatorAct && (
             <>
               <Button variant="outline" onClick={() => setShowRejectDialog(true)}>
@@ -464,6 +466,25 @@ export default function GDMDetail() {
                         >
                           Ver laudo
                         </a>
+                      </div>
+                    )}
+
+                    {gdm.commercial_proposal_url && (
+                      <div>
+                        <p className="text-sm text-slate-500 mb-2">Proposta Comercial (Fornecedor)</p>
+                        <a
+                          href={gdm.commercial_proposal_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sky-600 hover:underline"
+                        >
+                          Ver proposta
+                        </a>
+                        {gdm.commercial_proposal_uploaded_at && (
+                          <p className="text-xs text-slate-400 mt-1">
+                            Anexada em {format(new Date(gdm.commercial_proposal_uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
                       </div>
                     )}
 

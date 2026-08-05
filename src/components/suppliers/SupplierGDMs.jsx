@@ -1,5 +1,5 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   Dialog,
@@ -18,23 +18,73 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, Calendar, Ship, FileText } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Package, Calendar, Ship, FileText, Upload, Loader2, Paperclip, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
 import { createPageUrl } from '@/utils';
+import { toast } from 'sonner';
 
 export default function SupplierGDMs({ supplier, open, onClose }) {
+  const queryClient = useQueryClient();
+  const [uploadingId, setUploadingId] = useState(null);
+
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
   const { data: gdms = [], isLoading } = useQuery({
     queryKey: ['supplierGdms', supplier?.id],
     queryFn: () => base44.entities.GDM.filter({ supplier_id: supplier?.id }, '-sent_to_supplier_date'),
     enabled: !!supplier?.id && open,
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.GDM.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supplierGdms', supplier?.id] });
+      queryClient.invalidateQueries({ queryKey: ['gdm'] });
+    },
+    onError: () => toast.error('Erro ao salvar proposta'),
+  });
+
   const sentGdms = gdms.filter(
     (g) => g.sent_to_supplier_date || g.status === 'sent_to_supplier' || g.status === 'awaiting_quote' || g.status === 'quote_analysis' || g.status === 'approved' || g.status === 'completed'
   );
+
+  const handleAttachProposal = async (gdm, file) => {
+    if (!file) return;
+    setUploadingId(gdm.id);
+    try {
+      const uploadRes = await base44.integrations.Core.UploadFile({ file });
+      const newHistory = [
+        ...(gdm.history || []),
+        {
+          action: 'commercial_proposal_attached',
+          user: user?.email,
+          timestamp: new Date().toISOString(),
+          details: `Proposta comercial anexada por ${supplier?.company_name || 'fornecedor'}`,
+        },
+      ];
+      await updateMutation.mutateAsync({
+        id: gdm.id,
+        data: {
+          commercial_proposal_url: uploadRes.file_url,
+          commercial_proposal_uploaded_at: new Date().toISOString(),
+          commercial_proposal_uploaded_by: user?.email,
+          history: newHistory,
+        },
+      });
+      toast.success('Proposta comercial anexada à GDM!');
+    } catch (err) {
+      toast.error('Erro ao anexar proposta');
+      console.error(err);
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -45,7 +95,7 @@ export default function SupplierGDMs({ supplier, open, onClose }) {
             Equipamentos enviados — {supplier?.company_name}
           </DialogTitle>
           <DialogDescription>
-            {sentGdms.length} equipamento(s) enviado(s) para este fornecedor
+            {sentGdms.length} equipamento(s) enviado(s) para este fornecedor. Selecione um equipamento para anexar a proposta comercial.
           </DialogDescription>
         </DialogHeader>
 
@@ -65,7 +115,7 @@ export default function SupplierGDMs({ supplier, open, onClose }) {
                   <TableHead>Embarcação</TableHead>
                   <TableHead>Enviado em</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ação</TableHead>
+                  <TableHead className="text-right">Proposta Comercial</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -100,11 +150,56 @@ export default function SupplierGDMs({ supplier, open, onClose }) {
                       <StatusBadge status={gdm.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link to={createPageUrl('GDMDetail') + `?id=${gdm.id}`}>
-                        <Button variant="ghost" size="sm" onClick={onClose}>
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      </Link>
+                      <div className="flex justify-end items-center gap-2">
+                        {gdm.commercial_proposal_url ? (
+                          <a
+                            href={gdm.commercial_proposal_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button variant="outline" size="sm">
+                              <Paperclip className="h-4 w-4 mr-1" />
+                              Ver proposta
+                            </Button>
+                          </a>
+                        ) : null}
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx,.jpg,.png"
+                            className="hidden"
+                            disabled={uploadingId === gdm.id}
+                            onChange={(e) => {
+                              const f = e.target.files[0];
+                              if (f) handleAttachProposal(gdm, f);
+                              e.target.value = '';
+                            }}
+                          />
+                          <span className="inline-flex">
+                            <Button
+                              variant={gdm.commercial_proposal_url ? 'ghost' : 'default'}
+                              size="sm"
+                              className="bg-sky-600 hover:bg-sky-700"
+                              disabled={uploadingId === gdm.id}
+                              asChild
+                            >
+                              <span>
+                                {uploadingId === gdm.id ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <Upload className="h-4 w-4 mr-1" />
+                                )}
+                                {gdm.commercial_proposal_url ? 'Trocar' : 'Anexar'}
+                              </span>
+                            </Button>
+                          </span>
+                        </label>
+                        <Link to={createPageUrl('GDMDetail') + `?id=${gdm.id}`}>
+                          <Button variant="ghost" size="sm" onClick={onClose}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

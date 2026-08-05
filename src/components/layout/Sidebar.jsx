@@ -14,6 +14,7 @@ import {
   Wrench,
   ClipboardList,
   History,
+  Upload,
   ChevronLeft
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ const menuItems = {
     { icon: Package, label: "Equipamentos", page: "Equipment" },
     { icon: Building2, label: "Fornecedores", page: "Suppliers" },
     { icon: History, label: "Auditoria", page: "AuditLogs" },
+    { icon: Upload, label: "Importar Planilha", page: "ImportData" },
     { icon: Settings, label: "Políticas de Senha", page: "PasswordPolicies" },
     { icon: Settings, label: "Configurações", page: "Settings" },
   ],

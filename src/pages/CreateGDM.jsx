@@ -94,9 +94,28 @@ export default function CreateGDM() {
 
       return await base44.entities.GDM.create(gdmData);
     },
-    onSuccess: () => {
+    onSuccess: async (createdGdm) => {
       queryClient.invalidateQueries({ queryKey: ['gdms'] });
       toast.success('GDM criada com sucesso!');
+
+      // Notify the coordinator assigned to the vessel
+      try {
+        const vessel = vessels.find((v) => v.id === createdGdm.vessel_id);
+        if (vessel?.coordinator_id) {
+          const users = await base44.entities.User.list();
+          const coordinator = users.find((u) => u.id === vessel.coordinator_id);
+          if (coordinator?.email) {
+            await base44.integrations.Core.SendEmail({
+              to: coordinator.email,
+              subject: `Nova GDM criada — ${createdGdm.gdm_number}`,
+              body: `Uma nova Guia de Desembarque de Material foi criada e aguarda sua aprovação.\n\nGDM: ${createdGdm.gdm_number}\nEquipamento: ${createdGdm.equipment_name || 'Não informado'}\nEmbarcação: ${createdGdm.vessel_name || 'Não informada'}\n\nAcesse a plataforma para revisar e aprovar a GDM.`,
+            });
+          }
+        }
+      } catch (emailError) {
+        console.error('Falha ao notificar coordenador por e-mail:', emailError);
+      }
+
       navigate(createPageUrl('GDMList'));
     },
     onError: (error) => {

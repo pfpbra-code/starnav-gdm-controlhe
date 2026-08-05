@@ -112,6 +112,19 @@
       "type": "string",
       "description": "URL do laudo t\u00e9cnico"
     },
+    "commercial_proposal_url": {
+      "type": "string",
+      "description": "URL da proposta comercial anexada pelo fornecedor"
+    },
+    "commercial_proposal_uploaded_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data de upload da proposta comercial"
+    },
+    "commercial_proposal_uploaded_by": {
+      "type": "string",
+      "description": "Email de quem anexou a proposta comercial"
+    },
     "maintenance_decision": {
       "type": "string",
       "enum": [

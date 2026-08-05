@@ -37,12 +37,22 @@ import {
 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import GDMCard from '@/components/gdm/GDMCard';
+import GDMPdfButton from '@/components/gdm/GDMPdfButton';
+
+const quickFilters = [
+  { key: 'all', label: 'Todas', filter: () => true },
+  { key: 'pending', label: 'Pendentes', filter: (g) => g.status === 'pending_coordinator' || g.status === 'pending_services' },
+  { key: 'in_progress', label: 'Em Andamento', filter: (g) => ['sent_to_supplier', 'awaiting_quote', 'quote_analysis'].includes(g.status) },
+  { key: 'completed', label: 'Concluídas', filter: (g) => g.status === 'completed' || g.status === 'approved' },
+  { key: 'rejected', label: 'Rejeitadas', filter: (g) => g.status === 'rejected' },
+];
 
 export default function GDMList() {
   const [viewMode, setViewMode] = useState('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [treatmentFilter, setTreatmentFilter] = useState('all');
+  const [quickFilter, setQuickFilter] = useState('all');
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -88,8 +98,14 @@ export default function GDMList() {
       filtered = filtered.filter(gdm => gdm.treatment === treatmentFilter);
     }
 
+    // Quick filter
+    const quickFilterFn = quickFilters.find((q) => q.key === quickFilter)?.filter;
+    if (quickFilterFn) {
+      filtered = filtered.filter(quickFilterFn);
+    }
+
     return filtered;
-  }, [gdms, user, searchTerm, statusFilter, treatmentFilter]);
+  }, [gdms, user, searchTerm, statusFilter, treatmentFilter, quickFilter]);
 
   if (isLoading) {
     return (
@@ -127,6 +143,23 @@ export default function GDMList() {
             </Button>
           </Link>
         )}
+      </div>
+
+      {/* Quick Filters */}
+      <div className="flex flex-wrap gap-2">
+        {quickFilters.map((qf) => (
+          <button
+            key={qf.key}
+            onClick={() => setQuickFilter(qf.key)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              quickFilter === qf.key
+                ? 'bg-sky-600 text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {qf.label}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -227,12 +260,15 @@ export default function GDMList() {
                     <StatusBadge status={gdm.status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link to={createPageUrl(`GDMDetail?id=${gdm.id}`)}>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4 mr-1" />
-                        Ver
-                      </Button>
-                    </Link>
+                    <div className="flex justify-end gap-1">
+                      <Link to={createPageUrl(`GDMDetail?id=${gdm.id}`)}>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Ver
+                        </Button>
+                      </Link>
+                      <GDMPdfButton gdm={gdm} label="PDF" />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
