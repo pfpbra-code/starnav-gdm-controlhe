@@ -25,6 +25,7 @@ import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
+import { buildHistoryEntry, snapshotCurrentQuote, STATUS_LABELS, STEP_NAMES } from '@/lib/gdmWorkflow';
 
 export default function SupplierGDMs({ supplier, open, onClose }) {
   const queryClient = useQueryClient();
@@ -59,14 +60,23 @@ export default function SupplierGDMs({ supplier, open, onClose }) {
     setUploadingId(gdm.id);
     try {
       const uploadRes = await base44.integrations.Core.UploadFile({ file });
+      const previousStatus = gdm.status;
+      const newStatus = 'quote_analysis';
+      // Preserve the previous proposal/quote if one already existed
+      const quotesHistory = (gdm.commercial_proposal_url || gdm.quote_value)
+        ? snapshotCurrentQuote(gdm, 'Substituída por nova proposta comercial anexada')
+        : (gdm.quotes_history || []);
       const newHistory = [
         ...(gdm.history || []),
-        {
+        buildHistoryEntry({
           action: 'commercial_proposal_attached',
-          user: user?.email,
-          timestamp: new Date().toISOString(),
-          details: `Proposta comercial anexada por ${supplier?.company_name || 'fornecedor'}`,
-        },
+          user,
+          details: `Proposta comercial anexada por ${supplier?.company_name || 'fornecedor'}. Processo encaminhado à Manutenção.`,
+          previousStatus,
+          newStatus,
+          stepName: STEP_NAMES.quote_attached,
+          observation: 'Anexada via painel do fornecedor',
+        }),
       ];
       await updateMutation.mutateAsync({
         id: gdm.id,
@@ -74,10 +84,12 @@ export default function SupplierGDMs({ supplier, open, onClose }) {
           commercial_proposal_url: uploadRes.file_url,
           commercial_proposal_uploaded_at: new Date().toISOString(),
           commercial_proposal_uploaded_by: user?.email,
+          quotes_history: quotesHistory,
+          status: newStatus,
           history: newHistory,
         },
       });
-      toast.success('Proposta comercial anexada à GDM!');
+      toast.success('Proposta anexada! Processo encaminhado à Manutenção.');
     } catch (err) {
       toast.error('Erro ao anexar proposta');
       console.error(err);

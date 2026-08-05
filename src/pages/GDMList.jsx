@@ -41,9 +41,9 @@ import GDMPdfButton from '@/components/gdm/GDMPdfButton';
 
 const quickFilters = [
   { key: 'all', label: 'Todas', filter: () => true },
-  { key: 'pending', label: 'Pendentes', filter: (g) => g.status === 'pending_coordinator' || g.status === 'pending_services' },
-  { key: 'in_progress', label: 'Em Andamento', filter: (g) => ['sent_to_supplier', 'awaiting_quote', 'quote_analysis'].includes(g.status) },
-  { key: 'completed', label: 'Concluídas', filter: (g) => g.status === 'completed' || g.status === 'approved' },
+  { key: 'pending', label: 'Pendentes', filter: (g) => ['pending_coordinator', 'pending_services', 'new_quote_requested'].includes(g.status) },
+  { key: 'in_progress', label: 'Em Andamento', filter: (g) => ['sent_to_supplier', 'awaiting_quote', 'quote_attached', 'quote_analysis', 'approved', 'pwt_issued', 'oc_issued', 'ot_issued'].includes(g.status) },
+  { key: 'completed', label: 'Concluídas', filter: (g) => g.status === 'completed' },
   { key: 'rejected', label: 'Rejeitadas', filter: (g) => g.status === 'rejected' },
 ];
 
@@ -181,14 +181,18 @@ export default function GDMList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="pending_coordinator">Aguardando Coordenador</SelectItem>
-                <SelectItem value="pending_services">Aguardando Serviços</SelectItem>
+                <SelectItem value="pending_coordinator">GDM Emitida</SelectItem>
+                <SelectItem value="pending_services">Aguardando Serviços/Compras</SelectItem>
                 <SelectItem value="sent_to_supplier">Enviado ao Fornecedor</SelectItem>
-                <SelectItem value="awaiting_quote">Aguardando Cotação</SelectItem>
-                <SelectItem value="quote_analysis">Em Análise</SelectItem>
-                <SelectItem value="approved">Aprovado</SelectItem>
-                <SelectItem value="rejected">Reprovado</SelectItem>
-                <SelectItem value="completed">Concluído</SelectItem>
+                <SelectItem value="quote_attached">Cotação Anexada</SelectItem>
+                <SelectItem value="quote_analysis">Em Aprovação da Manutenção</SelectItem>
+                <SelectItem value="new_quote_requested">Nova Cotação Solicitada</SelectItem>
+                <SelectItem value="approved">Cotação Aprovada</SelectItem>
+                <SelectItem value="pwt_issued">PWT Emitido</SelectItem>
+                <SelectItem value="oc_issued">OC Emitida</SelectItem>
+                <SelectItem value="ot_issued">OT Emitida</SelectItem>
+                <SelectItem value="rejected">Reprovada</SelectItem>
+                <SelectItem value="completed">Processo Finalizado</SelectItem>
               </SelectContent>
             </Select>
             <Select value={treatmentFilter} onValueChange={setTreatmentFilter}>

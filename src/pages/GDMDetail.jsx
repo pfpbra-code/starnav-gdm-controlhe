@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -44,12 +44,26 @@ import {
   ArrowLeft,
   History,
   Image,
-  Percent
+  Percent,
+  FileCheck2,
+  ClipboardCheck,
+  ListChecks,
+  Flag,
+  Paperclip,
+  User
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  buildHistoryEntry,
+  snapshotCurrentQuote,
+  STATUS_LABELS,
+  STEP_NAMES,
+  ROLE_LABELS,
+  QUOTE_ATTACH_STATUSES,
+} from '@/lib/gdmWorkflow';
 
 export default function GDMDetail() {
   const navigate = useNavigate();
@@ -62,6 +76,10 @@ export default function GDMDetail() {
   const [showSendSupplierDialog, setShowSendSupplierDialog] = useState(false);
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
   const [showMaintenanceDialog, setShowMaintenanceDialog] = useState(false);
+  const [showPwtDialog, setShowPwtDialog] = useState(false);
+  const [showOcDialog, setShowOcDialog] = useState(false);
+  const [showOtDialog, setShowOtDialog] = useState(false);
+  const [showFinalizeDialog, setShowFinalizeDialog] = useState(false);
 
   const [coordinatorNotes, setCoordinatorNotes] = useState('');
   const [destination, setDestination] = useState('');
@@ -74,6 +92,14 @@ export default function GDMDetail() {
   const [maintenanceDecision, setMaintenanceDecision] = useState('');
   const [discountPercentage, setDiscountPercentage] = useState('');
   const [maintenanceNotes, setMaintenanceNotes] = useState('');
+  const [pwtNumber, setPwtNumber] = useState('');
+  const [pwtNotes, setPwtNotes] = useState('');
+  const [ocNumber, setOcNumber] = useState('');
+  const [ocNotes, setOcNotes] = useState('');
+  const [otNumber, setOtNumber] = useState('');
+  const [otNotes, setOtNotes] = useState('');
+  const [finalizeNotes, setFinalizeNotes] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -103,83 +129,138 @@ export default function GDMDetail() {
     }
   });
 
-  const addHistoryEntry = (action, details) => {
-    return [
-      ...(gdm?.history || []),
-      {
-        action,
-        user: user?.email,
-        timestamp: new Date().toISOString(),
-        details
+  // Real-time: reflect status changes live
+  useEffect(() => {
+    if (!gdmId) return;
+    const unsubscribe = base44.entities.GDM.subscribe((event) => {
+      if (event?.data?.id === gdmId || event?.id === gdmId) {
+        queryClient.invalidateQueries({ queryKey: ['gdm', gdmId] });
       }
-    ];
-  };
+    });
+    return unsubscribe;
+  }, [gdmId, queryClient]);
+
+  const buildHistory = (params) => [
+    ...(gdm?.history || []),
+    buildHistoryEntry({ ...params, user }),
+  ];
 
   // Coordinator Actions
   const handleCoordinatorApprove = () => {
     const fullDestination = destination === 'reparo' && repairReturn
       ? `${destination} - ${repairReturn}`
       : destination;
+    const previousStatus = gdm.status;
+    const newStatus = 'pending_services';
     updateMutation.mutate({
-      status: 'pending_services',
+      status: newStatus,
       coordinator_notes: coordinatorNotes,
       destination: fullDestination,
       coordinator_approved_by: user?.email,
       coordinator_approved_at: new Date().toISOString(),
-      history: addHistoryEntry('coordinator_approved', `Aprovado pelo coordenador. Destino: ${fullDestination}`)
+      history: buildHistory({
+        action: 'coordinator_approved',
+        details: `GDM aprovada pelo coordenador. Destino: ${fullDestination}.`,
+        previousStatus,
+        newStatus,
+        stepName: STEP_NAMES.pending_coordinator,
+        observation: coordinatorNotes,
+      }),
     });
     setShowApproveDialog(false);
     setDestination('');
     setRepairReturn('');
+    setCoordinatorNotes('');
+    setConfirmPassword('');
   };
 
   const handleCoordinatorReject = () => {
+    const previousStatus = gdm.status;
+    const newStatus = 'rejected';
     updateMutation.mutate({
-      status: 'rejected',
+      status: newStatus,
       coordinator_notes: coordinatorNotes,
       coordinator_approved_by: user?.email,
       coordinator_approved_at: new Date().toISOString(),
-      history: addHistoryEntry('coordinator_rejected', `Reprovado pelo coordenador. Motivo: ${coordinatorNotes}`)
+      history: buildHistory({
+        action: 'coordinator_rejected',
+        details: `GDM reprovada pelo coordenador. Motivo: ${coordinatorNotes}`,
+        previousStatus,
+        newStatus,
+        stepName: STEP_NAMES.rejected,
+        observation: coordinatorNotes,
+      }),
     });
     setShowRejectDialog(false);
+    setCoordinatorNotes('');
+    setConfirmPassword('');
   };
 
   // Services Actions
   const handleSendToSupplier = () => {
     const supplier = suppliers.find(s => s.id === selectedSupplier);
+    const previousStatus = gdm.status;
+    const newStatus = 'sent_to_supplier';
     updateMutation.mutate({
-      status: 'awaiting_quote',
+      status: newStatus,
       supplier_id: selectedSupplier,
       supplier_name: supplier?.company_name,
       invoice_number: invoiceNumber,
       sent_to_supplier_date: new Date().toISOString(),
       sent_by: user?.email,
-      history: addHistoryEntry('sent_to_supplier', `Material enviado para ${supplier?.company_name}. NF: ${invoiceNumber}`)
+      history: buildHistory({
+        action: 'sent_to_supplier',
+        details: `Material enviado para ${supplier?.company_name}. NF: ${invoiceNumber || '-'}.`,
+        previousStatus,
+        newStatus,
+        stepName: STEP_NAMES.pending_services,
+        observation: invoiceNumber ? `NF: ${invoiceNumber}` : '',
+      }),
     });
     setShowSendSupplierDialog(false);
+    setSelectedSupplier('');
+    setInvoiceNumber('');
+    setConfirmPassword('');
   };
 
-  // Supplier Actions
+  // Quote attachment (supplier or services) — forwards automatically to maintenance
   const handleSubmitQuote = async () => {
     let quoteUrl = quoteDocument;
     let reportUrl = technicalReport;
 
-    // Upload documents if they are files
-    // For now, we'll assume the user provides URLs
+    const previousStatus = gdm.status;
+    const newStatus = 'quote_analysis';
+    // Preserve any existing quote/proposal in history before overwriting
+    const quotesHistory = (gdm.quote_value || gdm.quote_document_url || gdm.commercial_proposal_url)
+      ? snapshotCurrentQuote(gdm, 'Nova cotação/proposta anexada')
+      : (gdm.quotes_history || []);
 
     updateMutation.mutate({
-      status: 'quote_analysis',
+      status: newStatus,
       quote_value: parseFloat(quoteValue),
       quote_document_url: quoteUrl,
       technical_report_url: reportUrl,
-      history: addHistoryEntry('quote_received', `Cotação recebida: R$ ${quoteValue}`)
+      quotes_history: quotesHistory,
+      history: buildHistory({
+        action: 'quote_attached',
+        details: `Cotação anexada (R$ ${quoteValue}). Processo encaminhado à Manutenção.`,
+        previousStatus,
+        newStatus,
+        stepName: STEP_NAMES.quote_attached,
+        observation: `Valor: R$ ${quoteValue}`,
+      }),
     });
     setShowQuoteDialog(false);
+    setQuoteValue('');
+    setQuoteDocument('');
+    setTechnicalReport('');
+    setConfirmPassword('');
   };
 
   // Maintenance Actions
   const handleMaintenanceDecision = () => {
-    const updates = {
+    const previousStatus = gdm.status;
+    let updates = {
       maintenance_decision: maintenanceDecision,
       maintenance_notes: maintenanceNotes,
       maintenance_decided_by: user?.email,
@@ -188,24 +269,156 @@ export default function GDMDetail() {
 
     if (maintenanceDecision === 'approved') {
       updates.status = 'approved';
-      updates.history = addHistoryEntry('maintenance_approved', 'Cotação aprovada pela manutenção');
+      updates.history = buildHistory({
+        action: 'maintenance_approved',
+        details: 'Cotação aprovada pelo Gestor de Manutenção.',
+        previousStatus,
+        newStatus: 'approved',
+        stepName: STEP_NAMES.quote_analysis,
+        observation: maintenanceNotes,
+      });
     } else if (maintenanceDecision === 'rejected') {
       updates.status = 'rejected';
-      updates.history = addHistoryEntry('maintenance_rejected', `Cotação reprovada. Motivo: ${maintenanceNotes}`);
+      updates.history = buildHistory({
+        action: 'maintenance_rejected',
+        details: `Cotação reprovada pela manutenção. Motivo: ${maintenanceNotes}`,
+        previousStatus,
+        newStatus: 'rejected',
+        stepName: STEP_NAMES.rejected,
+        observation: maintenanceNotes,
+      });
     } else if (maintenanceDecision === 'discount_requested') {
-      updates.status = 'awaiting_quote';
+      updates.status = 'new_quote_requested';
       updates.discount_percentage = parseFloat(discountPercentage);
-      updates.history = addHistoryEntry('discount_requested', `Desconto de ${discountPercentage}% solicitado`);
+      updates.quotes_history = snapshotCurrentQuote(gdm, `Desconto de ${discountPercentage}% solicitado`);
+      updates.history = buildHistory({
+        action: 'discount_requested',
+        details: `Solicitado desconto de ${discountPercentage}%. Cotação atual preservada no histórico.`,
+        previousStatus,
+        newStatus: 'new_quote_requested',
+        stepName: STEP_NAMES.new_quote_requested,
+        observation: maintenanceNotes,
+      });
+    } else if (maintenanceDecision === 'new_quote_requested') {
+      updates.status = 'new_quote_requested';
+      updates.quotes_history = snapshotCurrentQuote(gdm, 'Nova cotação de outro fornecedor solicitada');
+      updates.history = buildHistory({
+        action: 'new_quote_requested',
+        details: 'Manutenção solicitou nova cotação. Cotação anterior preservada no histórico.',
+        previousStatus,
+        newStatus: 'new_quote_requested',
+        stepName: STEP_NAMES.new_quote_requested,
+        observation: maintenanceNotes,
+      });
     }
 
     updateMutation.mutate(updates);
     setShowMaintenanceDialog(false);
+    setMaintenanceDecision('');
+    setMaintenanceNotes('');
+    setDiscountPercentage('');
+    setConfirmPassword('');
+  };
+
+  // PWT issuance (Maintenance, after approval)
+  const handleIssuePWT = () => {
+    const previousStatus = gdm.status;
+    const newStatus = 'pwt_issued';
+    updateMutation.mutate({
+      status: newStatus,
+      pwt_number: pwtNumber,
+      pwt_issued_by: user?.email,
+      pwt_issued_at: new Date().toISOString(),
+      history: buildHistory({
+        action: 'pwt_issued',
+        details: `PWT emitido pela Manutenção${pwtNumber ? ` (${pwtNumber})` : ''}.`,
+        previousStatus,
+        newStatus,
+        stepName: STEP_NAMES.approved,
+        observation: pwtNotes,
+      }),
+    });
+    setShowPwtDialog(false);
+    setPwtNumber('');
+    setPwtNotes('');
+    setConfirmPassword('');
+  };
+
+  // OC issuance (Services/Compras)
+  const handleIssueOC = () => {
+    const previousStatus = gdm.status;
+    const newStatus = 'oc_issued';
+    updateMutation.mutate({
+      status: newStatus,
+      oc_number: ocNumber,
+      oc_issued_by: user?.email,
+      oc_issued_at: new Date().toISOString(),
+      history: buildHistory({
+        action: 'oc_issued',
+        details: `Ordem de Compra emitida${ocNumber ? ` (${ocNumber})` : ''}.`,
+        previousStatus,
+        newStatus,
+        stepName: STEP_NAMES.pwt_issued,
+        observation: ocNotes,
+      }),
+    });
+    setShowOcDialog(false);
+    setOcNumber('');
+    setOcNotes('');
+    setConfirmPassword('');
+  };
+
+  // OT issuance (Services/Compras)
+  const handleIssueOT = () => {
+    const previousStatus = gdm.status;
+    const newStatus = 'ot_issued';
+    updateMutation.mutate({
+      status: newStatus,
+      ot_number: otNumber,
+      ot_issued_by: user?.email,
+      ot_issued_at: new Date().toISOString(),
+      history: buildHistory({
+        action: 'ot_issued',
+        details: `Ordem de Trabalho emitida${otNumber ? ` (${otNumber})` : ''}.`,
+        previousStatus,
+        newStatus,
+        stepName: STEP_NAMES.oc_issued,
+        observation: otNotes,
+      }),
+    });
+    setShowOtDialog(false);
+    setOtNumber('');
+    setOtNotes('');
+    setConfirmPassword('');
+  };
+
+  // Finalize process (Services/Compras)
+  const handleFinalize = () => {
+    const previousStatus = gdm.status;
+    const newStatus = 'completed';
+    updateMutation.mutate({
+      status: newStatus,
+      completed_by: user?.email,
+      completed_at: new Date().toISOString(),
+      history: buildHistory({
+        action: 'process_finalized',
+        details: 'Processo finalizado por Serviços/Compras.',
+        previousStatus,
+        newStatus,
+        stepName: STEP_NAMES.ot_issued,
+        observation: finalizeNotes,
+      }),
+    });
+    setShowFinalizeDialog(false);
+    setFinalizeNotes('');
+    setConfirmPassword('');
   };
 
   const canCoordinatorAct = user?.role === 'coordinator' || user?.role === 'admin';
   const canServicesAct = user?.role === 'services' || user?.role === 'admin';
   const canSupplierAct = user?.role === 'supplier_user';
   const canMaintenanceAct = user?.role === 'maintenance' || user?.role === 'admin';
+  const canAttachQuote = canSupplierAct || canServicesAct;
 
   if (isLoading) {
     return (
@@ -277,10 +490,10 @@ export default function GDMDetail() {
             </Button>
           )}
 
-          {gdm.status === 'awaiting_quote' && canSupplierAct && (
+          {QUOTE_ATTACH_STATUSES.includes(gdm.status) && canAttachQuote && (
             <Button className="bg-sky-600 hover:bg-sky-700" onClick={() => setShowQuoteDialog(true)}>
-              <DollarSign className="h-4 w-4 mr-2" />
-              Enviar Cotação
+              <Paperclip className="h-4 w-4 mr-2" />
+              Anexar Cotação/Proposta
             </Button>
           )}
 
@@ -288,6 +501,34 @@ export default function GDMDetail() {
             <Button className="bg-sky-600 hover:bg-sky-700" onClick={() => setShowMaintenanceDialog(true)}>
               <Wrench className="h-4 w-4 mr-2" />
               Analisar Cotação
+            </Button>
+          )}
+
+          {gdm.status === 'approved' && canMaintenanceAct && (
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setShowPwtDialog(true)}>
+              <FileCheck2 className="h-4 w-4 mr-2" />
+              Emitir PWT
+            </Button>
+          )}
+
+          {gdm.status === 'pwt_issued' && canServicesAct && (
+            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setShowOcDialog(true)}>
+              <ClipboardCheck className="h-4 w-4 mr-2" />
+              Emitir OC
+            </Button>
+          )}
+
+          {gdm.status === 'oc_issued' && canServicesAct && (
+            <Button className="bg-lime-600 hover:bg-lime-700" onClick={() => setShowOtDialog(true)}>
+              <ListChecks className="h-4 w-4 mr-2" />
+              Emitir OT
+            </Button>
+          )}
+
+          {gdm.status === 'ot_issued' && canServicesAct && (
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowFinalizeDialog(true)}>
+              <Flag className="h-4 w-4 mr-2" />
+              Finalizar Processo
             </Button>
           )}
         </div>
@@ -309,6 +550,27 @@ export default function GDMDetail() {
                   <CardTitle className="text-lg">Informações da GDM</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Current step & responsible */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-sky-50 rounded-xl border border-sky-100">
+                    <div>
+                      <p className="text-xs text-sky-700 font-medium uppercase tracking-wide">Etapa atual do processo</p>
+                      <p className="text-base font-semibold text-slate-900">
+                        {STATUS_LABELS[gdm.status] || gdm.status}
+                      </p>
+                      <p className="text-sm text-slate-600">{STEP_NAMES[gdm.status] || '-'}</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="h-4 w-4 text-sky-600" />
+                      <div>
+                        <p className="text-xs text-slate-500">Responsável atual</p>
+                        <p className="font-medium text-slate-900">
+                          {user?.full_name || user?.email || '-'}
+                        </p>
+                        <p className="text-xs text-slate-500">{ROLE_LABELS[user?.role] || user?.role}</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-start gap-3">
                       <div className="h-10 w-10 rounded-lg bg-sky-100 flex items-center justify-center">
@@ -488,10 +750,84 @@ export default function GDMDetail() {
                       </div>
                     )}
 
+                    {gdm.pwt_number && (
+                      <div>
+                        <p className="text-sm text-slate-500 mb-2">PWT</p>
+                        <p className="font-medium">{gdm.pwt_number}</p>
+                        {gdm.pwt_issued_at && (
+                          <p className="text-xs text-slate-400">
+                            Emitido em {format(new Date(gdm.pwt_issued_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {gdm.oc_number && (
+                      <div>
+                        <p className="text-sm text-slate-500 mb-2">Ordem de Compra (OC)</p>
+                        <p className="font-medium">{gdm.oc_number}</p>
+                      </div>
+                    )}
+
+                    {gdm.ot_number && (
+                      <div>
+                        <p className="text-sm text-slate-500 mb-2">Ordem de Trabalho (OT)</p>
+                        <p className="font-medium">{gdm.ot_number}</p>
+                      </div>
+                    )}
+
+                    {gdm.quotes_history && gdm.quotes_history.length > 0 && (
+                      <div className="pt-4 border-t">
+                        <p className="text-sm text-slate-500 mb-2">
+                          Cotações/Propostas Anteriores (preservadas para auditoria)
+                        </p>
+                        <div className="space-y-3">
+                          {gdm.quotes_history.map((q, idx) => (
+                            <div key={idx} className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-sm">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-slate-700">
+                                  Cotação #{idx + 1}
+                                  {q.supplier_name ? ` — ${q.supplier_name}` : ''}
+                                </span>
+                                {q.preserved_at && (
+                                  <span className="text-xs text-slate-400">
+                                    {format(new Date(q.preserved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </span>
+                                )}
+                              </div>
+                              {q.quote_value != null && (
+                                <p className="text-slate-600 mt-1">Valor: R$ {Number(q.quote_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                              )}
+                              {q.discount_percentage != null && (
+                                <p className="text-slate-600">Desconto solicitado: {q.discount_percentage}%</p>
+                              )}
+                              {q.reason && <p className="text-xs text-slate-500 italic">{q.reason}</p>}
+                              <div className="flex flex-wrap gap-3 mt-1">
+                                {q.quote_document_url && (
+                                  <a href={q.quote_document_url} target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline text-xs">Ver cotação</a>
+                                )}
+                                {q.commercial_proposal_url && (
+                                  <a href={q.commercial_proposal_url} target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline text-xs">Ver proposta</a>
+                                )}
+                                {q.technical_report_url && (
+                                  <a href={q.technical_report_url} target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline text-xs">Ver laudo</a>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {gdm.maintenance_decision && (
                       <div className="pt-4 border-t">
                         <p className="text-sm text-slate-500 mb-2">Decisão da Manutenção</p>
-                        <StatusBadge status={gdm.maintenance_decision === 'approved' ? 'approved' : gdm.maintenance_decision === 'rejected' ? 'rejected' : 'awaiting_quote'} />
+                        <StatusBadge status={
+                          gdm.maintenance_decision === 'approved' ? 'approved'
+                          : gdm.maintenance_decision === 'rejected' ? 'rejected'
+                          : gdm.maintenance_decision === 'new_quote_requested' ? 'new_quote_requested'
+                          : 'awaiting_quote'
+                        } />
                         {gdm.discount_percentage && (
                           <p className="mt-2 text-sm">Desconto solicitado: {gdm.discount_percentage}%</p>
                         )}
@@ -564,13 +900,16 @@ export default function GDMDetail() {
             )}
 
             <div className="space-y-2">
-              <Label>Observações</Label>
+              <Label>Observação *</Label>
               <Textarea
                 value={coordinatorNotes}
                 onChange={(e) => setCoordinatorNotes(e.target.value)}
-                placeholder="Adicione observações se necessário..."
+                placeholder="Justifique a aprovação (obrigatório para rastreabilidade)..."
               />
             </div>
+            <p className="text-xs text-slate-500">
+              Responsável: {user?.full_name || user?.email} • Etapa: {STATUS_LABELS[gdm.status]} → Aguardando Serviços/Compras
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowApproveDialog(false)}>
@@ -579,10 +918,10 @@ export default function GDMDetail() {
             <Button
               className="bg-green-600 hover:bg-green-700"
               onClick={handleCoordinatorApprove}
-              disabled={updateMutation.isPending || !destination || (destination === 'reparo' && !repairReturn)}
+              disabled={updateMutation.isPending || !destination || (destination === 'reparo' && !repairReturn) || !coordinatorNotes}
             >
               {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Aprovar
+              Confirmar Aprovação
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -750,9 +1089,10 @@ export default function GDMDetail() {
                   <SelectValue placeholder="Selecione a decisão" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="approved">Aprovar</SelectItem>
-                  <SelectItem value="discount_requested">Solicitar Desconto</SelectItem>
-                  <SelectItem value="rejected">Reprovar</SelectItem>
+                  <SelectItem value="approved">Aprovar Cotação</SelectItem>
+                  <SelectItem value="discount_requested">Reprovar e Solicitar Desconto</SelectItem>
+                  <SelectItem value="new_quote_requested">Solicitar Nova Cotação (outro fornecedor)</SelectItem>
+                  <SelectItem value="rejected">Reprovar Definitivamente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -766,17 +1106,21 @@ export default function GDMDetail() {
                   onChange={(e) => setDiscountPercentage(e.target.value)}
                   placeholder="Ex: 10"
                 />
+                <p className="text-xs text-slate-500">A cotação atual será preservada no histórico.</p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label>Observações (Interno)</Label>
+              <Label>Observação *</Label>
               <Textarea
                 value={maintenanceNotes}
                 onChange={(e) => setMaintenanceNotes(e.target.value)}
-                placeholder="Observações internas..."
+                placeholder="Justifique a decisão (obrigatório para rastreabilidade)..."
               />
             </div>
+            <p className="text-xs text-slate-500">
+              Responsável: {user?.full_name || user?.email} • A cotação atual não será excluída — permanecerá registrada no histórico.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowMaintenanceDialog(false)}>
@@ -785,10 +1129,134 @@ export default function GDMDetail() {
             <Button
               className="bg-sky-600 hover:bg-sky-700"
               onClick={handleMaintenanceDecision}
-              disabled={updateMutation.isPending || !maintenanceDecision}
+              disabled={updateMutation.isPending || !maintenanceDecision || !maintenanceNotes}
             >
               {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Confirmar
+              Confirmar Decisão
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PWT Issuance Dialog */}
+      <Dialog open={showPwtDialog} onOpenChange={setShowPwtDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Emitir PWT</DialogTitle>
+            <DialogDescription>
+              A Manutenção emite o PWT após a aprovação final da cotação.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Número do PWT</Label>
+              <Input value={pwtNumber} onChange={(e) => setPwtNumber(e.target.value)} placeholder="Ex: PWT-0001" />
+            </div>
+            <div className="space-y-2">
+              <Label>Observação *</Label>
+              <Textarea value={pwtNotes} onChange={(e) => setPwtNotes(e.target.value)} placeholder="Justifique a emissão (obrigatório)..." />
+            </div>
+            <p className="text-xs text-slate-500">
+              Responsável: {user?.full_name || user?.email} • Etapa: {STATUS_LABELS[gdm.status]} → PWT Emitido
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPwtDialog(false)}>Cancelar</Button>
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleIssuePWT} disabled={updateMutation.isPending || !pwtNotes}>
+              {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Emitir PWT
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* OC Issuance Dialog */}
+      <Dialog open={showOcDialog} onOpenChange={setShowOcDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Emitir Ordem de Compra (OC)</DialogTitle>
+            <DialogDescription>
+              Serviços/Compras recebe o processo e emite a OC.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Número da OC</Label>
+              <Input value={ocNumber} onChange={(e) => setOcNumber(e.target.value)} placeholder="Ex: OC-0001" />
+            </div>
+            <div className="space-y-2">
+              <Label>Observação *</Label>
+              <Textarea value={ocNotes} onChange={(e) => setOcNotes(e.target.value)} placeholder="Justifique a emissão (obrigatório)..." />
+            </div>
+            <p className="text-xs text-slate-500">
+              Responsável: {user?.full_name || user?.email} • Etapa: {STATUS_LABELS[gdm.status]} → OC Emitida
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOcDialog(false)}>Cancelar</Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleIssueOC} disabled={updateMutation.isPending || !ocNotes}>
+              {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Emitir OC
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* OT Issuance Dialog */}
+      <Dialog open={showOtDialog} onOpenChange={setShowOtDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Emitir Ordem de Trabalho (OT)</DialogTitle>
+            <DialogDescription>
+              Serviços/Compras emite a OT após a OC.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Número da OT</Label>
+              <Input value={otNumber} onChange={(e) => setOtNumber(e.target.value)} placeholder="Ex: OT-0001" />
+            </div>
+            <div className="space-y-2">
+              <Label>Observação *</Label>
+              <Textarea value={otNotes} onChange={(e) => setOtNotes(e.target.value)} placeholder="Justifique a emissão (obrigatório)..." />
+            </div>
+            <p className="text-xs text-slate-500">
+              Responsável: {user?.full_name || user?.email} • Etapa: {STATUS_LABELS[gdm.status]} → OT Emitida
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOtDialog(false)}>Cancelar</Button>
+            <Button className="bg-lime-600 hover:bg-lime-700" onClick={handleIssueOT} disabled={updateMutation.isPending || !otNotes}>
+              {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Emitir OT
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Finalize Dialog */}
+      <Dialog open={showFinalizeDialog} onOpenChange={setShowFinalizeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Finalizar Processo</DialogTitle>
+            <DialogDescription>
+              Confirme o encerramento do processo da GDM.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Observação *</Label>
+              <Textarea value={finalizeNotes} onChange={(e) => setFinalizeNotes(e.target.value)} placeholder="Confirme o encerramento (obrigatório)..." />
+            </div>
+            <p className="text-xs text-slate-500">
+              Responsável: {user?.full_name || user?.email} • Etapa: {STATUS_LABELS[gdm.status]} → Processo Finalizado
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFinalizeDialog(false)}>Cancelar</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleFinalize} disabled={updateMutation.isPending || !finalizeNotes}>
+              {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Finalizar Processo
             </Button>
           </DialogFooter>
         </DialogContent>

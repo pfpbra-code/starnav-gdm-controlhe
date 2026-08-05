@@ -10,8 +10,15 @@ import {
   DollarSign,
   Wrench,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Paperclip,
+  FileCheck2,
+  ClipboardCheck,
+  ListChecks,
+  Flag,
+  RefreshCw
 } from 'lucide-react';
+import { STATUS_LABELS } from '@/lib/gdmWorkflow';
 
 const actionIcons = {
   created: FileText,
@@ -19,10 +26,17 @@ const actionIcons = {
   coordinator_rejected: XCircle,
   sent_to_supplier: Send,
   quote_received: DollarSign,
+  quote_attached: Paperclip,
+  commercial_proposal_attached: Paperclip,
   maintenance_approved: CheckCircle,
   maintenance_rejected: XCircle,
   discount_requested: AlertCircle,
-  completed: CheckCircle,
+  new_quote_requested: RefreshCw,
+  pwt_issued: FileCheck2,
+  oc_issued: ClipboardCheck,
+  ot_issued: ListChecks,
+  process_finalized: Flag,
+  completed: Flag,
   default: Clock
 };
 
@@ -32,9 +46,16 @@ const actionColors = {
   coordinator_rejected: "bg-red-100 text-red-600",
   sent_to_supplier: "bg-purple-100 text-purple-600",
   quote_received: "bg-amber-100 text-amber-600",
+  quote_attached: "bg-cyan-100 text-cyan-600",
+  commercial_proposal_attached: "bg-cyan-100 text-cyan-600",
   maintenance_approved: "bg-green-100 text-green-600",
   maintenance_rejected: "bg-red-100 text-red-600",
   discount_requested: "bg-orange-100 text-orange-600",
+  new_quote_requested: "bg-orange-100 text-orange-600",
+  pwt_issued: "bg-teal-100 text-teal-600",
+  oc_issued: "bg-emerald-100 text-emerald-600",
+  ot_issued: "bg-lime-100 text-lime-600",
+  process_finalized: "bg-slate-100 text-slate-600",
   completed: "bg-slate-100 text-slate-600",
   default: "bg-gray-100 text-gray-600"
 };
@@ -71,9 +92,22 @@ export default function GDMTimeline({ history = [] }) {
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-                    <div>
+                    <div className="space-y-0.5">
                       <p className="text-sm text-slate-900">{event.details}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">por {event.user}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        por {event.user_name || event.user}
+                        {event.step_name && <span className="text-slate-400"> • {event.step_name}</span>}
+                      </p>
+                      {(event.previous_status || event.new_status) && (
+                        <p className="text-xs text-slate-400">
+                          Status: {STATUS_LABELS[event.previous_status] || event.previous_status || '—'}
+                          {' → '}
+                          {STATUS_LABELS[event.new_status] || event.new_status || '—'}
+                        </p>
+                      )}
+                      {event.observation && (
+                        <p className="text-xs text-slate-500 italic">"{event.observation}"</p>
+                      )}
                     </div>
                     <div className="whitespace-nowrap text-right text-xs text-slate-500">
                       {event.timestamp && format(new Date(event.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR })}

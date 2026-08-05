@@ -29,6 +29,7 @@ import {
   Camera
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { buildHistoryEntry } from '@/lib/gdmWorkflow';
 
 export default function CreateGDM() {
   const navigate = useNavigate();
@@ -84,12 +85,15 @@ export default function CreateGDM() {
         vessel_name: vessel?.name || '',
         equipment_name: equip?.name || '',
         status: 'pending_coordinator',
-        history: [{
+        history: [buildHistoryEntry({
           action: 'created',
-          user: user?.email,
-          timestamp: new Date().toISOString(),
-          details: `GDM criada pela embarcação ${vessel?.name}`
-        }]
+          user,
+          details: `GDM criada pela embarcação ${vessel?.name}`,
+          previousStatus: null,
+          newStatus: 'pending_coordinator',
+          stepName: 'Emissão da GDM (Embarcação)',
+          observation: data.description || '',
+        })]
       };
 
       return await base44.entities.GDM.create(gdmData);
