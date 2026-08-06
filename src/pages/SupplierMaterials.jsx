@@ -37,13 +37,40 @@ import {
   CheckCircle,
   Ship
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildHistoryEntry, STATUS_LABELS, STEP_NAMES } from '@/lib/gdmWorkflow';
 
+const quickFilters = [
+  { key: 'all', label: 'Todas' },
+  { key: 'awaiting', label: 'Aguardando Cotação' },
+  { key: 'analysis', label: 'Em Análise' },
+  { key: 'approved', label: 'Aprovadas' },
+  { key: 'finalized', label: 'Finalizadas' },
+  { key: 'rejected', label: 'Reprovadas' },
+];
+
+const quickFilterFn = {
+  all: () => true,
+  awaiting: (g) => ['awaiting_quote', 'new_quote_requested'].includes(g.status),
+  analysis: (g) => ['quote_analysis', 'quote_attached'].includes(g.status),
+  approved: (g) => ['approved', 'pwt_issued', 'oc_issued', 'ot_issued'].includes(g.status),
+  finalized: (g) => g.status === 'completed',
+  rejected: (g) => g.status === 'rejected',
+};
+
 export default function SupplierMaterials() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [quickFilter, setQuickFilter] = useState('all');
   const [activeTab, setActiveTab] = useState('awaiting');
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
   const [selectedGDM, setSelectedGDM] = useState(null);
@@ -80,10 +107,19 @@ export default function SupplierMaterials() {
   const awaitingGDMs = gdms.filter(g => g.status === 'awaiting_quote' || g.status === 'new_quote_requested');
   const sentGDMs = gdms.filter(g => ['quote_analysis', 'quote_attached', 'approved', 'pwt_issued', 'oc_issued', 'ot_issued', 'rejected', 'completed'].includes(g.status));
 
-  const filteredGDMs = (activeTab === 'awaiting' ? awaitingGDMs : sentGDMs).filter(gdm =>
-    gdm.gdm_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    gdm.equipment_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const baseList = activeTab === 'awaiting' ? awaitingGDMs : sentGDMs;
+  const filteredGDMs = baseList.filter((gdm) => {
+    const term = searchTerm.toLowerCase();
+    const matchesSearch =
+      !term ||
+      gdm.gdm_number?.toLowerCase().includes(term) ||
+      gdm.equipment_name?.toLowerCase().includes(term) ||
+      gdm.vessel_name?.toLowerCase().includes(term) ||
+      (STATUS_LABELS[gdm.status] || gdm.status || '').toLowerCase().includes(term);
+    const matchesStatus = statusFilter === 'all' || gdm.status === statusFilter;
+    const matchesQuick = quickFilterFn[quickFilter]?.(gdm) ?? true;
+    return matchesSearch && matchesStatus && matchesQuick;
+  });
 
   const handleFileUpload = async (e, field) => {
     const file = e.target.files[0];
@@ -186,17 +222,54 @@ export default function SupplierMaterials() {
         </TabsList>
       </Tabs>
 
-      {/* Search */}
+      {/* Quick Filters */}
+      <div className="flex flex-wrap gap-2">
+        {quickFilters.map((qf) => (
+          <button
+            key={qf.key}
+            onClick={() => setQuickFilter(qf.key)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              quickFilter === qf.key
+                ? 'bg-sky-600 text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {qf.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search & Status */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Buscar por número ou equipamento..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Buscar por número, embarcação, equipamento ou status..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-56">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="awaiting_quote">Aguardando Cotação</SelectItem>
+                <SelectItem value="new_quote_requested">Nova Cotação Solicitada</SelectItem>
+                <SelectItem value="quote_attached">Cotação Anexada</SelectItem>
+                <SelectItem value="quote_analysis">Em Aprovação da Manutenção</SelectItem>
+                <SelectItem value="approved">Cotação Aprovada</SelectItem>
+                <SelectItem value="pwt_issued">PWT Emitido</SelectItem>
+                <SelectItem value="oc_issued">OC Emitida</SelectItem>
+                <SelectItem value="ot_issued">OT Emitida</SelectItem>
+                <SelectItem value="completed">Processo Finalizado</SelectItem>
+                <SelectItem value="rejected">Reprovada</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>

@@ -38,6 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import GDMCard from '@/components/gdm/GDMCard';
 import GDMPdfButton from '@/components/gdm/GDMPdfButton';
+import { STATUS_LABELS } from '@/lib/gdmWorkflow';
 
 const quickFilters = [
   { key: 'all', label: 'Todas', filter: () => true },
@@ -84,7 +85,8 @@ export default function GDMList() {
         gdm.gdm_number?.toLowerCase().includes(term) ||
         gdm.vessel_name?.toLowerCase().includes(term) ||
         gdm.equipment_name?.toLowerCase().includes(term) ||
-        gdm.serial_number?.toLowerCase().includes(term)
+        gdm.serial_number?.toLowerCase().includes(term) ||
+        (STATUS_LABELS[gdm.status] || gdm.status || '').toLowerCase().includes(term)
       );
     }
 
