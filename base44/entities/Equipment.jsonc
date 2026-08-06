@@ -25,7 +25,20 @@
       "description": "Categoria do equipamento"
     },
     "description": {
-      "type": "string"
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do equipamento"
+    },
+    "location": {
+      "type": "string",
+      "description": "Localiza\u00e7\u00e3o f\u00edsica do equipamento"
+    },
+    "manufacturer": {
+      "type": "string",
+      "description": "Fabricante do equipamento"
+    },
+    "model": {
+      "type": "string",
+      "description": "Modelo do equipamento"
     },
     "status": {
       "type": "string",

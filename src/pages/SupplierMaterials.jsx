@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
+import { buildHistoryEntry, STATUS_LABELS, STEP_NAMES } from '@/lib/gdmWorkflow';
 
 export default function SupplierMaterials() {
   const queryClient = useQueryClient();
@@ -49,7 +50,8 @@ export default function SupplierMaterials() {
   const [quoteData, setQuoteData] = useState({
     quote_value: '',
     quote_document_url: '',
-    technical_report_url: ''
+    technical_report_url: '',
+    commercial_proposal_url: ''
   });
   const [uploading, setUploading] = useState(false);
 
@@ -68,14 +70,15 @@ export default function SupplierMaterials() {
     mutationFn: ({ id, data }) => base44.entities.GDM.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supplierGDMs'] });
-      toast.success('Cotação enviada com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['gdms'] });
+      toast.success('Cotação enviada com sucesso! Disponível em todas as telas.');
       setShowQuoteDialog(false);
     },
     onError: () => toast.error('Erro ao enviar cotação')
   });
 
-  const awaitingGDMs = gdms.filter(g => g.status === 'awaiting_quote');
-  const sentGDMs = gdms.filter(g => ['quote_analysis', 'approved', 'rejected', 'completed'].includes(g.status));
+  const awaitingGDMs = gdms.filter(g => g.status === 'awaiting_quote' || g.status === 'new_quote_requested');
+  const sentGDMs = gdms.filter(g => ['quote_analysis', 'quote_attached', 'approved', 'pwt_issued', 'oc_issued', 'ot_issued', 'rejected', 'completed'].includes(g.status));
 
   const filteredGDMs = (activeTab === 'awaiting' ? awaitingGDMs : sentGDMs).filter(gdm =>
     gdm.gdm_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -104,25 +107,33 @@ export default function SupplierMaterials() {
       return;
     }
 
+    const previousStatus = selectedGDM.status;
+    const newStatus = 'quote_analysis';
     const history = [
       ...(selectedGDM.history || []),
-      {
+      buildHistoryEntry({
         action: 'quote_received',
-        user: user?.email,
-        timestamp: new Date().toISOString(),
-        details: `Cotação recebida: R$ ${parseFloat(quoteData.quote_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-      }
+        user,
+        details: `Cotação recebida: R$ ${parseFloat(quoteData.quote_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        previousStatus,
+        newStatus,
+        stepName: STEP_NAMES.quote_analysis,
+        observation: `Fornecedor: ${selectedGDM.supplier_name || '-'}`,
+      }),
     ];
 
     updateMutation.mutate({
       id: selectedGDM.id,
       data: {
-        status: 'quote_analysis',
+        status: newStatus,
         quote_value: parseFloat(quoteData.quote_value),
         quote_document_url: quoteData.quote_document_url,
         technical_report_url: quoteData.technical_report_url,
-        history
-      }
+        commercial_proposal_url: quoteData.commercial_proposal_url,
+        commercial_proposal_uploaded_at: new Date().toISOString(),
+        commercial_proposal_uploaded_by: user?.email,
+        history,
+      },
     });
   };
 
@@ -131,7 +142,8 @@ export default function SupplierMaterials() {
     setQuoteData({
       quote_value: gdm.quote_value?.toString() || '',
       quote_document_url: gdm.quote_document_url || '',
-      technical_report_url: gdm.technical_report_url || ''
+      technical_report_url: gdm.technical_report_url || '',
+      commercial_proposal_url: gdm.commercial_proposal_url || ''
     });
     setShowQuoteDialog(true);
   };
@@ -353,6 +365,34 @@ export default function SupplierMaterials() {
                     disabled={uploading}
                   />
                   <label htmlFor="tech-report">
+                    <Button type="button" variant="outline" asChild disabled={uploading}>
+                      <span>
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Proposta Comercial</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={quoteData.commercial_proposal_url}
+                  onChange={(e) => setQuoteData(prev => ({ ...prev, commercial_proposal_url: e.target.value }))}
+                  placeholder="URL da proposta ou faça upload"
+                  disabled={uploading}
+                />
+                <div>
+                  <input
+                    type="file"
+                    id="commercial-proposal"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, 'commercial_proposal_url')}
+                    disabled={uploading}
+                  />
+                  <label htmlFor="commercial-proposal">
                     <Button type="button" variant="outline" asChild disabled={uploading}>
                       <span>
                         {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}

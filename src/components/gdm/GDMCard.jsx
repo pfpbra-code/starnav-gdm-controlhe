@@ -44,6 +44,15 @@ export default function GDMCard({ gdm, showActions = true }) {
           <StatusBadge status={gdm.treatment} type="treatment" />
         </div>
 
+        {gdm.quote_value != null && (
+          <div className="flex items-center justify-between bg-emerald-50 rounded-lg px-3 py-2">
+            <span className="text-xs text-emerald-700 font-medium">Cotação</span>
+            <span className="text-sm font-bold text-emerald-700">
+              R$ {gdm.quote_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        )}
+
         {showActions && (
           <div className="pt-2 border-t">
             <Link to={createPageUrl(`GDMDetail?id=${gdm.id}`)}>

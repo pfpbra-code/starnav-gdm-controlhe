@@ -33,6 +33,9 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Package, Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
+import EquipmentReportPdfButton from '@/components/equipment/EquipmentReportPdfButton';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const categoryLabels = {
   navigation: "Navegação",
@@ -56,6 +59,9 @@ export default function Equipment() {
     code: '',
     category: '',
     description: '',
+    location: '',
+    manufacturer: '',
+    model: '',
     status: 'active'
   });
 
@@ -106,6 +112,9 @@ export default function Equipment() {
       code: '',
       category: '',
       description: '',
+      location: '',
+      manufacturer: '',
+      model: '',
       status: 'active'
     });
   };
@@ -117,6 +126,9 @@ export default function Equipment() {
       code: equip.code || '',
       category: equip.category || '',
       description: equip.description || '',
+      location: equip.location || '',
+      manufacturer: equip.manufacturer || '',
+      model: equip.model || '',
       status: equip.status || 'active'
     });
     setShowDialog(true);
@@ -166,12 +178,15 @@ export default function Equipment() {
           <h1 className="text-2xl font-bold text-slate-900">Equipamentos</h1>
           <p className="text-slate-500 mt-1">{filteredEquipment.length} equipamentos cadastrados</p>
         </div>
-        {isAdmin && (
-          <Button className="bg-sky-600 hover:bg-sky-700" onClick={() => setShowDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Equipamento
-          </Button>
-        )}
+        <div className="flex flex-col md:flex-row gap-3">
+          <EquipmentReportPdfButton equipment={equipment} />
+          {isAdmin && (
+            <Button className="bg-sky-600 hover:bg-sky-700" onClick={() => setShowDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Equipamento
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -210,7 +225,11 @@ export default function Equipment() {
               <TableHead>Nome</TableHead>
               <TableHead>Código</TableHead>
               <TableHead>Categoria</TableHead>
+              <TableHead>Localização</TableHead>
+              <TableHead>Fabricante</TableHead>
+              <TableHead>Modelo</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Cadastro</TableHead>
               {isAdmin && <TableHead className="text-right">Ações</TableHead>}
             </TableRow>
           </TableHeader>
@@ -227,8 +246,14 @@ export default function Equipment() {
                 </TableCell>
                 <TableCell>{equip.code}</TableCell>
                 <TableCell>{categoryLabels[equip.category] || equip.category || '-'}</TableCell>
+                <TableCell>{equip.location || '-'}</TableCell>
+                <TableCell>{equip.manufacturer || '-'}</TableCell>
+                <TableCell>{equip.model || '-'}</TableCell>
                 <TableCell>
                   <StatusBadge status={equip.status} />
+                </TableCell>
+                <TableCell className="text-xs text-slate-500">
+                  {equip.created_date ? format(new Date(equip.created_date), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
                 </TableCell>
                 {isAdmin && (
                   <TableCell className="text-right">
@@ -251,7 +276,7 @@ export default function Equipment() {
             ))}
             {filteredEquipment.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 5 : 4} className="h-32 text-center">
+                <TableCell colSpan={isAdmin ? 9 : 8} className="h-32 text-center">
                   <Package className="h-8 w-8 mx-auto text-slate-300 mb-2" />
                   <p className="text-slate-500">Nenhum equipamento encontrado</p>
                 </TableCell>
@@ -315,6 +340,32 @@ export default function Equipment() {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Descrição do equipamento..."
                 />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Localização</Label>
+                  <Input
+                    value={formData.location}
+                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="Localização física"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Fabricante</Label>
+                  <Input
+                    value={formData.manufacturer}
+                    onChange={(e) => setFormData(prev => ({ ...prev, manufacturer: e.target.value }))}
+                    placeholder="Fabricante"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Modelo</Label>
+                  <Input
+                    value={formData.model}
+                    onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
+                    placeholder="Modelo"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>

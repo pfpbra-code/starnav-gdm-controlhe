@@ -8,14 +8,17 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const columns = [
-  { key: 'pending_coordinator', label: 'Aguardando Coordenador', color: 'amber' },
+  { key: 'pending_coordinator', label: 'GDM Emitida', color: 'amber' },
   { key: 'pending_services', label: 'Aguardando Serviços', color: 'blue' },
   { key: 'sent_to_supplier', label: 'Enviado ao Fornecedor', color: 'purple' },
   { key: 'awaiting_quote', label: 'Aguardando Cotação', color: 'cyan' },
-  { key: 'quote_analysis', label: 'Análise de Cotação', color: 'indigo' },
-  { key: 'approved', label: 'Aprovado', color: 'green' },
-  { key: 'completed', label: 'Concluído', color: 'emerald' },
-  { key: 'rejected', label: 'Rejeitado', color: 'red' },
+  { key: 'quote_analysis', label: 'Aprovação da Manutenção', color: 'indigo' },
+  { key: 'approved', label: 'Cotação Aprovada', color: 'green' },
+  { key: 'pwt_issued', label: 'PWT Emitido', color: 'teal' },
+  { key: 'oc_issued', label: 'OC Emitida', color: 'emerald' },
+  { key: 'ot_issued', label: 'OT Emitida', color: 'lime' },
+  { key: 'completed', label: 'Finalizado', color: 'slate' },
+  { key: 'rejected', label: 'Reprovada', color: 'red' },
 ];
 
 const headerColorClasses = {
@@ -25,19 +28,22 @@ const headerColorClasses = {
   cyan: 'bg-cyan-100 text-cyan-700',
   indigo: 'bg-indigo-100 text-indigo-700',
   green: 'bg-green-100 text-green-700',
+  teal: 'bg-teal-100 text-teal-700',
   emerald: 'bg-emerald-100 text-emerald-700',
+  lime: 'bg-lime-100 text-lime-700',
+  slate: 'bg-slate-200 text-slate-700',
   red: 'bg-red-100 text-red-700',
 };
 
 export default function GDMKanban({ gdms }) {
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
+    <div className="flex gap-3 overflow-x-auto pb-4">
       {columns.map((col) => {
         const columnGdms = gdms.filter((g) => g.status === col.key);
         return (
-          <div key={col.key} className="flex-shrink-0 w-72">
+          <div key={col.key} className="flex-shrink-0 w-64">
             <div className={`flex items-center justify-between px-3 py-2 rounded-t-lg ${headerColorClasses[col.color]}`}>
-              <span className="text-sm font-semibold">{col.label}</span>
+              <span className="text-xs font-semibold">{col.label}</span>
               <span className="text-xs bg-white/60 px-2 py-0.5 rounded-full">
                 {columnGdms.length}
               </span>
@@ -61,7 +67,7 @@ export default function GDMKanban({ gdms }) {
                           <span className="text-xs font-mono font-semibold text-sky-700">
                             {gdm.gdm_number}
                           </span>
-                          <StatusBadge treatment={gdm.treatment} />
+                          <StatusBadge status={gdm.treatment} type="treatment" />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-slate-900 line-clamp-1">
