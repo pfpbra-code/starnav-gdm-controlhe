@@ -151,18 +151,10 @@ export default function GDMDetail() {
     buildHistoryEntry({ ...params, user }),
   ];
 
-  const openDocument = async (url) => {
+  const openDocument = (url) => {
     if (!url) return;
-    try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const win = window.open(blobUrl, '_blank');
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
-      if (!win) window.open(url, '_blank');
-    } catch {
-      window.open(url, '_blank');
-    }
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}`;
+    window.open(viewerUrl, '_blank');
   };
 
   const handleFileUpload = async (e, setter) => {
