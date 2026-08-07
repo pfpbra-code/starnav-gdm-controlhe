@@ -66,6 +66,8 @@ import {
   ROLE_LABELS,
   QUOTE_ATTACH_STATUSES,
   addProposal,
+  validateProposalFile,
+  fileNameFromUrl,
 } from '@/lib/gdmWorkflow';
 
 export default function GDMDetail() {
@@ -103,6 +105,7 @@ export default function GDMDetail() {
   const [otNotes, setOtNotes] = useState('');
   const [finalizeNotes, setFinalizeNotes] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -147,6 +150,27 @@ export default function GDMDetail() {
     ...(gdm?.history || []),
     buildHistoryEntry({ ...params, user }),
   ];
+
+  const handleFileUpload = async (e, setter) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const validation = validateProposalFile(file);
+    if (!validation.ok) {
+      toast.error(validation.error);
+      e.target.value = '';
+      return;
+    }
+    setUploading(true);
+    try {
+      const result = await base44.integrations.Core.UploadFile({ file });
+      setter(result.file_url);
+      toast.success('Arquivo enviado!');
+    } catch {
+      toast.error('Erro ao enviar arquivo');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // Coordinator Actions
   const handleCoordinatorApprove = () => {
@@ -1055,21 +1079,76 @@ export default function GDMDetail() {
                 placeholder="0,00"
               />
             </div>
+            <p className="text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg p-2">
+              Anexos aceitos apenas em PDF, XLSX ou XLS.
+            </p>
+
             <div className="space-y-2">
-              <Label>URL do Documento da Cotação</Label>
-              <Input
-                value={quoteDocument}
-                onChange={(e) => setQuoteDocument(e.target.value)}
-                placeholder="https://..."
-              />
+              <Label>Documento da Cotação</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={quoteDocument ? fileNameFromUrl(quoteDocument) : ''}
+                  readOnly
+                  placeholder="Nenhum arquivo selecionado"
+                  disabled={uploading}
+                />
+                <div>
+                  <input
+                    type="file"
+                    id="quote-doc"
+                    className="hidden"
+                    accept=".pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    onChange={(e) => handleFileUpload(e, setQuoteDocument)}
+                    disabled={uploading}
+                  />
+                  <label htmlFor="quote-doc">
+                    <Button type="button" variant="outline" asChild disabled={uploading}>
+                      <span>
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+              </div>
+              {quoteDocument && (
+                <a href={quoteDocument} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-600 hover:underline">
+                  Ver arquivo anexado
+                </a>
+              )}
             </div>
+
             <div className="space-y-2">
-              <Label>URL do Laudo Técnico</Label>
-              <Input
-                value={technicalReport}
-                onChange={(e) => setTechnicalReport(e.target.value)}
-                placeholder="https://..."
-              />
+              <Label>Laudo Técnico</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={technicalReport ? fileNameFromUrl(technicalReport) : ''}
+                  readOnly
+                  placeholder="Nenhum arquivo selecionado"
+                  disabled={uploading}
+                />
+                <div>
+                  <input
+                    type="file"
+                    id="tech-report"
+                    className="hidden"
+                    accept=".pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    onChange={(e) => handleFileUpload(e, setTechnicalReport)}
+                    disabled={uploading}
+                  />
+                  <label htmlFor="tech-report">
+                    <Button type="button" variant="outline" asChild disabled={uploading}>
+                      <span>
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+              </div>
+              {technicalReport && (
+                <a href={technicalReport} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-600 hover:underline">
+                  Ver arquivo anexado
+                </a>
+              )}
             </div>
           </div>
           <DialogFooter>
