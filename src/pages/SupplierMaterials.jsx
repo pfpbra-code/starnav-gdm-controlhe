@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -13,30 +12,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import {
-  Package,
-  Search,
-  Eye,
-  DollarSign,
-  Upload,
-  Loader2,
-  CheckCircle,
-  Ship
-} from 'lucide-react';
+import { Package, Search, Eye, Ship } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -44,9 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
-import { buildHistoryEntry, STATUS_LABELS, STEP_NAMES, addProposal, validateProposalFile, fileNameFromUrl } from '@/lib/gdmWorkflow';
+import { STATUS_LABELS } from '@/lib/gdmWorkflow';
 
 const quickFilters = [
   { key: 'all', label: 'Todas' },
@@ -67,20 +48,10 @@ const quickFilterFn = {
 };
 
 export default function SupplierMaterials() {
-  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [quickFilter, setQuickFilter] = useState('all');
   const [activeTab, setActiveTab] = useState('awaiting');
-  const [showQuoteDialog, setShowQuoteDialog] = useState(false);
-  const [selectedGDM, setSelectedGDM] = useState(null);
-  const [quoteData, setQuoteData] = useState({
-    quote_value: '',
-    quote_document_url: '',
-    technical_report_url: '',
-    commercial_proposal_url: ''
-  });
-  const [uploading, setUploading] = useState(false);
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -91,17 +62,6 @@ export default function SupplierMaterials() {
     queryKey: ['supplierGDMs', user?.supplier_id],
     queryFn: () => base44.entities.GDM.filter({ supplier_id: user?.supplier_id }),
     enabled: !!user?.supplier_id,
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.GDM.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supplierGDMs'] });
-      queryClient.invalidateQueries({ queryKey: ['gdms'] });
-      toast.success('Cotação enviada com sucesso! Disponível em todas as telas.');
-      setShowQuoteDialog(false);
-    },
-    onError: () => toast.error('Erro ao enviar cotação')
   });
 
   const awaitingGDMs = gdms.filter(g => g.status === 'awaiting_quote' || g.status === 'new_quote_requested');
@@ -120,86 +80,6 @@ export default function SupplierMaterials() {
     const matchesQuick = quickFilterFn[quickFilter]?.(gdm) ?? true;
     return matchesSearch && matchesStatus && matchesQuick;
   });
-
-  const handleFileUpload = async (e, field) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const validation = validateProposalFile(file);
-    if (!validation.ok) {
-      toast.error(validation.error);
-      e.target.value = '';
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const result = await base44.integrations.Core.UploadFile({ file });
-      setQuoteData(prev => ({ ...prev, [field]: result.file_url }));
-      toast.success('Arquivo enviado!');
-    } catch (error) {
-      toast.error('Erro ao enviar arquivo');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleSubmitQuote = () => {
-    if (!quoteData.quote_value) {
-      toast.error('Informe o valor da cotação');
-      return;
-    }
-
-    const previousStatus = selectedGDM.status;
-    const newStatus = 'quote_analysis';
-    const history = [
-      ...(selectedGDM.history || []),
-      buildHistoryEntry({
-        action: 'quote_received',
-        user,
-        details: `Cotação recebida: R$ ${parseFloat(quoteData.quote_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        previousStatus,
-        newStatus,
-        stepName: STEP_NAMES.quote_analysis,
-        observation: `Fornecedor: ${selectedGDM.supplier_name || '-'}`,
-      }),
-    ];
-
-    const proposals = addProposal(selectedGDM, {
-      supplier_name: selectedGDM.supplier_name,
-      quote_value: parseFloat(quoteData.quote_value),
-      registered_by: user?.email,
-      file_url: quoteData.commercial_proposal_url || quoteData.quote_document_url,
-      technical_report_url: quoteData.technical_report_url,
-      notes: 'Proposta enviada pelo fornecedor',
-    });
-
-    updateMutation.mutate({
-      id: selectedGDM.id,
-      data: {
-        status: newStatus,
-        quote_value: parseFloat(quoteData.quote_value),
-        quote_document_url: quoteData.quote_document_url,
-        technical_report_url: quoteData.technical_report_url,
-        commercial_proposal_url: quoteData.commercial_proposal_url,
-        commercial_proposal_uploaded_at: new Date().toISOString(),
-        commercial_proposal_uploaded_by: user?.email,
-        proposals,
-        history,
-      },
-    });
-  };
-
-  const openQuoteDialog = (gdm) => {
-    setSelectedGDM(gdm);
-    setQuoteData({
-      quote_value: gdm.quote_value?.toString() || '',
-      quote_document_url: gdm.quote_document_url || '',
-      technical_report_url: gdm.technical_report_url || '',
-      commercial_proposal_url: gdm.commercial_proposal_url || ''
-    });
-    setShowQuoteDialog(true);
-  };
 
   if (isLoading) {
     return (
@@ -221,7 +101,7 @@ export default function SupplierMaterials() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Materiais Recebidos</h1>
-        <p className="text-slate-500 mt-1">Gerencie os materiais e envie cotações</p>
+        <p className="text-slate-500 mt-1">Acompanhe os materiais recebidos e o status das cotações</p>
       </div>
 
       {/* Tabs */}
@@ -337,23 +217,11 @@ export default function SupplierMaterials() {
                   </TableCell>
                 )}
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    {activeTab === 'awaiting' && (
-                      <Button
-                        size="sm"
-                        className="bg-sky-600 hover:bg-sky-700"
-                        onClick={() => openQuoteDialog(gdm)}
-                      >
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        Enviar Cotação
-                      </Button>
-                    )}
-                    <Link to={createPageUrl(`GDMDetail?id=${gdm.id}`)}>
-                      <Button size="sm" variant="ghost">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
+                  <Link to={createPageUrl(`GDMDetail?id=${gdm.id}`)}>
+                    <Button size="sm" variant="ghost">
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </Link>
                 </TableCell>
               </TableRow>
             ))}
@@ -362,8 +230,8 @@ export default function SupplierMaterials() {
                 <TableCell colSpan={activeTab === 'sent' ? 7 : 6} className="h-32 text-center">
                   <Package className="h-8 w-8 mx-auto text-slate-300 mb-2" />
                   <p className="text-slate-500">
-                    {activeTab === 'awaiting' 
-                      ? 'Nenhum material aguardando cotação' 
+                    {activeTab === 'awaiting'
+                      ? 'Nenhum material aguardando cotação'
                       : 'Nenhuma cotação enviada'}
                   </p>
                 </TableCell>
@@ -372,151 +240,6 @@ export default function SupplierMaterials() {
           </TableBody>
         </Table>
       </Card>
-
-      {/* Quote Dialog */}
-      <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Enviar Cotação</DialogTitle>
-            <DialogDescription>
-              GDM: {selectedGDM?.gdm_number}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg p-2">
-              Anexos aceitos apenas em PDF, XLSX ou XLS.
-            </p>
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <p className="text-sm text-slate-500">Equipamento</p>
-              <p className="font-medium">{selectedGDM?.equipment_name}</p>
-              <p className="text-sm text-slate-500 mt-2">Tratativa</p>
-              <StatusBadge status={selectedGDM?.treatment} type="treatment" />
-            </div>
-
-            {selectedGDM?.discount_percentage && (
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <p className="text-sm text-amber-800 font-medium">
-                  ⚠️ Desconto de {selectedGDM.discount_percentage}% solicitado
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label>Valor da Cotação (R$) *</Label>
-              <Input
-                type="number"
-                value={quoteData.quote_value}
-                onChange={(e) => setQuoteData(prev => ({ ...prev, quote_value: e.target.value }))}
-                placeholder="0,00"
-                step="0.01"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Documento da Cotação</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={quoteData.quote_document_url}
-                  onChange={(e) => setQuoteData(prev => ({ ...prev, quote_document_url: e.target.value }))}
-                  placeholder="URL do documento ou faça upload"
-                  disabled={uploading}
-                />
-                <div>
-                  <input
-                    type="file"
-                    id="quote-doc"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'quote_document_url')}
-                    disabled={uploading}
-                  />
-                  <label htmlFor="quote-doc">
-                    <Button type="button" variant="outline" asChild disabled={uploading}>
-                      <span>
-                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      </span>
-                    </Button>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Laudo Técnico</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={quoteData.technical_report_url}
-                  onChange={(e) => setQuoteData(prev => ({ ...prev, technical_report_url: e.target.value }))}
-                  placeholder="URL do laudo técnico ou faça upload"
-                  disabled={uploading}
-                />
-                <div>
-                  <input
-                    type="file"
-                    id="tech-report"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'technical_report_url')}
-                    disabled={uploading}
-                  />
-                  <label htmlFor="tech-report">
-                    <Button type="button" variant="outline" asChild disabled={uploading}>
-                      <span>
-                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      </span>
-                    </Button>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Proposta Comercial</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={quoteData.commercial_proposal_url}
-                  onChange={(e) => setQuoteData(prev => ({ ...prev, commercial_proposal_url: e.target.value }))}
-                  placeholder="URL da proposta ou faça upload"
-                  disabled={uploading}
-                />
-                <div>
-                  <input
-                    type="file"
-                    id="commercial-proposal"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'commercial_proposal_url')}
-                    disabled={uploading}
-                  />
-                  <label htmlFor="commercial-proposal">
-                    <Button type="button" variant="outline" asChild disabled={uploading}>
-                      <span>
-                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      </span>
-                    </Button>
-                  </label>
-                </div>
-              </div>
-              {quoteData.commercial_proposal_url && (
-                <p className="text-xs text-slate-500 mt-1 truncate">
-                  Arquivo: {fileNameFromUrl(quoteData.commercial_proposal_url)}
-                </p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowQuoteDialog(false)}>
-              Cancelar
-            </Button>
-            <Button
-              className="bg-sky-600 hover:bg-sky-700"
-              onClick={handleSubmitQuote}
-              disabled={updateMutation.isPending || !quoteData.quote_value}
-            >
-              {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Enviar Cotação
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
