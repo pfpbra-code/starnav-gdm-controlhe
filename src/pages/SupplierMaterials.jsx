@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
-import { buildHistoryEntry, STATUS_LABELS, STEP_NAMES } from '@/lib/gdmWorkflow';
+import { buildHistoryEntry, STATUS_LABELS, STEP_NAMES, addProposal, validateProposalFile, fileNameFromUrl } from '@/lib/gdmWorkflow';
 
 const quickFilters = [
   { key: 'all', label: 'Todas' },
@@ -125,6 +125,13 @@ export default function SupplierMaterials() {
     const file = e.target.files[0];
     if (!file) return;
 
+    const validation = validateProposalFile(file);
+    if (!validation.ok) {
+      toast.error(validation.error);
+      e.target.value = '';
+      return;
+    }
+
     setUploading(true);
     try {
       const result = await base44.integrations.Core.UploadFile({ file });
@@ -158,6 +165,15 @@ export default function SupplierMaterials() {
       }),
     ];
 
+    const proposals = addProposal(selectedGDM, {
+      supplier_name: selectedGDM.supplier_name,
+      quote_value: parseFloat(quoteData.quote_value),
+      registered_by: user?.email,
+      file_url: quoteData.commercial_proposal_url || quoteData.quote_document_url,
+      technical_report_url: quoteData.technical_report_url,
+      notes: 'Proposta enviada pelo fornecedor',
+    });
+
     updateMutation.mutate({
       id: selectedGDM.id,
       data: {
@@ -168,6 +184,7 @@ export default function SupplierMaterials() {
         commercial_proposal_url: quoteData.commercial_proposal_url,
         commercial_proposal_uploaded_at: new Date().toISOString(),
         commercial_proposal_uploaded_by: user?.email,
+        proposals,
         history,
       },
     });
@@ -366,6 +383,9 @@ export default function SupplierMaterials() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <p className="text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg p-2">
+              Anexos aceitos apenas em PDF, XLSX ou XLS.
+            </p>
             <div className="p-3 bg-slate-50 rounded-lg">
               <p className="text-sm text-slate-500">Equipamento</p>
               <p className="font-medium">{selectedGDM?.equipment_name}</p>
@@ -474,6 +494,11 @@ export default function SupplierMaterials() {
                   </label>
                 </div>
               </div>
+              {quoteData.commercial_proposal_url && (
+                <p className="text-xs text-slate-500 mt-1 truncate">
+                  Arquivo: {fileNameFromUrl(quoteData.commercial_proposal_url)}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>

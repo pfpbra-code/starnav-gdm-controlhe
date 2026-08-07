@@ -163,6 +163,42 @@
       },
       "description": "Cota\u00e7\u00f5es/propostas anteriores preservadas para auditoria"
     },
+    "proposals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "supplier_name": {
+            "type": "string",
+            "description": "Empresa fornecedora"
+          },
+          "quote_value": {
+            "type": "number",
+            "description": "Valor ofertado"
+          },
+          "proposal_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data da proposta"
+          },
+          "registered_by": {
+            "type": "string",
+            "description": "Usu\u00e1rio respons\u00e1vel pelo cadastro"
+          },
+          "file_url": {
+            "type": "string",
+            "description": "Arquivo anexo da proposta"
+          },
+          "technical_report_url": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Hist\u00f3rico completo de todas as propostas comerciais recebidas (n\u00e3o exclu\u00eddas automaticamente)"
+    },
     "maintenance_decision": {
       "type": "string",
       "enum": [

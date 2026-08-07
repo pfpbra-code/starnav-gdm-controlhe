@@ -25,6 +25,8 @@ import {
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import GDMTimeline from '@/components/gdm/GDMTimeline';
 import GDMPdfButton from '@/components/gdm/GDMPdfButton';
+import QuoteSummary from '@/components/gdm/QuoteSummary';
+import ProposalsHistory from '@/components/gdm/ProposalsHistory';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -63,6 +65,7 @@ import {
   STEP_NAMES,
   ROLE_LABELS,
   QUOTE_ATTACH_STATUSES,
+  addProposal,
 } from '@/lib/gdmWorkflow';
 
 export default function GDMDetail() {
@@ -235,12 +238,22 @@ export default function GDMDetail() {
       ? snapshotCurrentQuote(gdm, 'Nova cotação/proposta anexada')
       : (gdm.quotes_history || []);
 
+    const proposals = addProposal(gdm, {
+      supplier_name: gdm.supplier_name,
+      quote_value: parseFloat(quoteValue),
+      registered_by: user?.email,
+      file_url: quoteUrl,
+      technical_report_url: reportUrl,
+      notes: 'Cotação/proposta anexada',
+    });
+
     updateMutation.mutate({
       status: newStatus,
       quote_value: parseFloat(quoteValue),
       quote_document_url: quoteUrl,
       technical_report_url: reportUrl,
       quotes_history: quotesHistory,
+      proposals,
       history: buildHistory({
         action: 'quote_attached',
         details: `Cotação anexada (R$ ${quoteValue}). Processo encaminhado à Manutenção.`,
@@ -542,6 +555,9 @@ export default function GDMDetail() {
               <TabsTrigger value="details">Detalhes</TabsTrigger>
               <TabsTrigger value="photos">Fotos</TabsTrigger>
               {gdm.quote_value && <TabsTrigger value="quote">Cotação</TabsTrigger>}
+              {(gdm.proposals?.length > 0 || gdm.quote_value) && (
+                <TabsTrigger value="proposals">Propostas</TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="details">
@@ -835,6 +851,13 @@ export default function GDMDetail() {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+            )}
+
+            {(gdm.proposals?.length > 0 || gdm.quote_value) && (
+              <TabsContent value="proposals" className="space-y-6">
+                <QuoteSummary gdm={gdm} />
+                <ProposalsHistory gdm={gdm} />
               </TabsContent>
             )}
           </Tabs>

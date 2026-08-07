@@ -86,3 +86,49 @@ export function snapshotCurrentQuote(gdm, reason) {
   };
   return [...(gdm.quotes_history || []), snapshot];
 }
+
+// --- Propostas comerciais (múltiplas por GDM, nunca excluídas) ---
+
+// Formatos aceitos para anexos de propostas comerciais
+export const ACCEPTED_PROPOSAL_EXTENSIONS = ['pdf', 'xlsx', 'xls'];
+export const ACCEPTED_PROPOSAL_MIME = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+];
+
+export function validateProposalFile(file) {
+  if (!file) return { ok: false, error: 'Nenhum arquivo selecionado.' };
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const okExt = ACCEPTED_PROPOSAL_EXTENSIONS.includes(ext);
+  const okMime = !file.type || ACCEPTED_PROPOSAL_MIME.includes(file.type);
+  if (!okExt || !okMime) {
+    return { ok: false, error: 'Formato inválido. Apenas arquivos PDF, XLSX ou XLS são aceitos.' };
+  }
+  return { ok: true };
+}
+
+export function fileNameFromUrl(url) {
+  if (!url) return '';
+  try {
+    const decoded = decodeURIComponent(url);
+    const parts = decoded.split('?')[0].split('/');
+    return parts[parts.length - 1] || url;
+  } catch {
+    return (url.split('/').pop()) || url;
+  }
+}
+
+// Adiciona uma nova proposta ao histórico (append-only, nada é removido)
+export function addProposal(gdm, proposal) {
+  const entry = {
+    supplier_name: proposal.supplier_name || gdm?.supplier_name || '',
+    quote_value: proposal.quote_value,
+    proposal_date: proposal.proposal_date || new Date().toISOString(),
+    registered_by: proposal.registered_by,
+    file_url: proposal.file_url || '',
+    technical_report_url: proposal.technical_report_url || '',
+    notes: proposal.notes || '',
+  };
+  return [...(gdm?.proposals || []), entry];
+}
