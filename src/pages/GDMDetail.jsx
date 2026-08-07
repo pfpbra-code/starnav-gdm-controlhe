@@ -151,6 +151,20 @@ export default function GDMDetail() {
     buildHistoryEntry({ ...params, user }),
   ];
 
+  const openDocument = async (url) => {
+    if (!url) return;
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const win = window.open(blobUrl, '_blank');
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+      if (!win) window.open(url, '_blank');
+    } catch {
+      window.open(url, '_blank');
+    }
+  };
+
   const handleFileUpload = async (e, setter) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -750,7 +764,8 @@ export default function GDMDetail() {
                           href={gdm.quote_document_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sky-600 hover:underline"
+                          onClick={(e) => { e.preventDefault(); openDocument(gdm.quote_document_url); }}
+                          className="text-sky-600 hover:underline cursor-pointer"
                         >
                           Ver documento
                         </a>
@@ -764,7 +779,8 @@ export default function GDMDetail() {
                           href={gdm.technical_report_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sky-600 hover:underline"
+                          onClick={(e) => { e.preventDefault(); openDocument(gdm.technical_report_url); }}
+                          className="text-sky-600 hover:underline cursor-pointer"
                         >
                           Ver laudo
                         </a>
@@ -778,7 +794,8 @@ export default function GDMDetail() {
                           href={gdm.commercial_proposal_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sky-600 hover:underline"
+                          onClick={(e) => { e.preventDefault(); openDocument(gdm.commercial_proposal_url); }}
+                          className="text-sky-600 hover:underline cursor-pointer"
                         >
                           Ver proposta
                         </a>
