@@ -29,7 +29,11 @@ import {
   Camera
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { buildHistoryEntry } from '@/lib/gdmWorkflow';
+import { buildHistoryEntry, nextGdmNumberForVessel } from '@/lib/gdmWorkflow';
+import EquipmentAutocomplete from '@/components/gdm/EquipmentAutocomplete';
+import { ITEM_DESTINATION_OPTIONS, ITEM_DESTINATION_LABELS } from '@/lib/gdmItems';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Plus, Trash2 } from 'lucide-react';
 
 export default function CreateGDM() {
   const navigate = useNavigate();
@@ -37,13 +41,52 @@ export default function CreateGDM() {
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     vessel_id: '',
-    equipment_id: '',
-    serial_number: '',
     disembark_date: format(new Date(), 'yyyy-MM-dd'),
-    treatment: '',
     description: '',
     photos: []
   });
+
+  // Itens da GDM: cada equipamento tem quantidade, série, OS e destino próprios.
+  const [items, setItems] = useState([]);
+  const [itemDraft, setItemDraft] = useState({
+    equipment_id: '',
+    equipment_name: '',
+    equipment_code: '',
+    quantity: 1,
+    serial_number: '',
+    os_number: '',
+    destination: 'repair',
+  });
+  const [applyDestinationToAll, setApplyDestinationToAll] = useState(false);
+
+  const addItem = () => {
+    if (!itemDraft.equipment_id || !itemDraft.equipment_name) {
+      toast.error('Selecione o equipamento do item');
+      return;
+    }
+    const qty = Number(itemDraft.quantity) || 1;
+    if (qty <= 0) {
+      toast.error('Informe uma quantidade válida');
+      return;
+    }
+    setItems((prev) => {
+      const next = [...prev, { ...itemDraft, quantity: qty, key: Date.now() + Math.random() }];
+      return applyDestinationToAll
+        ? next.map((it) => ({ ...it, destination: itemDraft.destination }))
+        : next;
+    });
+    setItemDraft((prev) => ({
+      equipment_id: '',
+      equipment_name: '',
+      equipment_code: '',
+      quantity: 1,
+      serial_number: '',
+      os_number: '',
+      destination: prev.destination,
+    }));
+  };
+
+  const removeItem = (key) => setItems((prev) => prev.filter((i) => i.key !== key));
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -55,18 +98,15 @@ export default function CreateGDM() {
     queryFn: () => base44.entities.Vessel.filter({ status: 'active' }),
   });
 
-  const { data: equipment = [] } = useQuery({
-    queryKey: ['equipment'],
-    queryFn: () => base44.entities.Equipment.filter({ status: 'active' }),
-  });
-
   // Filter vessels based on user role
   const availableVessels = React.useMemo(() => {
-    if (user?.role === 'vessel_user' && user?.vessel_id) {
-      return vessels.filter(v => v.id === user.vessel_id);
+    const vesselId = user?.vessel_id ?? user?.data?.vessel_id;
+    const assigned = user?.assigned_vessels ?? user?.data?.assigned_vessels;
+    if (user?.role === 'vessel_user' && vesselId) {
+      return vessels.filter(v => v.id === vesselId);
     }
-    if (user?.role === 'coordinator' && user?.assigned_vessels) {
-      return vessels.filter(v => user.assigned_vessels.includes(v.id));
+    if (user?.role === 'coordinator' && assigned) {
+      return vessels.filter(v => assigned.includes(v.id));
     }
     return vessels;
   }, [vessels, user]);
@@ -74,21 +114,30 @@ export default function CreateGDM() {
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const vessel = vessels.find(v => v.id === data.vessel_id);
-      const equip = equipment.find(e => e.id === data.equipment_id);
-      
-      // Generate GDM number
-      const gdmNumber = `GDM-${format(new Date(), 'yyyyMMdd')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      
+      const first = items[0];
+
+      // Numeração sequencial por embarcação, reiniciando a cada ano (GDM-NNN/YYYY).
+      const year = new Date().getFullYear();
+      const existingForVessel = await base44.entities.GDM.filter({ vessel_id: data.vessel_id });
+      const gdmNumber = nextGdmNumberForVessel(existingForVessel, year);
+
       const gdmData = {
         ...data,
         gdm_number: gdmNumber,
         vessel_name: vessel?.name || '',
-        equipment_name: equip?.name || '',
+        vessel_code: vessel?.code || '',
+        // Compatibilidade com telas e relatórios que ainda leem o equipamento principal.
+        equipment_id: first?.equipment_id || '',
+        equipment_name: items.length > 1
+          ? `${first?.equipment_name} (+${items.length - 1} item(ns))`
+          : (first?.equipment_name || ''),
+        serial_number: first?.serial_number || '',
+        treatment: first?.destination === 'certification' ? 'repair' : (first?.destination || 'repair'),
         status: 'pending_coordinator',
         history: [buildHistoryEntry({
           action: 'created',
           user,
-          details: `GDM criada pela embarcação ${vessel?.name}`,
+          details: `GDM criada pela embarcação ${vessel?.name} com ${items.length} item(ns)`,
           previousStatus: null,
           newStatus: 'pending_coordinator',
           stepName: 'Emissão da GDM (Embarcação)',
@@ -96,7 +145,26 @@ export default function CreateGDM() {
         })]
       };
 
-      return await base44.entities.GDM.create(gdmData);
+      const created = await base44.entities.GDM.create(gdmData);
+
+      await base44.entities.GDMItem.bulkCreate(
+        items.map((it, index) => ({
+          gdm_id: created.id,
+          vessel_id: created.vessel_id,
+          vessel_name: created.vessel_name,
+          item_number: index + 1,
+          equipment_id: it.equipment_id,
+          equipment_code: it.equipment_code || null,
+          equipment_name: it.equipment_name,
+          serial_number: it.serial_number || null,
+          quantity: Number(it.quantity) || 1,
+          os_number: it.os_number || null,
+          destination: it.destination,
+          status: 'pending_coordinator',
+        }))
+      );
+
+      return created;
     },
     onSuccess: async (createdGdm) => {
       queryClient.invalidateQueries({ queryKey: ['gdms'] });
@@ -162,9 +230,13 @@ export default function CreateGDM() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (!formData.vessel_id || !formData.equipment_id || !formData.treatment) {
-      toast.error('Preencha todos os campos obrigatórios');
+
+    if (!formData.vessel_id) {
+      toast.error('Selecione a embarcação');
+      return;
+    }
+    if (items.length === 0) {
+      toast.error('Adicione pelo menos um item à GDM');
       return;
     }
 
@@ -210,82 +282,150 @@ export default function CreateGDM() {
               </Select>
             </div>
 
-            {/* Equipment Selection */}
-            <div className="space-y-2">
+            {/* Data de desembarque */}
+            <div className="space-y-2 md:max-w-xs">
               <Label className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-slate-500" />
-                Equipamento *
+                <Calendar className="h-4 w-4 text-slate-500" />
+                Data de Desembarque *
               </Label>
-              <Select
-                value={formData.equipment_id}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, equipment_id: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o equipamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {equipment.map((equip) => (
-                    <SelectItem key={equip.id} value={equip.id}>
-                      {equip.name} ({equip.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                type="date"
+                value={formData.disembark_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, disembark_date: e.target.value }))}
+              />
             </div>
 
-            {/* Serial Number & Date */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Hash className="h-4 w-4 text-slate-500" />
-                  Número de Série
-                </Label>
-                <Input
-                  value={formData.serial_number}
-                  onChange={(e) => setFormData(prev => ({ ...prev, serial_number: e.target.value }))}
-                  placeholder="Ex: SN-12345"
-                />
+            {/* Itens da GDM */}
+            <div className="space-y-4 rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base">Itens desembarcados *</Label>
+                <span className="text-sm text-slate-500">{items.length} item(ns)</span>
               </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-slate-500" />
-                  Data de Desembarque *
-                </Label>
-                <Input
-                  type="date"
-                  value={formData.disembark_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, disembark_date: e.target.value }))}
-                />
-              </div>
-            </div>
 
-            {/* Treatment */}
-            <div className="space-y-2">
-              <Label>Tratativa *</Label>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { value: 'repair', label: 'Reparo', color: 'blue' },
-                  { value: 'discard', label: 'Descarte', color: 'red' },
-                  { value: 'stock_return', label: 'Retorno ao Estoque', color: 'green' }
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, treatment: option.value }))}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      formData.treatment === option.value
-                        ? option.color === 'blue'
-                          ? 'border-blue-500 bg-blue-50'
-                          : option.color === 'red'
-                          ? 'border-red-500 bg-red-50'
-                          : 'border-green-500 bg-green-50'
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
+              <EquipmentAutocomplete
+                value={itemDraft.equipment_id}
+                onChange={(id, equip) =>
+                  setItemDraft(prev => ({
+                    ...prev,
+                    equipment_id: id,
+                    equipment_name: equip?.name || '',
+                    equipment_code: equip?.code || '',
+                  }))
+                }
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>Quantidade</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={itemDraft.quantity}
+                    onChange={(e) => setItemDraft(prev => ({ ...prev, quantity: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Hash className="h-4 w-4 text-slate-500" />
+                    Número de Série
+                  </Label>
+                  <Input
+                    value={itemDraft.serial_number}
+                    onChange={(e) => setItemDraft(prev => ({ ...prev, serial_number: e.target.value }))}
+                    placeholder="Ex: SN-12345"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>OS</Label>
+                  <Input
+                    value={itemDraft.os_number}
+                    onChange={(e) => setItemDraft(prev => ({ ...prev, os_number: e.target.value }))}
+                    placeholder="Ex: OS-2026-001"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Destino *</Label>
+                  <Select
+                    value={itemDraft.destination}
+                    onValueChange={(value) => setItemDraft(prev => ({ ...prev, destination: value }))}
                   >
-                    <span className="font-medium">{option.label}</span>
-                  </button>
-                ))}
+                    <SelectTrigger>
+                      <SelectValue placeholder="Destino" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ITEM_DESTINATION_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label className="flex items-center gap-2 text-sm text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={applyDestinationToAll}
+                    onChange={(e) => {
+                      setApplyDestinationToAll(e.target.checked);
+                      if (e.target.checked) {
+                        setItems(prev => prev.map(it => ({ ...it, destination: itemDraft.destination })));
+                      }
+                    }}
+                  />
+                  Aplicar o mesmo destino a todos os itens
+                </label>
+                <Button type="button" variant="outline" onClick={addItem}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar item
+                </Button>
+              </div>
+
+              {items.length > 0 && (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>#</TableHead>
+                        <TableHead>Equipamento</TableHead>
+                        <TableHead>Qtd.</TableHead>
+                        <TableHead>Série</TableHead>
+                        <TableHead>OS</TableHead>
+                        <TableHead>Destino</TableHead>
+                        <TableHead />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((it, index) => (
+                        <TableRow key={it.key}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>
+                            <span className="font-medium">{it.equipment_name}</span>
+                            {it.equipment_code && (
+                              <span className="text-slate-400"> ({it.equipment_code})</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{it.quantity}</TableCell>
+                          <TableCell>{it.serial_number || '—'}</TableCell>
+                          <TableCell>{it.os_number || '—'}</TableCell>
+                          <TableCell>{ITEM_DESTINATION_LABELS[it.destination]}</TableCell>
+                          <TableCell>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(it.key)}
+                              className="text-red-500 hover:text-red-700"
+                              aria-label="Remover item"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </div>
 
             {/* Description */}
