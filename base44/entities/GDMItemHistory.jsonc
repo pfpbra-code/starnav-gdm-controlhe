@@ -1,0 +1,146 @@
+{
+  "name": "GDMItemHistory",
+  "type": "object",
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "ID do item da GDM"
+    },
+    "gdm_id": {
+      "type": "string",
+      "description": "ID da GDM"
+    },
+    "vessel_id": {
+      "type": "string",
+      "description": "ID da embarca\u00e7\u00e3o (denormalizado para escopo de acesso)"
+    },
+    "supplier_id": {
+      "type": "string",
+      "description": "ID do fornecedor (denormalizado para escopo de acesso)"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que executou a a\u00e7\u00e3o"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio que executou a a\u00e7\u00e3o"
+    },
+    "action": {
+      "type": "string",
+      "description": "A\u00e7\u00e3o realizada (approve, reject, confirm_receipt, ...)"
+    },
+    "previous_status": {
+      "type": "string",
+      "description": "Situa\u00e7\u00e3o anterior do item"
+    },
+    "new_status": {
+      "type": "string",
+      "description": "Nova situa\u00e7\u00e3o do item"
+    },
+    "observation": {
+      "type": "string",
+      "description": "Observa\u00e7\u00e3o registrada na a\u00e7\u00e3o"
+    },
+    "data": {
+      "type": "object",
+      "description": "Dados adicionais da a\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "item_id",
+    "action"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "coordinator"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "services"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maintenance"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "almoxarifado"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.vessel_id": "{{user.data.vessel_id}}"
+        },
+        {
+          "data.supplier_id": "{{user.data.supplier_id}}"
+        },
+        {
+          "data.vessel_id": {
+            "$in": "{{user.data.assigned_vessels}}"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "coordinator"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "services"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maintenance"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "almoxarifado"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "planejamento"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
