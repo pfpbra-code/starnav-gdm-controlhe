@@ -27,6 +27,8 @@ import GDMTimeline from '@/components/gdm/GDMTimeline';
 import GDMPdfButton from '@/components/gdm/GDMPdfButton';
 import QuoteSummary from '@/components/gdm/QuoteSummary';
 import ProposalsHistory from '@/components/gdm/ProposalsHistory';
+import GDMItemsPanel from '@/components/gdm/GDMItemsPanel';
+import GDMItemsSummary from '@/components/gdm/GDMItemsSummary';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -580,6 +582,9 @@ export default function GDMDetail() {
       {/* Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          <GDMItemsSummary gdmId={gdmId} />
+          <GDMItemsPanel gdmId={gdmId} user={user} gdm={gdm} />
+
           <Tabs defaultValue="details" className="space-y-6">
             <TabsList>
               <TabsTrigger value="details">Detalhes</TabsTrigger>

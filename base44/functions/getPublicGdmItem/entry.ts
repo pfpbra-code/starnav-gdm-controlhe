@@ -29,17 +29,32 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ error: 'Identificador inválido' }, { status: 400 });
     }
 
-    const items = await base44.asServiceRole.entities.GDMItem.filter({ id: resolvedId });
-    const item = items && items[0];
+    let item = null;
+    try {
+      const items = await base44.asServiceRole.entities.GDMItem.filter({ id: resolvedId });
+      item = items && items[0];
+    } catch {
+      item = null;
+    }
     if (!item) return Response.json({ error: 'Equipamento não encontrado' }, { status: 404 });
 
-    const gdms = await base44.asServiceRole.entities.GDM.filter({ id: item.gdm_id });
-    const gdm = (gdms && gdms[0]) || {};
+    let gdm = {};
+    try {
+      const gdms = await base44.asServiceRole.entities.GDM.filter({ id: item.gdm_id });
+      gdm = (gdms && gdms[0]) || {};
+    } catch {
+      gdm = {};
+    }
 
-    const history = await base44.asServiceRole.entities.GDMItemHistory.filter(
-      { item_id: item.id },
-      'created_date',
-    );
+    let history = [];
+    try {
+      history = await base44.asServiceRole.entities.GDMItemHistory.filter(
+        { item_id: item.id },
+        'created_date',
+      );
+    } catch {
+      history = [];
+    }
 
     return Response.json({
       item: {

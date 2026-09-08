@@ -4,6 +4,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import ImportData from './pages/ImportData';
+import ItemPublic from './pages/ItemPublic';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -77,7 +78,14 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <NavigationTracker />
-          <AuthenticatedApp />
+          {window.location.pathname.startsWith('/ItemPublic') ? (
+            <Routes>
+              <Route path="/ItemPublic/:id" element={<ItemPublic />} />
+              <Route path="*" element={<PageNotFound />} />
+            </Routes>
+          ) : (
+            <AuthenticatedApp />
+          )}
         </Router>
         <Toaster />
       </QueryClientProvider>

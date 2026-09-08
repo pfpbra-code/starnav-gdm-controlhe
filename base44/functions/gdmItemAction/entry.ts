@@ -22,8 +22,13 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ error: 'item_id e action são obrigatórios' }, { status: 400 });
     }
 
-    const items = await base44.entities.GDMItem.filter({ id: itemId });
-    const item = items && items[0];
+    let item = null;
+    try {
+      const items = await base44.entities.GDMItem.filter({ id: itemId });
+      item = items && items[0];
+    } catch {
+      item = null;
+    }
     if (!item) return Response.json({ error: 'Item não encontrado' }, { status: 404 });
 
     const can = (p: string) => hasPermission(user, p);
