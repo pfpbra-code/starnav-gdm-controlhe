@@ -9,6 +9,8 @@
         "coordinator",
         "services",
         "maintenance",
+        "almoxarifado",
+        "planejamento",
         "supplier_user",
         "vessel_user",
         "user"
@@ -91,16 +93,5 @@
       "format": "date-time"
     }
   },
-  "required": [
-    "department",
-    "assigned_vessels",
-    "supplier_id",
-    "vessel_id",
-    "permissions",
-    "login_history",
-    "last_login",
-    "password_changed_at",
-    "password_expires_at",
-    "account_locked_until"
-  ]
+  "required": []
 }

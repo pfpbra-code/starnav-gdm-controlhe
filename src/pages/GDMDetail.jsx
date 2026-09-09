@@ -37,8 +37,6 @@ import {
   Calendar,
   Hash,
   FileText,
-  CheckCircle,
-  XCircle,
   Send,
   Building2,
   DollarSign,
@@ -78,8 +76,6 @@ export default function GDMDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const gdmId = urlParams.get('id');
 
-  const [showApproveDialog, setShowApproveDialog] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showSendSupplierDialog, setShowSendSupplierDialog] = useState(false);
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
   const [showMaintenanceDialog, setShowMaintenanceDialog] = useState(false);
@@ -88,9 +84,6 @@ export default function GDMDetail() {
   const [showOtDialog, setShowOtDialog] = useState(false);
   const [showFinalizeDialog, setShowFinalizeDialog] = useState(false);
 
-  const [coordinatorNotes, setCoordinatorNotes] = useState('');
-  const [destination, setDestination] = useState('');
-  const [repairReturn, setRepairReturn] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [quoteValue, setQuoteValue] = useState('');
@@ -178,57 +171,6 @@ export default function GDMDetail() {
     } finally {
       setUploading(false);
     }
-  };
-
-  // Coordinator Actions
-  const handleCoordinatorApprove = () => {
-    const fullDestination = destination === 'reparo' && repairReturn
-      ? `${destination} - ${repairReturn}`
-      : destination;
-    const previousStatus = gdm.status;
-    const newStatus = 'pending_services';
-    updateMutation.mutate({
-      status: newStatus,
-      coordinator_notes: coordinatorNotes,
-      destination: fullDestination,
-      coordinator_approved_by: user?.email,
-      coordinator_approved_at: new Date().toISOString(),
-      history: buildHistory({
-        action: 'coordinator_approved',
-        details: `GDM aprovada pelo coordenador. Destino: ${fullDestination}.`,
-        previousStatus,
-        newStatus,
-        stepName: STEP_NAMES.pending_coordinator,
-        observation: coordinatorNotes,
-      }),
-    });
-    setShowApproveDialog(false);
-    setDestination('');
-    setRepairReturn('');
-    setCoordinatorNotes('');
-    setConfirmPassword('');
-  };
-
-  const handleCoordinatorReject = () => {
-    const previousStatus = gdm.status;
-    const newStatus = 'rejected';
-    updateMutation.mutate({
-      status: newStatus,
-      coordinator_notes: coordinatorNotes,
-      coordinator_approved_by: user?.email,
-      coordinator_approved_at: new Date().toISOString(),
-      history: buildHistory({
-        action: 'coordinator_rejected',
-        details: `GDM reprovada pelo coordenador. Motivo: ${coordinatorNotes}`,
-        previousStatus,
-        newStatus,
-        stepName: STEP_NAMES.rejected,
-        observation: coordinatorNotes,
-      }),
-    });
-    setShowRejectDialog(false);
-    setCoordinatorNotes('');
-    setConfirmPassword('');
   };
 
   // Services Actions
@@ -459,7 +401,6 @@ export default function GDMDetail() {
     setConfirmPassword('');
   };
 
-  const canCoordinatorAct = user?.role === 'coordinator' || user?.role === 'admin';
   const canServicesAct = user?.role === 'services' || user?.role === 'admin';
   const canSupplierAct = user?.role === 'supplier_user';
   const canMaintenanceAct = user?.role === 'maintenance' || user?.role === 'admin';
@@ -515,18 +456,6 @@ export default function GDMDetail() {
         {/* Action Buttons based on status and role */}
         <div className="flex gap-3 items-center">
           <GDMPdfButton gdm={gdm} variant="outline" label="Gerar PDF" />
-          {gdm.status === 'pending_coordinator' && canCoordinatorAct && (
-            <>
-              <Button variant="outline" onClick={() => setShowRejectDialog(true)}>
-                <XCircle className="h-4 w-4 mr-2" />
-                Reprovar
-              </Button>
-              <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowApproveDialog(true)}>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Aprovar
-              </Button>
-            </>
-          )}
 
           {gdm.status === 'pending_services' && canServicesAct && (
             <Button className="bg-sky-600 hover:bg-sky-700" onClick={() => setShowSendSupplierDialog(true)}>
@@ -916,113 +845,6 @@ export default function GDMDetail() {
           </Card>
         </div>
       </div>
-
-      {/* Coordinator Approve Dialog */}
-      <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Aprovar GDM</DialogTitle>
-            <DialogDescription>
-              Confirme a aprovação da GDM e defina o destino do material.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Destino do Material *</Label>
-              <Select value={destination} onValueChange={(value) => {
-                setDestination(value);
-                setRepairReturn('');
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o destino do material" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="reparo">Reparo</SelectItem>
-                  <SelectItem value="calibracao">Calibração</SelectItem>
-                  <SelectItem value="descarte">Descarte</SelectItem>
-                  <SelectItem value="retorno_estoque">Retorno para Estoque</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {destination === 'reparo' && (
-              <div className="space-y-2">
-                <Label>Retorno após reparo *</Label>
-                <Select value={repairReturn} onValueChange={setRepairReturn}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o destino após reparo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="retorno_bordo">Retorno para Bordo</SelectItem>
-                    <SelectItem value="retorno_estoque">Retorno para Estoque</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label>Observação *</Label>
-              <Textarea
-                value={coordinatorNotes}
-                onChange={(e) => setCoordinatorNotes(e.target.value)}
-                placeholder="Justifique a aprovação (obrigatório para rastreabilidade)..."
-              />
-            </div>
-            <p className="text-xs text-slate-500">
-              Responsável: {user?.full_name || user?.email} • Etapa: {STATUS_LABELS[gdm.status]} → Aguardando Serviços/Compras
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowApproveDialog(false)}>
-              Cancelar
-            </Button>
-            <Button
-              className="bg-green-600 hover:bg-green-700"
-              onClick={handleCoordinatorApprove}
-              disabled={updateMutation.isPending || !destination || (destination === 'reparo' && !repairReturn) || !coordinatorNotes}
-            >
-              {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Confirmar Aprovação
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Coordinator Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reprovar GDM</DialogTitle>
-            <DialogDescription>
-              Informe o motivo da reprovação da GDM.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Motivo da Reprovação *</Label>
-              <Textarea
-                value={coordinatorNotes}
-                onChange={(e) => setCoordinatorNotes(e.target.value)}
-                placeholder="Descreva o motivo da reprovação..."
-                rows={4}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCoordinatorReject}
-              disabled={updateMutation.isPending || !coordinatorNotes}
-            >
-              {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Reprovar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Send to Supplier Dialog */}
       <Dialog open={showSendSupplierDialog} onOpenChange={setShowSendSupplierDialog}>

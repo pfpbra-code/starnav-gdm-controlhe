@@ -148,6 +148,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
   const [observation, setObservation] = useState('');
   const [returnNumber, setReturnNumber] = useState('');
   const [destination, setDestination] = useState('');
+  const [supplierId, setSupplierId] = useState('');
   const [filter, setFilter] = useState('all');
   const [destFilter, setDestFilter] = useState('all');
 
@@ -157,10 +158,17 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
     enabled: !!gdmId,
   });
 
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: () => base44.entities.Supplier.filter({ status: 'active' }),
+  });
+
   const can = (key) => hasPermission(user, key);
   const summary = summarizeItems(items);
   const reasonRequired = pending?.action === 'reject';
   const isApproval = pending?.action === 'approve';
+  const needsSupplier =
+    pending?.action === 'advance_treatment' && pending?.item?.status === 'pending_services';
   const destinationChanged = isApproval && destination && destination !== pending?.item?.destination;
 
   const visibleItems = useMemo(() => {
@@ -183,6 +191,14 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
           observation: observation.trim() || undefined,
           return_number: askReturnNumber ? returnNumber.trim() || undefined : undefined,
           destination: action === 'approve' ? destination || item.destination : undefined,
+          supplier_id:
+            action === 'advance_treatment' && item.status === 'pending_services'
+              ? supplierId
+              : undefined,
+          supplier_name:
+            action === 'advance_treatment' && item.status === 'pending_services'
+              ? suppliers.find((s) => s.id === supplierId)?.company_name
+              : undefined,
         })
         .then((res) => res.data),
     onSuccess: (_data, variables) => {
@@ -195,6 +211,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
       setObservation('');
       setReturnNumber('');
       setDestination('');
+      setSupplierId('');
     },
     onError: (error) => toast.error(error?.message || 'Não foi possível concluir a ação'),
   });
@@ -203,6 +220,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
     setPending({ item, ...a });
     setObservation('');
     setReturnNumber('');
+    setSupplierId('');
     setDestination(item.destination || '');
   };
 
@@ -457,6 +475,26 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                 </div>
               </div>
             )}
+            {needsSupplier && (
+              <div className="space-y-2">
+                <Label>Fornecedor *</Label>
+                <Select value={supplierId} onValueChange={setSupplierId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o fornecedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.company_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">
+                  O item será vinculado a este fornecedor, que passará a enxergá-lo em seu painel.
+                </p>
+              </div>
+            )}
             {pending?.askReturnNumber && (
               <div className="space-y-2">
                 <Label>Número da devolução (opcional)</Label>
@@ -493,7 +531,8 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
               disabled={
                 actionMutation.isPending ||
                 ((reasonRequired || destinationChanged) && !observation.trim()) ||
-                (isApproval && !destination)
+                (isApproval && !destination) ||
+                (needsSupplier && !supplierId)
               }
               onClick={() => actionMutation.mutate(pending)}
             >

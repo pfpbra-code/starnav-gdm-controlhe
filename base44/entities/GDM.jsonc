@@ -14,6 +14,10 @@
       "type": "string",
       "description": "Nome da embarca\u00e7\u00e3o"
     },
+    "vessel_code": {
+      "type": "string",
+      "description": "C\u00f3digo da embarca\u00e7\u00e3o (denormalizado para r\u00f3tulos e relat\u00f3rios)"
+    },
     "equipment_id": {
       "type": "string",
       "description": "ID do equipamento"
@@ -256,6 +260,20 @@
     "ot_issued_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "expected_return_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data prevista de retorno do material"
+    },
+    "return_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de retorno do material"
+    },
+    "return_nf_url": {
+      "type": "string",
+      "description": "URL da nota fiscal de retorno"
     },
     "completed_by": {
       "type": "string"

@@ -56,6 +56,7 @@ export function effectivePermissions(user: any): string[] {
 export function hasPermission(user: any, permission: string): boolean {
   if (!permission) return true;
   if (!user) return false;
+  if (user.status && user.status !== 'active') return false;
   const perms = effectivePermissions(user);
   return perms.includes('*') || perms.includes(permission);
 }

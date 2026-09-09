@@ -5,6 +5,8 @@ import { hasPermission } from '../../shared/itemPermissions.ts';
 // verificação de permissão, bloqueio de saltos de etapa e registro automático no histórico.
 // As operações de entidade rodam como o usuário logado (RLS aplicado).
 
+const VALID_DESTINATIONS = ['repair', 'certification', 'stock_return', 'discard'];
+
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
@@ -42,6 +44,9 @@ export default async function (req: Request): Promise<Response> {
       if (prev !== 'pending_coordinator') throw new Error('Item não está aguardando aprovação');
       next = 'pending_almoxarifado';
       if (destination && destination !== item.destination) {
+        if (!VALID_DESTINATIONS.includes(destination)) {
+          throw new Error('Destino inválido para o item');
+        }
         if (!can('change_gdm_destination') && user.role !== 'admin') {
           throw new Error('Sem permissão para alterar o destino do item');
         }
@@ -107,8 +112,8 @@ export default async function (req: Request): Promise<Response> {
       if (['discard', 'stock_return'].includes(item.destination)) {
         throw new Error('Este item segue o fluxo próprio de descarte/estoque');
       }
-      if (['pending_coordinator', 'rejected', 'cancelled', 'completed'].includes(prev)) {
-        throw new Error('Item não pode ser finalizado nesta etapa');
+      if (!['in_treatment', 'awaiting_return'].includes(prev)) {
+        throw new Error('Item só pode ser finalizado em tratativa ou aguardando retorno');
       }
       next = 'completed';
       extra.completed_at = now;
@@ -121,6 +126,12 @@ export default async function (req: Request): Promise<Response> {
       if (!can('edit_gdm')) throw new Error('Sem permissão');
       if (!['pending_services', 'sent_to_supplier', 'in_treatment'].includes(prev)) {
         throw new Error('Etapa inválida');
+      }
+      if (prev === 'pending_services') {
+        const supplierId = body.supplier_id || null;
+        if (!supplierId) throw new Error('Selecione o fornecedor antes de enviar o item');
+        extra.supplier_id = supplierId;
+        extra.supplier_name = body.supplier_name || null;
       }
       next =
         prev === 'pending_services'
@@ -149,6 +160,48 @@ export default async function (req: Request): Promise<Response> {
       new_status: next,
       observation: observation || null,
     });
+
+    // Sincroniza o status da GDM com a situação consolidada dos itens
+    try {
+      const siblings = await base44.entities.GDMItem.filter({ gdm_id: item.gdm_id });
+      const statuses = (siblings || []).map((i: any) => i.status);
+      const gdms = await base44.asServiceRole.entities.GDM.filter({ id: item.gdm_id });
+      const gdm = gdms && gdms[0];
+      if (gdm && statuses.length > 0) {
+        const waiting = statuses.includes('pending_coordinator');
+        const closed = ['completed', 'cancelled', 'rejected'];
+        const allClosed = statuses.every((s: string) => closed.includes(s));
+        let target: string | null = null;
+        if (allClosed) {
+          if (statuses.includes('completed')) target = 'completed';
+          else if (statuses.every((s: string) => s === 'rejected')) target = 'rejected';
+        } else if (!waiting && gdm.status === 'pending_coordinator') {
+          target = 'pending_services';
+        }
+        if (target && target !== gdm.status && gdm.status !== 'rejected') {
+          await base44.asServiceRole.entities.GDM.update(gdm.id, {
+            status: target,
+            history: [
+              ...(gdm.history || []),
+              {
+                action: 'status_synced_from_items',
+                user: user.email,
+                user_name: user.full_name || user.email,
+                role: user.role,
+                timestamp: new Date().toISOString(),
+                details: `Status da GDM atualizado automaticamente a partir dos itens (${target}).`,
+                previous_status: gdm.status,
+                new_status: target,
+                step_name: 'Sincronização dos itens',
+                observation: `Item ${item.item_number}: ${prev} → ${next}`,
+              },
+            ],
+          });
+        }
+      }
+    } catch {
+      // Falha na sincronização da GDM não deve invalidar a ação do item
+    }
 
     return Response.json(updated);
   } catch (error) {

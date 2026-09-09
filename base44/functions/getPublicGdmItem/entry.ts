@@ -9,15 +9,7 @@ export default async function (req: Request): Promise<Response> {
     const url = new URL(req.url);
     const itemId =
       url.searchParams.get('item_id') ||
-      url.searchParams.get('itemId') ||
-      (() => {
-        try {
-          const body = req.method === 'POST' ? null : null;
-          return body;
-        } catch {
-          return null;
-        }
-      })();
+      url.searchParams.get('itemId');
     let resolvedId = itemId;
 
     if (!resolvedId && req.method === 'POST') {
@@ -91,10 +83,6 @@ export default async function (req: Request): Promise<Response> {
         pwt_number: gdm.pwt_number,
         oc_number: gdm.oc_number,
         ot_number: gdm.ot_number,
-        quote_document_url: gdm.quote_document_url,
-        technical_report_url: gdm.technical_report_url,
-        commercial_proposal_url: gdm.commercial_proposal_url,
-        return_nf_url: gdm.return_nf_url,
       },
       history: (history || []).map((h) => ({
         id: h.id,
