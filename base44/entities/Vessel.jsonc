@@ -35,6 +35,10 @@
       ],
       "default": "active"
     },
+    "photo_url": {
+      "type": "string",
+      "description": "URL da foto da embarca\u00e7\u00e3o (armazenada no storage)"
+    },
     "login_password": {
       "type": "string",
       "description": "Senha de acesso da embarca\u00e7\u00e3o"

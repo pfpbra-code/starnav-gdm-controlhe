@@ -37,6 +37,9 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { usePermissions } from '@/hooks/usePermissions';
+import { SECTOR_DESTINATIONS } from '@/lib/permissions';
+import { Wrench, Cog } from 'lucide-react';
 
 const statusColors = {
   pending: '#f59e0b',
@@ -52,6 +55,16 @@ export default function Dashboard() {
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+  });
+
+  const { hasPermission } = usePermissions();
+  const canViewMaintenance = hasPermission('view_maintenance');
+  const canViewOperations = hasPermission('view_operations');
+
+  const { data: items = [] } = useQuery({
+    queryKey: ['gdmItems'],
+    queryFn: () => base44.entities.GDMItem.list('-created_date', 500),
+    enabled: canViewMaintenance || canViewOperations,
   });
 
   const { data: gdms = [], isLoading: loadingGDMs } = useQuery({
@@ -88,6 +101,19 @@ export default function Dashboard() {
 
     return { total: gdms.length, open, approved, rejected, finalized, inProgress, pending, avgDays };
   }, [gdms]);
+
+  // Indicadores por setor: Manutenção + Operações = Dashboard geral
+  const sectorStats = React.useMemo(() => {
+    const isOpen = (i) => !['completed', 'cancelled', 'rejected'].includes(i.status);
+    return {
+      maintenance: items.filter((i) => SECTOR_DESTINATIONS.maintenance.includes(i.destination) && isOpen(i)).length,
+      operations: items.filter((i) => SECTOR_DESTINATIONS.operations.includes(i.destination) && isOpen(i)).length,
+      inRepair: items.filter((i) => i.destination === 'repair' && i.status === 'in_treatment').length,
+      inCalibration: items.filter((i) => i.destination === 'certification' && i.status === 'in_treatment').length,
+      pendingQuotes: gdms.filter((g) => g.status === 'quote_analysis').length,
+      openOTs: gdms.filter((g) => g.status === 'ot_issued').length,
+    };
+  }, [items, gdms]);
 
   // Dados mensais reais (últimos 6 meses)
   const monthlyData = React.useMemo(() => {
@@ -172,6 +198,26 @@ export default function Dashboard() {
           color="amber"
         />
       </div>
+
+      {/* Indicadores por setor */}
+      {(canViewMaintenance || canViewOperations) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {canViewMaintenance && (
+            <StatsCard title="Itens em Manutenção" value={sectorStats.maintenance} icon={Wrench} color="amber" />
+          )}
+          {canViewOperations && (
+            <StatsCard title="Itens em Operações" value={sectorStats.operations} icon={Cog} color="indigo" />
+          )}
+          {canViewMaintenance && (
+            <StatsCard title="Equipamentos em Reparo" value={sectorStats.inRepair} icon={Wrench} color="sky" />
+          )}
+          {canViewOperations && (
+            <StatsCard title="Equipamentos em Calibração" value={sectorStats.inCalibration} icon={Cog} color="purple" />
+          )}
+          <StatsCard title="Cotações Pendentes" value={sectorStats.pendingQuotes} icon={AlertTriangle} color="red" />
+          <StatsCard title="OTs Emitidas" value={sectorStats.openOTs} icon={FileText} color="green" />
+        </div>
+      )}
 
       {/* Kanban Board */}
       <div>
@@ -297,7 +343,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-slate-900">GDMs Recentes</h2>
           <div className="flex gap-3">
-            {(user?.role === 'admin' || user?.role === 'vessel_user') && (
+            {hasPermission('create_gdm') && (
               <Link to={createPageUrl('CreateGDM')}>
                 <Button className="bg-sky-600 hover:bg-sky-700">
                   <Plus className="h-4 w-4 mr-2" />

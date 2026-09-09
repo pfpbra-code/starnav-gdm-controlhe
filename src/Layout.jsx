@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 import { Loader2 } from 'lucide-react';
 
 const pageTitles = {
+  MyProfile: "Meu Perfil",
+  Maintenance: "Manutenção",
+  Operations: "Operações",
   Dashboard: "Dashboard",
   GDMList: "Guias de Desembarque",
   GDMDetail: "Detalhes da GDM",

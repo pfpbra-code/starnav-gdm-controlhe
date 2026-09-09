@@ -13,22 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Shield } from 'lucide-react';
 
-const AVAILABLE_PERMISSIONS = [
-  { id: 'create_gdm', label: 'Criar GDM', category: 'GDM' },
-  { id: 'edit_gdm', label: 'Editar GDM', category: 'GDM' },
-  { id: 'delete_gdm', label: 'Deletar GDM', category: 'GDM' },
-  { id: 'approve_gdm', label: 'Aprovar GDM', category: 'GDM' },
-  { id: 'manage_vessels', label: 'Gerenciar Embarcações', category: 'Cadastros' },
-  { id: 'manage_equipment', label: 'Gerenciar Equipamentos', category: 'Cadastros' },
-  { id: 'manage_suppliers', label: 'Gerenciar Fornecedores', category: 'Cadastros' },
-  { id: 'manage_users', label: 'Gerenciar Usuários', category: 'Administração' },
-  { id: 'view_audit_logs', label: 'Ver Logs de Auditoria', category: 'Administração' },
-  { id: 'send_to_supplier', label: 'Enviar ao Fornecedor', category: 'Serviços' },
-  { id: 'quote_analysis', label: 'Análise de Cotação', category: 'Manutenção' },
-  { id: 'submit_quote', label: 'Enviar Cotação', category: 'Fornecedor' },
-  { id: 'export_reports', label: 'Exportar Relatórios', category: 'Relatórios' },
-  { id: 'system_settings', label: 'Configurações do Sistema', category: 'Administração' },
-];
+// Catálogo central de permissões — fonte única, compartilhada com o backend.
+import { AVAILABLE_PERMISSIONS } from '@/lib/permissions';
 
 export default function UserPermissions({ user, open, onOpenChange, onSave, isSaving }) {
   const [permissions, setPermissions] = useState(user?.permissions || []);

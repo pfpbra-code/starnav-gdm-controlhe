@@ -53,12 +53,23 @@ export const AVAILABLE_PERMISSIONS = [
   // Planejamento
   { id: "issue_pwt", label: "Emitir PWT", category: "Planejamento" },
 
+  // Setores (Manutenção / Operações)
+  { id: "view_dashboard", label: "Visualizar Dashboard", category: "Setores" },
+  { id: "view_maintenance", label: "Acessar Manutenção", category: "Setores" },
+  { id: "view_operations", label: "Acessar Operações", category: "Setores" },
+  { id: "view_maintenance_quotes", label: "Cotações — Manutenção", category: "Setores" },
+  { id: "view_operations_quotes", label: "Cotações — Operações", category: "Setores" },
+  { id: "approve_maintenance_quote", label: "Aprovar Cotação — Manutenção", category: "Setores" },
+  { id: "approve_operations_quote", label: "Aprovar Cotação — Operações", category: "Setores" },
+
   // Cadastros
   { id: "view_vessels", label: "Visualizar Embarcações", category: "Cadastros" },
   { id: "manage_vessels", label: "Gerenciar Embarcações", category: "Cadastros" },
   { id: "view_equipment", label: "Visualizar Equipamentos", category: "Cadastros" },
   { id: "manage_equipment", label: "Gerenciar Equipamentos", category: "Cadastros" },
   { id: "import_equipment", label: "Importar Equipamentos (planilha)", category: "Cadastros" },
+  { id: "import_spreadsheet", label: "Importar Planilha", category: "Cadastros" },
+  { id: "edit_vessel_photo", label: "Editar Foto da Embarcação", category: "Cadastros" },
   { id: "view_suppliers", label: "Visualizar Fornecedores", category: "Cadastros" },
   { id: "manage_suppliers", label: "Gerenciar Fornecedores", category: "Cadastros" },
 
@@ -98,6 +109,7 @@ export const ROLE_LABELS = {
   coordinator: "Coordenador",
   services: "Serviços",
   maintenance: "Manutenção",
+  operations: "Operações",
   almoxarifado: "Almoxarifado",
   planejamento: "Planejamento",
   supplier_user: "Fornecedor",
@@ -113,6 +125,9 @@ export const ROLE_LABELS = {
 export const ROLE_PERMISSION_PRESETS = {
   admin: ALL_PERMISSION_IDS,
   coordinator: [
+    "view_dashboard",
+    "view_maintenance",
+    "view_operations",
     "view_gdm",
     "create_gdm",
     "edit_gdm",
@@ -131,6 +146,9 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_critical_equipment",
   ],
   services: [
+    "view_dashboard",
+    "view_maintenance",
+    "view_operations",
     "view_gdm",
     "edit_gdm",
     "change_gdm_destination",
@@ -158,6 +176,7 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_critical_equipment",
   ],
   maintenance: [
+    "view_dashboard",
     "view_gdm",
     "generate_gdm_pdf",
     "quote_analysis",
@@ -176,6 +195,9 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_critical_equipment",
   ],
   almoxarifado: [
+    "view_dashboard",
+    "view_maintenance",
+    "view_operations",
     "view_gdm",
     "generate_gdm_pdf",
     "confirm_receipt",
@@ -185,6 +207,9 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_equipment",
   ],
   planejamento: [
+    "view_dashboard",
+    "view_maintenance",
+    "view_operations",
     "view_gdm",
     "generate_gdm_pdf",
     "issue_pwt",
@@ -195,14 +220,28 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_analytics",
   ],
   supplier_user: [
+    "view_dashboard",
     "view_gdm",
     "submit_quote",
     "attach_technical_report",
     "attach_commercial_proposal",
     "view_ot",
   ],
-  vessel_user: ["view_gdm", "create_gdm", "generate_gdm_pdf"],
-  user: ["view_gdm", "generate_gdm_pdf"],
+  vessel_user: ["view_dashboard", "view_gdm", "create_gdm", "generate_gdm_pdf"],
+  user: ["view_dashboard", "view_gdm", "generate_gdm_pdf"],
+  operations: [
+    "view_dashboard",
+    "view_gdm",
+    "generate_gdm_pdf",
+    "view_operations",
+    "view_operations_quotes",
+    "approve_operations_quote",
+    "view_equipment",
+    "view_suppliers",
+    "view_reports",
+    "view_cost_reports",
+    "view_analytics",
+  ],
 };
 
 export function presetLabels(role) {
@@ -215,6 +254,29 @@ function userField(user, key) {
   return user?.[key] !== undefined ? user[key] : custom[key];
 }
 
+/**
+ * Permissões implícitas do perfil: garantem que usuários de um setor nunca
+ * percam acesso ao próprio setor, mesmo quando possuem permissões
+ * individuais definidas pelo ADM.
+ */
+export const ROLE_IMPLIED_PERMISSIONS = {
+  maintenance: ["view_maintenance", "view_maintenance_quotes", "approve_maintenance_quote"],
+  operations: ["view_operations", "view_operations_quotes", "approve_operations_quote"],
+  coordinator: ["view_maintenance", "view_operations"],
+  services: ["view_maintenance", "view_operations"],
+  almoxarifado: ["view_maintenance", "view_operations"],
+  planejamento: ["view_maintenance", "view_operations"],
+};
+
+const DEFAULT_IMPLIED_PERMISSIONS = ["view_dashboard"];
+
+function mergeRoleImplied(role, permissions) {
+  const implied = ROLE_IMPLIED_PERMISSIONS[role] || [];
+  return Array.from(
+    new Set([...permissions, ...implied, ...DEFAULT_IMPLIED_PERMISSIONS]),
+  );
+}
+
 /** Permissões efetivas do usuário (admin sempre tem tudo). */
 export function effectivePermissions(user) {
   if (!user) return [];
@@ -222,8 +284,9 @@ export function effectivePermissions(user) {
   const own = Array.isArray(userField(user, "permissions"))
     ? userField(user, "permissions").filter(Boolean)
     : [];
-  if (own.length > 0) return own;
-  return ROLE_PERMISSION_PRESETS[user.role] || ROLE_PERMISSION_PRESETS.user;
+  const base =
+    own.length > 0 ? own : (ROLE_PERMISSION_PRESETS[user.role] || ROLE_PERMISSION_PRESETS.user);
+  return mergeRoleImplied(user.role, base);
 }
 
 export function hasPermission(user, permission) {
@@ -297,20 +360,45 @@ export function scopeGdms(user, gdms = []) {
 // Módulos (usado pela sidebar e pelas rotas)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Setores (Manutenção / Operações)
+// ---------------------------------------------------------------------------
+
+/** Destinos de item que pertencem a cada setor. */
+export const SECTOR_DESTINATIONS = {
+  maintenance: ["repair", "stock_return", "discard"],
+  operations: ["certification"],
+};
+
+/** Setor responsável por um destino de item. */
+export function itemSector(destination) {
+  if (SECTOR_DESTINATIONS.maintenance.includes(destination)) return "maintenance";
+  if (SECTOR_DESTINATIONS.operations.includes(destination)) return "operations";
+  return null;
+}
+
+/** Permissão de visualização do setor. */
+export function sectorViewPermission(sector) {
+  return sector === "operations" ? "view_operations" : "view_maintenance";
+}
+
 /** Permissão mínima exigida por página. null = sempre liberado. */
 export const MODULE_PERMISSIONS = {
   MyProfile: null,
-  Dashboard: null,
+  Dashboard: "view_dashboard",
   Notifications: null,
   NotificationPreferences: null,
-  SupplierDashboard: null,
-  VesselDashboard: null,
+  SupplierDashboard: "view_dashboard",
+  VesselDashboard: "view_dashboard",
   GDMList: "view_gdm",
   GDMDetail: "view_gdm",
   VesselGDMs: "view_gdm",
   CreateGDM: "create_gdm",
   ServicesTreatments: "manage_service_treatments",
-  MaintenanceAnalysis: "quote_analysis",
+  Maintenance: "view_maintenance",
+  Operations: "view_operations",
+  // A Análise de Cotações controla as abas (Manutenção/Operações) internamente.
+  MaintenanceAnalysis: null,
   SupplierMaterials: "view_gdm",
   Vessels: "view_vessels",
   Equipment: "view_equipment",
@@ -318,7 +406,7 @@ export const MODULE_PERMISSIONS = {
   SupplierDetail: "view_suppliers",
   Users: "manage_users",
   AuditLogs: "view_audit_logs",
-  ImportData: "import_equipment",
+  ImportData: "import_spreadsheet",
   PasswordPolicies: "system_settings",
   Settings: "system_settings",
 };

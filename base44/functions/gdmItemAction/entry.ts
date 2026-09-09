@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { hasPermission } from '../../shared/itemPermissions.ts';
+import { hasPermission, SECTOR_BY_DESTINATION, sectorViewPermission } from '../../shared/itemPermissions.ts';
 
 // Ações protegidas sobre itens de GDM (espelha a função gdm_item_action do projeto original):
 // verificação de permissão, bloqueio de saltos de etapa e registro automático no histórico.
@@ -34,6 +34,13 @@ export default async function (req: Request): Promise<Response> {
     if (!item) return Response.json({ error: 'Item não encontrado' }, { status: 404 });
 
     const can = (p: string) => hasPermission(user, p);
+
+    // Separação de setores: só usuários autorizados no setor do item podem agir sobre ele.
+    const itemSector = SECTOR_BY_DESTINATION[item.destination] || 'maintenance';
+    if (!can(sectorViewPermission(itemSector))) {
+      throw new Error('Sem permissão para atuar em itens deste setor');
+    }
+
     const prev = item.status;
     let next: string | null = null;
     const now = new Date().toISOString();

@@ -5,6 +5,10 @@ import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import ImportData from './pages/ImportData';
 import ItemPublic from './pages/ItemPublic';
+import MyProfile from './pages/MyProfile';
+import Maintenance from './pages/Maintenance';
+import Operations from './pages/Operations';
+import RequirePermission from '@/components/RequirePermission';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -46,7 +50,9 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
-          <MainPage />
+          <RequirePermission module={mainPageKey}>
+            <MainPage />
+          </RequirePermission>
         </LayoutWrapper>
       } />
       {Object.entries(Pages).map(([path, Page]) => (
@@ -55,7 +61,9 @@ const AuthenticatedApp = () => {
           path={`/${path}`}
           element={
             <LayoutWrapper currentPageName={path}>
-              <Page />
+              <RequirePermission module={path}>
+                <Page />
+              </RequirePermission>
             </LayoutWrapper>
           }
         />
@@ -63,6 +71,27 @@ const AuthenticatedApp = () => {
       <Route path="/ImportData" element={
         <LayoutWrapper currentPageName="ImportData">
           <ImportData />
+        </LayoutWrapper>
+      } />
+      <Route path="/MyProfile" element={
+        <LayoutWrapper currentPageName="MyProfile">
+          <RequirePermission module="MyProfile">
+            <MyProfile />
+          </RequirePermission>
+        </LayoutWrapper>
+      } />
+      <Route path="/Maintenance" element={
+        <LayoutWrapper currentPageName="Maintenance">
+          <RequirePermission module="Maintenance">
+            <Maintenance />
+          </RequirePermission>
+        </LayoutWrapper>
+      } />
+      <Route path="/Operations" element={
+        <LayoutWrapper currentPageName="Operations">
+          <RequirePermission module="Operations">
+            <Operations />
+          </RequirePermission>
         </LayoutWrapper>
       } />
       <Route path="*" element={<PageNotFound />} />

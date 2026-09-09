@@ -38,6 +38,7 @@ export default function Vessels() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingVessel, setEditingVessel] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -96,6 +97,7 @@ export default function Vessels() {
 
   const handleCloseDialog = () => {
     setShowDialog(false);
+    setPhotoFile(null);
     setEditingVessel(null);
     setFormData({
       name: '',
@@ -120,12 +122,22 @@ export default function Vessels() {
     setShowDialog(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    const data = { ...formData };
+    if (photoFile) {
+      try {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: photoFile });
+        data.photo_url = file_url;
+      } catch {
+        toast.error('Erro ao enviar a foto da embarcação');
+        return;
+      }
+    }
     if (editingVessel) {
-      updateMutation.mutate({ id: editingVessel.id, data: formData });
+      updateMutation.mutate({ id: editingVessel.id, data });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(data);
     }
   };
 
@@ -205,8 +217,16 @@ export default function Vessels() {
                 <TableRow key={vessel.id} className="hover:bg-slate-50">
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-sky-100 flex items-center justify-center">
-                        <Ship className="h-4 w-4 text-sky-600" />
+                      <div className="h-10 w-14 rounded-lg bg-sky-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {vessel.photo_url ? (
+                          <img
+                            src={vessel.photo_url}
+                            alt={vessel.name}
+                            className="h-10 w-14 object-cover"
+                          />
+                        ) : (
+                          <Ship className="h-4 w-4 text-sky-600" />
+                        )}
                       </div>
                       <span className="font-medium">{vessel.name}</span>
                     </div>
@@ -316,6 +336,21 @@ export default function Vessels() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Foto da Embarcação</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                />
+                {editingVessel?.photo_url && (
+                  <img
+                    src={editingVessel.photo_url}
+                    alt={editingVessel.name}
+                    className="mt-2 h-28 w-full object-cover rounded-lg border border-slate-200"
+                  />
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Senha de Acesso</Label>

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -29,11 +30,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { usePermissions } from '@/hooks/usePermissions';
+import { SECTOR_DESTINATIONS } from '@/lib/permissions';
 import {
   Wrench,
   Search,
@@ -44,13 +45,39 @@ import {
   DollarSign,
   FileText,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  ShieldX,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Skeleton } from "@/components/ui/skeleton";
+
+/**
+ * ANÁLISE DE COTAÇÕES — centraliza a aprovação de cotações.
+ * Duas áreas internas (Manutenção / Operações), isoladas por permissão:
+ * cada usuário vê apenas o setor autorizado pelo ADM.
+ */
+const SECTOR_TABS = [
+  {
+    key: 'maintenance',
+    label: 'Manutenção',
+    viewPermission: 'view_maintenance_quotes',
+    approvePermission: 'approve_maintenance_quote',
+  },
+  {
+    key: 'operations',
+    label: 'Operações',
+    viewPermission: 'view_operations_quotes',
+    approvePermission: 'approve_operations_quote',
+  },
+];
 
 export default function MaintenanceAnalysis() {
   const queryClient = useQueryClient();
+  const { user, hasPermission } = usePermissions();
+
+  const visibleTabs = SECTOR_TABS.filter((t) => hasPermission(t.viewPermission));
+  const [activeTab, setActiveTab] = useState(visibleTabs[0]?.key || 'maintenance');
+  const tab = visibleTabs.find((t) => t.key === activeTab) || visibleTabs[0];
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
   const [selectedGDM, setSelectedGDM] = useState(null);
@@ -58,14 +85,14 @@ export default function MaintenanceAnalysis() {
   const [discountPercentage, setDiscountPercentage] = useState('');
   const [notes, setNotes] = useState('');
 
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
   const { data: gdms = [], isLoading } = useQuery({
     queryKey: ['gdms'],
     queryFn: () => base44.entities.GDM.list('-created_date', 100),
+  });
+
+  const { data: items = [] } = useQuery({
+    queryKey: ['gdmItems'],
+    queryFn: () => base44.entities.GDMItem.list('-created_date', 500),
   });
 
   const updateMutation = useMutation({
@@ -78,14 +105,51 @@ export default function MaintenanceAnalysis() {
     onError: () => toast.error('Erro ao registrar análise')
   });
 
-  // Filter GDMs that are awaiting maintenance analysis
-  const analysisGDMs = gdms.filter(gdm => gdm.status === 'quote_analysis');
+  // Mapa de setores por GDM a partir dos itens — não duplica registros.
+  const sectorsByGdm = useMemo(() => {
+    const map = {};
+    items.forEach((i) => {
+      const entry = (map[i.gdm_id] = map[i.gdm_id] || {
+        maintenance: false,
+        operations: false,
+        total: 0,
+      });
+      entry.total += 1;
+      if (SECTOR_DESTINATIONS.maintenance.includes(i.destination)) entry.maintenance = true;
+      if (SECTOR_DESTINATIONS.operations.includes(i.destination)) entry.operations = true;
+    });
+    return map;
+  }, [items]);
+
+  const belongsToTab = (gdm, tabKey) => {
+    const s = sectorsByGdm[gdm.id];
+    if (!s || s.total === 0) return tabKey === 'maintenance'; // GDMs legadas sem itens
+    return tabKey === 'maintenance' ? s.maintenance : s.operations;
+  };
+
+  const analysisGDMs = useMemo(
+    () =>
+      gdms.filter(
+        (gdm) =>
+          gdm.status === 'quote_analysis' && (!tab || belongsToTab(gdm, tab.key)),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gdms, sectorsByGdm, tab],
+  );
+
+  const decidedGDMs = useMemo(
+    () => gdms.filter((g) => g.maintenance_decision && (!tab || belongsToTab(g, tab.key))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gdms, sectorsByGdm, tab],
+  );
 
   const filteredGDMs = analysisGDMs.filter(gdm => {
     return gdm.gdm_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       gdm.vessel_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       gdm.equipment_name?.toLowerCase().includes(searchTerm.toLowerCase());
   });
+
+  const canApprove = !!tab && hasPermission(tab.approvePermission);
 
   const handleAnalysis = () => {
     if (!decision) {
@@ -145,8 +209,6 @@ export default function MaintenanceAnalysis() {
     setShowAnalysisDialog(true);
   };
 
-  const canMaintenance = user?.role === 'maintenance' || user?.role === 'admin';
-
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -162,15 +224,48 @@ export default function MaintenanceAnalysis() {
     );
   }
 
+  if (!visibleTabs.length) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <CardContent className="py-16 text-center">
+          <ShieldX className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+          <h2 className="text-xl font-semibold text-slate-900">Acesso Negado</h2>
+          <p className="text-slate-500 mt-1">
+            Você não possui permissão para analisar cotações.
+            Solicite acesso ao administrador.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Análise de Cotações</h1>
-        <p className="text-slate-500 mt-1">Analise as cotações recebidas dos fornecedores</p>
+        <p className="text-slate-500 mt-1">
+          Aprovação centralizada das cotações recebidas dos fornecedores
+        </p>
       </div>
 
-      {/* Stats */}
+      {/* Abas por setor */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          {visibleTabs.map((t) => (
+            <TabsTrigger key={t.key} value={t.key}>
+              {t.key === 'maintenance' ? (
+                <Wrench className="h-4 w-4 mr-2" />
+              ) : (
+                <ExternalLink className="h-4 w-4 mr-2" />
+              )}
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      {/* Stats da aba ativa */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-0 shadow-sm bg-amber-50">
           <CardContent className="p-4">
@@ -193,7 +288,7 @@ export default function MaintenanceAnalysis() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-900">
-                  {gdms.filter(g => g.maintenance_decision === 'approved').length}
+                  {decidedGDMs.filter(g => g.maintenance_decision === 'approved').length}
                 </p>
                 <p className="text-sm text-green-700">Aprovadas</p>
               </div>
@@ -208,7 +303,7 @@ export default function MaintenanceAnalysis() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-red-900">
-                  {gdms.filter(g => g.maintenance_decision === 'rejected').length}
+                  {decidedGDMs.filter(g => g.maintenance_decision === 'rejected').length}
                 </p>
                 <p className="text-sm text-red-700">Reprovadas</p>
               </div>
@@ -290,7 +385,7 @@ export default function MaintenanceAnalysis() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    {canMaintenance && (
+                    {canApprove && (
                       <Button
                         size="sm"
                         className="bg-sky-600 hover:bg-sky-700"
@@ -325,7 +420,7 @@ export default function MaintenanceAnalysis() {
       <Dialog open={showAnalysisDialog} onOpenChange={setShowAnalysisDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Análise Técnica</DialogTitle>
+            <DialogTitle>Análise Técnica — {tab?.label}</DialogTitle>
             <DialogDescription>
               GDM: {selectedGDM?.gdm_number}
             </DialogDescription>

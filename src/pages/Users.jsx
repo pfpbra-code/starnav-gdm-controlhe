@@ -42,6 +42,7 @@ const roleLabels = {
   coordinator: "Coordenador",
   services: "Serviços",
   maintenance: "Manutenção",
+  operations: "Operações",
   supplier_user: "Fornecedor",
   vessel_user: "Embarcação",
   user: "Usuário"
@@ -52,6 +53,7 @@ const roleColors = {
   coordinator: "bg-blue-100 text-blue-800",
   services: "bg-green-100 text-green-800",
   maintenance: "bg-amber-100 text-amber-800",
+  operations: "bg-orange-100 text-orange-800",
   supplier_user: "bg-purple-100 text-purple-800",
   vessel_user: "bg-sky-100 text-sky-800",
   user: "bg-gray-100 text-gray-800"
@@ -415,6 +417,7 @@ export default function Users() {
                   <SelectItem value="coordinator">Coordenador</SelectItem>
                   <SelectItem value="services">Serviços</SelectItem>
                   <SelectItem value="maintenance">Manutenção</SelectItem>
+                  <SelectItem value="operations">Operações</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>
