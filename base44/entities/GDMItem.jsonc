@@ -86,6 +86,15 @@
       "type": "string",
       "description": "Nome do fornecedor"
     },
+    "sent_to_supplier_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora do envio do item ao fornecedor (v\u00ednculo autom\u00e1tico GDM-Item-Fornecedor)"
+    },
+    "sent_by": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio de servi\u00e7os que enviou o item ao fornecedor (respons\u00e1vel interno)"
+    },
     "notes": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es do item"
@@ -237,9 +246,6 @@
           "data.vessel_id": "{{user.data.vessel_id}}"
         },
         {
-          "data.supplier_id": "{{user.data.supplier_id}}"
-        },
-        {
           "data.vessel_id": {
             "$in": "{{user.data.assigned_vessels}}"
           }
@@ -283,9 +289,6 @@
         },
         {
           "data.vessel_id": "{{user.data.vessel_id}}"
-        },
-        {
-          "data.supplier_id": "{{user.data.supplier_id}}"
         },
         {
           "user_condition": {
