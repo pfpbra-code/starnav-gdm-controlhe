@@ -184,6 +184,8 @@ export default async function (req: Request): Promise<Response> {
         if (!supplierId) throw new Error('Selecione o fornecedor antes de enviar o item');
         extra.supplier_id = supplierId;
         extra.supplier_name = body.supplier_name || null;
+        extra.sent_to_supplier_at = now;
+        extra.sent_by = user.email;
       }
       next =
         prev === 'pending_services'
@@ -204,7 +206,7 @@ export default async function (req: Request): Promise<Response> {
       item_id: item.id,
       gdm_id: item.gdm_id,
       vessel_id: item.vessel_id || null,
-      supplier_id: item.supplier_id || null,
+      supplier_id: extra.supplier_id || item.supplier_id || null,
       user_id: user.id,
       user_email: user.email,
       action,

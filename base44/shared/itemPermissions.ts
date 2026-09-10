@@ -38,10 +38,6 @@ const PRESETS: Record<string, any> = {
     'generate_gdm_pdf', 'issue_pwt', 'view_oc', 'view_ot', 'view_reports',
     'view_cost_reports', 'view_analytics',
   ],
-  supplier_user: [
-    'view_dashboard', 'view_gdm', 'submit_quote', 'attach_technical_report',
-    'attach_commercial_proposal', 'view_ot',
-  ],
   vessel_user: ['view_dashboard', 'view_gdm', 'create_gdm', 'generate_gdm_pdf'],
   user: ['view_dashboard', 'view_gdm', 'generate_gdm_pdf'],
 };
