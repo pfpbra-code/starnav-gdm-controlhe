@@ -9,7 +9,6 @@ import {
   FilePlus2,
   Ship,
   Users,
-  Package,
   Building2,
   Settings,
   LogOut,
@@ -35,11 +34,7 @@ const MENU_ITEMS = [
     page: 'Dashboard',
     permission: 'view_dashboard',
     resolvePage: (user) =>
-      user?.role === 'supplier_user'
-        ? 'SupplierDashboard'
-        : user?.role === 'vessel_user'
-          ? 'VesselDashboard'
-          : 'Dashboard',
+      user?.role === 'vessel_user' ? 'VesselDashboard' : 'Dashboard',
   },
   { icon: FilePlus2, label: 'Criar GDM', page: 'CreateGDM', permission: 'create_gdm' },
   { icon: FileText, label: 'GDM', page: 'GDMList', permission: 'view_gdm' },
@@ -61,7 +56,6 @@ const MENU_ITEMS = [
 const EXTRA_ITEMS = [
   { icon: ClipboardList, label: 'Tratativas', page: 'ServicesTreatments', permission: 'manage_service_treatments' },
   { icon: FileText, label: 'Minhas GDMs', page: 'VesselGDMs', permission: null, roles: ['vessel_user'] },
-  { icon: Package, label: 'Materiais Recebidos', page: 'SupplierMaterials', permission: null, roles: ['supplier_user'] },
   { icon: History, label: 'Auditoria', page: 'AuditLogs', permission: 'view_audit_logs' },
   { icon: Bell, label: 'Notificações', page: 'Notifications', permission: null },
 ];

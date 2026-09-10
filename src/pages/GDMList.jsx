@@ -74,8 +74,6 @@ export default function GDMList() {
       filtered = filtered.filter(gdm => user.assigned_vessels.includes(gdm.vessel_id));
     } else if (user?.role === 'vessel_user' && user?.vessel_id) {
       filtered = filtered.filter(gdm => gdm.vessel_id === user.vessel_id);
-    } else if (user?.role === 'supplier_user' && user?.supplier_id) {
-      filtered = filtered.filter(gdm => gdm.supplier_id === user.supplier_id);
     }
 
     // Search filter

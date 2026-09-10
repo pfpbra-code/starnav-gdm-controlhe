@@ -402,9 +402,8 @@ export default function GDMDetail() {
   };
 
   const canServicesAct = user?.role === 'services' || user?.role === 'admin';
-  const canSupplierAct = user?.role === 'supplier_user';
   const canMaintenanceAct = user?.role === 'maintenance' || user?.role === 'admin';
-  const canAttachQuote = canSupplierAct || canServicesAct;
+  const canAttachQuote = canServicesAct;
 
   if (isLoading) {
     return (

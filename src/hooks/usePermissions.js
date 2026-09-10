@@ -8,9 +8,7 @@ import {
   hasAllPermissions as hasAllPermissionsFor,
   canAccessModule as canAccessModuleFor,
   canAccessVessel as canAccessVesselFor,
-  canAccessSupplier as canAccessSupplierFor,
   allowedVesselIds,
-  allowedSupplierIds,
   scopeGdms,
 } from "@/lib/permissions";
 
@@ -35,9 +33,7 @@ export function usePermissions() {
       hasAllPermissions: (p) => hasAllPermissionsFor(user, p),
       canAccessModule: (m) => canAccessModuleFor(user, m),
       canAccessVessel: (id) => canAccessVesselFor(user, id),
-      canAccessSupplier: (id) => canAccessSupplierFor(user, id),
       vesselScope: allowedVesselIds(user),
-      supplierScope: allowedSupplierIds(user),
       scopeGdms: (gdms) => scopeGdms(user, gdms),
     }),
     [user, isLoading],

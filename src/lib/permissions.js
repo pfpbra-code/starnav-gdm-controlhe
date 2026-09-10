@@ -45,11 +45,6 @@ export const AVAILABLE_PERMISSIONS = [
   { id: "request_new_quote", label: "Solicitar Nova Cotação", category: "Manutenção" },
   { id: "approve_maintenance", label: "Aprovar Manutenção", category: "Manutenção" },
 
-  // Fornecedor (portal)
-  { id: "submit_quote", label: "Enviar Cotação", category: "Fornecedor" },
-  { id: "attach_technical_report", label: "Anexar Laudo Técnico", category: "Fornecedor" },
-  { id: "attach_commercial_proposal", label: "Anexar Proposta Comercial", category: "Fornecedor" },
-
   // Planejamento
   { id: "issue_pwt", label: "Emitir PWT", category: "Planejamento" },
 
@@ -112,7 +107,6 @@ export const ROLE_LABELS = {
   operations: "Operações",
   almoxarifado: "Almoxarifado",
   planejamento: "Planejamento",
-  supplier_user: "Fornecedor",
   vessel_user: "Embarcação",
   user: "Usuário",
 };
@@ -219,14 +213,6 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_cost_reports",
     "view_analytics",
   ],
-  supplier_user: [
-    "view_dashboard",
-    "view_gdm",
-    "submit_quote",
-    "attach_technical_report",
-    "attach_commercial_proposal",
-    "view_ot",
-  ],
   vessel_user: ["view_dashboard", "view_gdm", "create_gdm", "generate_gdm_pdf"],
   user: ["view_dashboard", "view_gdm", "generate_gdm_pdf"],
   operations: [
@@ -329,31 +315,10 @@ export function canAccessVessel(user, vesselId) {
   return !!vesselId && allowed.includes(vesselId);
 }
 
-/** Fornecedores que o usuário pode acessar: null = todos. */
-export function allowedSupplierIds(user) {
-  if (!user) return [];
-  if (user.role === "supplier_user") {
-    const supplierId = userField(user, "supplier_id");
-    return supplierId ? [supplierId] : [];
-  }
-  return null;
-}
-
-export function canAccessSupplier(user, supplierId) {
-  const allowed = allowedSupplierIds(user);
-  if (allowed === null) return true;
-  return !!supplierId && allowed.includes(supplierId);
-}
-
-/** Aplica o escopo de embarcação/fornecedor a uma lista de GDMs. */
+/** Aplica o escopo de embarcação a uma lista de GDMs. */
 export function scopeGdms(user, gdms = []) {
   const vessels = allowedVesselIds(user);
-  const suppliers = allowedSupplierIds(user);
-  return gdms.filter((g) => {
-    if (vessels !== null && !vessels.includes(g.vessel_id)) return false;
-    if (suppliers !== null && !suppliers.includes(g.supplier_id)) return false;
-    return true;
-  });
+  return gdms.filter((g) => vessels === null || vessels.includes(g.vessel_id));
 }
 
 // ---------------------------------------------------------------------------
@@ -388,7 +353,6 @@ export const MODULE_PERMISSIONS = {
   Dashboard: "view_dashboard",
   Notifications: null,
   NotificationPreferences: null,
-  SupplierDashboard: "view_dashboard",
   VesselDashboard: "view_dashboard",
   GDMList: "view_gdm",
   GDMDetail: "view_gdm",
@@ -399,7 +363,6 @@ export const MODULE_PERMISSIONS = {
   Operations: "view_operations",
   // A Análise de Cotações controla as abas (Manutenção/Operações) internamente.
   MaintenanceAnalysis: null,
-  SupplierMaterials: "view_gdm",
   Vessels: "view_vessels",
   Equipment: "view_equipment",
   Suppliers: "view_suppliers",

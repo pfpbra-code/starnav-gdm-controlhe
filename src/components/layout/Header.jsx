@@ -19,7 +19,6 @@ const roleLabels = {
   coordinator: "Coordenador",
   services: "Serviços",
   maintenance: "Manutenção",
-  supplier_user: "Fornecedor",
   vessel_user: "Embarcação",
 };
 

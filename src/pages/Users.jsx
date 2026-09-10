@@ -43,7 +43,6 @@ const roleLabels = {
   services: "Serviços",
   maintenance: "Manutenção",
   operations: "Operações",
-  supplier_user: "Fornecedor",
   vessel_user: "Embarcação",
   user: "Usuário"
 };
@@ -54,7 +53,6 @@ const roleColors = {
   services: "bg-green-100 text-green-800",
   maintenance: "bg-amber-100 text-amber-800",
   operations: "bg-orange-100 text-orange-800",
-  supplier_user: "bg-purple-100 text-purple-800",
   vessel_user: "bg-sky-100 text-sky-800",
   user: "bg-gray-100 text-gray-800"
 };
@@ -91,11 +89,6 @@ export default function Users() {
   const { data: vessels = [] } = useQuery({
     queryKey: ['vessels'],
     queryFn: () => base44.entities.Vessel.list(),
-  });
-
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: () => base44.entities.Supplier.list(),
   });
 
   const updateMutation = useMutation({
@@ -147,7 +140,6 @@ export default function Users() {
       department: user.department || '',
       status: user.status || 'active',
       assigned_vessels: user.assigned_vessels || [],
-      supplier_id: user.supplier_id || '',
       vessel_id: user.vessel_id || ''
     });
     setShowEditDialog(true);
@@ -522,27 +514,6 @@ export default function Users() {
                       </label>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {editFormData.role === 'supplier_user' && (
-                <div className="space-y-2">
-                  <Label>Fornecedor</Label>
-                  <Select
-                    value={editFormData.supplier_id}
-                    onValueChange={(value) => setEditFormData(prev => ({ ...prev, supplier_id: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o fornecedor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.company_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
               )}
 

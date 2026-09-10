@@ -12,7 +12,6 @@ import { ROLE_LABELS, PERMISSION_CATEGORIES } from '@/lib/permissions';
 import {
   UserCircle,
   Ship,
-  Building2,
   ShieldCheck,
   Bell,
   Settings2,
@@ -32,15 +31,6 @@ export default function MyProfile() {
     enabled: !!user,
   });
 
-  const { data: supplierList } = useQuery({
-    queryKey: ['mySupplier', user?.supplier_id || user?.data?.supplier_id],
-    queryFn: async () => {
-      const supplierId = user?.supplier_id || user?.data?.supplier_id;
-      return base44.entities.Supplier.filter({ id: supplierId });
-    },
-    enabled: !!(user && (user.supplier_id || user.data?.supplier_id)),
-  });
-
   if (isLoading || !user) {
     return (
       <div className="space-y-6">
@@ -52,7 +42,6 @@ export default function MyProfile() {
 
   const vesselId = user.vessel_id || user.data?.vessel_id;
   const assignedVessels = user.assigned_vessels || user.data?.assigned_vessels || [];
-  const supplier = supplierList?.[0];
 
   const linkedVessels = vessels.filter(
     (v) => v.id === vesselId || assignedVessels.includes(v.id),
@@ -121,7 +110,7 @@ export default function MyProfile() {
       </Card>
 
       {/* Vinculos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -142,28 +131,6 @@ export default function MyProfile() {
             ) : (
               <p className="text-slate-500 text-sm">
                 Nenhuma embarcação vinculada ao seu usuário.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-purple-600" />
-              Fornecedor Vinculado
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {supplier ? (
-              <div className="space-y-1">
-                <p className="font-medium">{supplier.company_name}</p>
-                <p className="text-sm text-slate-500">CNPJ: {supplier.cnpj}</p>
-                <p className="text-sm text-slate-500">{supplier.email}</p>
-              </div>
-            ) : (
-              <p className="text-slate-500 text-sm">
-                Nenhum fornecedor vinculado ao seu usuário.
               </p>
             )}
           </CardContent>

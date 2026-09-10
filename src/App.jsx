@@ -8,6 +8,7 @@ import ItemPublic from './pages/ItemPublic';
 import MyProfile from './pages/MyProfile';
 import Maintenance from './pages/Maintenance';
 import Operations from './pages/Operations';
+import SupplierDetail from './pages/SupplierDetail';
 import RequirePermission from '@/components/RequirePermission';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
@@ -91,6 +92,13 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="Operations">
           <RequirePermission module="Operations">
             <Operations />
+          </RequirePermission>
+        </LayoutWrapper>
+      } />
+      <Route path="/SupplierDetail" element={
+        <LayoutWrapper currentPageName="SupplierDetail">
+          <RequirePermission module="SupplierDetail">
+            <SupplierDetail />
           </RequirePermission>
         </LayoutWrapper>
       } />

@@ -1,17 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { usePermissions } from '@/hooks/usePermissions';
+import { buildSupplierStats, formatBRL } from '@/lib/supplierControl';
+import SupplierControlKpis from '@/components/suppliers/SupplierControlKpis';
+import SupplierDialog from '@/components/suppliers/SupplierDialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -19,68 +16,75 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Building2, Plus, Search, Edit, Trash2, Loader2, Mail, Phone, Package } from 'lucide-react';
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Search, Plus, Building2, Edit, Trash2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { Skeleton } from "@/components/ui/skeleton";
-import SupplierGDMs from '@/components/suppliers/SupplierGDMs';
 
+/**
+ * Fornecedores — centro interno de controle e rastreabilidade.
+ * Sem acesso de fornecedores ao sistema: apenas perfis autorizados
+ * pelo ADM consultam os indicadores e o histórico dos equipamentos.
+ */
 export default function Suppliers() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [showDialog, setShowDialog] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState(null);
-  const [selectedSupplier, setSelectedSupplier] = useState(null);
-  const [showGdmsDialog, setShowGdmsDialog] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState({
-    company_name: '',
-    trading_name: '',
-    cnpj: '',
-    email: '',
-    phone: '',
-    contact_name: '',
-    address: '',
-    login_password: '',
-    status: 'active'
-  });
+  const { hasPermission } = usePermissions();
+  const canManage = hasPermission('manage_suppliers');
 
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ['suppliers'],
-    queryFn: () => base44.entities.Supplier.list('-created_date'),
+    queryFn: () => base44.entities.Supplier.list(),
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Supplier.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      toast.success('Fornecedor criado com sucesso!');
-      handleCloseDialog();
-    },
-    onError: () => toast.error('Erro ao criar fornecedor')
+  const { data: items = [] } = useQuery({
+    queryKey: ['gdmItems'],
+    queryFn: () => base44.entities.GDMItem.list('-updated_date', 500),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Supplier.update(id, data),
+  const { data: gdms = [] } = useQuery({
+    queryKey: ['gdms'],
+    queryFn: () => base44.entities.GDM.list('-updated_date', 300),
+  });
+
+  const { data: histories = [] } = useQuery({
+    queryKey: ['gdmItemHistories'],
+    queryFn: () => base44.entities.GDMItemHistory.list('-created_date', 1000),
+  });
+
+  // Sincronização em tempo real: vínculos de itens atualizam os indicadores.
+  useEffect(() => {
+    const unsubscribe = base44.entities.GDMItem.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ['gdmItems'] });
+      queryClient.invalidateQueries({ queryKey: ['gdmItemHistories'] });
+      queryClient.invalidateQueries({ queryKey: ['gdms'] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
+
+  const stats = useMemo(
+    () => buildSupplierStats({ suppliers, items, gdms, histories }),
+    [suppliers, items, gdms, histories]
+  );
+
+  const saveMutation = useMutation({
+    mutationFn: (data) =>
+      editing
+        ? base44.entities.Supplier.update(editing.id, data)
+        : base44.entities.Supplier.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      toast.success('Fornecedor atualizado!');
-      handleCloseDialog();
+      toast.success(editing ? 'Fornecedor atualizado!' : 'Fornecedor cadastrado!');
+      setDialogOpen(false);
+      setEditing(null);
     },
-    onError: () => toast.error('Erro ao atualizar fornecedor')
+    onError: () => toast.error('Erro ao salvar fornecedor'),
   });
 
   const deleteMutation = useMutation({
@@ -88,73 +92,32 @@ export default function Suppliers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       toast.success('Fornecedor removido!');
+      setDeleting(null);
     },
-    onError: () => toast.error('Erro ao remover fornecedor')
+    onError: () => toast.error('Erro ao remover fornecedor'),
   });
 
-  const handleCloseDialog = () => {
-    setShowDialog(false);
-    setEditingSupplier(null);
-    setFormData({
-      company_name: '',
-      trading_name: '',
-      cnpj: '',
-      email: '',
-      phone: '',
-      contact_name: '',
-      address: '',
-      login_password: '',
-      status: 'active'
-    });
-  };
-
-  const handleEdit = (supplier) => {
-    setEditingSupplier(supplier);
-    setFormData({
-      company_name: supplier.company_name || '',
-      trading_name: supplier.trading_name || '',
-      cnpj: supplier.cnpj || '',
-      email: supplier.email || '',
-      phone: supplier.phone || '',
-      contact_name: supplier.contact_name || '',
-      address: supplier.address || '',
-      login_password: supplier.login_password || '',
-      status: supplier.status || 'active'
-    });
-    setShowDialog(true);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (editingSupplier) {
-      updateMutation.mutate({ id: editingSupplier.id, data: formData });
-    } else {
-      createMutation.mutate(formData);
-    }
-  };
-
-  const filteredSuppliers = suppliers.filter(supplier =>
-    supplier.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.trading_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.cnpj?.includes(searchTerm)
-  );
-
-  const isAdmin = user?.role === 'admin';
+  const filteredStats = stats.filter((row) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    const s = row.supplier;
+    return (
+      s.company_name?.toLowerCase().includes(term) ||
+      s.trading_name?.toLowerCase().includes(term) ||
+      s.cnpj?.includes(term)
+    );
+  });
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between">
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-10 w-32" />
+        <Skeleton className="h-10 w-72" />
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
         </div>
-        <Card>
-          <CardContent className="p-6">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-16 mb-4" />
-            ))}
-          </CardContent>
-        </Card>
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
@@ -165,23 +128,40 @@ export default function Suppliers() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Fornecedores</h1>
-          <p className="text-slate-500 mt-1">{filteredSuppliers.length} fornecedores cadastrados</p>
+          <p className="text-slate-500 mt-1">
+            Centro interno de controle — {suppliers.length} fornecedores cadastrados
+          </p>
         </div>
-        {isAdmin && (
-          <Button className="bg-sky-600 hover:bg-sky-700" onClick={() => setShowDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Fornecedor
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">
+            <Lock className="h-3 w-3 mr-1" />
+            Sem acesso externo
+          </Badge>
+          {canManage && (
+            <Button
+              className="bg-sky-600 hover:bg-sky-700"
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Fornecedor
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Search */}
+      {/* Indicadores internos */}
+      <SupplierControlKpis stats={stats} />
+
+      {/* Busca */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Buscar por nome ou CNPJ..."
+              placeholder="Buscar por razão social, nome fantasia ou CNPJ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -190,223 +170,151 @@ export default function Suppliers() {
         </CardContent>
       </Card>
 
-      {/* Table */}
+      {/* Tabela de fornecedores */}
       <Card className="border-0 shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead>Empresa</TableHead>
-              <TableHead>CNPJ</TableHead>
-              <TableHead>Contato</TableHead>
-              <TableHead>Status</TableHead>
-              {isAdmin && <TableHead className="text-right">Ações</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredSuppliers.map((supplier) => (
-              <TableRow key={supplier.id} className="hover:bg-slate-50">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-indigo-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{supplier.company_name}</p>
-                      {supplier.trading_name && (
-                        <p className="text-sm text-slate-500">{supplier.trading_name}</p>
-                      )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="ml-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedSupplier(supplier);
-                        setShowGdmsDialog(true);
-                      }}
-                    >
-                      <Package className="h-4 w-4 mr-1" />
-                      Equipamentos
-                    </Button>
-                  </div>
-                </TableCell>
-                <TableCell>{supplier.cnpj}</TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    {supplier.email && (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Mail className="h-3 w-3 text-slate-400" />
-                        {supplier.email}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50">
+                <TableHead>Fornecedor</TableHead>
+                <TableHead>Em posse</TableHead>
+                <TableHead>Aguard. Cotação</TableHead>
+                <TableHead>Em Reparo</TableHead>
+                <TableHead>Aguard. Retorno</TableHead>
+                <TableHead>Finalizados</TableHead>
+                <TableHead>Valor em Orçamento</TableHead>
+                {canManage && <TableHead className="text-right">Ações</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStats.map((row) => (
+                <TableRow
+                  key={row.supplier.id}
+                  className="cursor-pointer hover:bg-slate-50"
+                  onClick={() => navigate(`/SupplierDetail?id=${row.supplier.id}`)}
+                >
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-sky-50 flex items-center justify-center">
+                        <Building2 className="h-4 w-4 text-sky-600" />
                       </div>
-                    )}
-                    {supplier.phone && (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Phone className="h-3 w-3 text-slate-400" />
-                        {supplier.phone}
+                      <div>
+                        <p className="font-medium">
+                          {row.supplier.trading_name || row.supplier.company_name}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          CNPJ {row.supplier.cnpj} • {row.supplier.email}
+                        </p>
                       </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={supplier.status} />
-                </TableCell>
-                {isAdmin && (
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(supplier)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteMutation.mutate(supplier.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   </TableCell>
-                )}
-              </TableRow>
-            ))}
-            {filteredSuppliers.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 5 : 4} className="h-32 text-center">
-                  <Building2 className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-                  <p className="text-slate-500">Nenhum fornecedor encontrado</p>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                  <TableCell className="font-medium">{row.inPossession}</TableCell>
+                  <TableCell>
+                    {row.awaitingQuote > 0 ? (
+                      <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                        {row.awaitingQuote}
+                      </Badge>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {row.inRepair > 0 ? (
+                      <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                        {row.inRepair}
+                      </Badge>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {row.awaitingReturn > 0 ? (
+                      <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+                        {row.awaitingReturn}
+                      </Badge>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-slate-600">{row.completed}</TableCell>
+                  <TableCell className="font-medium">{formatBRL(row.totalValue)}</TableCell>
+                  {canManage && (
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Editar"
+                          onClick={() => {
+                            setEditing(row.supplier);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Remover"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => setDeleting(row.supplier)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+              {filteredStats.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={canManage ? 8 : 7} className="h-32 text-center">
+                    <Building2 className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                    <p className="text-slate-500">
+                      Nenhum fornecedor encontrado. Clique em uma linha para ver os detalhes.
+                    </p>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
 
-      {/* Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingSupplier ? 'Editar Fornecedor' : 'Novo Fornecedor'}</DialogTitle>
-            <DialogDescription>
-              {editingSupplier ? 'Atualize os dados do fornecedor' : 'Preencha os dados do novo fornecedor'}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-              <div className="space-y-2">
-                <Label>Razão Social *</Label>
-                <Input
-                  value={formData.company_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, company_name: e.target.value }))}
-                  placeholder="Razão social da empresa"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Nome Fantasia</Label>
-                <Input
-                  value={formData.trading_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, trading_name: e.target.value }))}
-                  placeholder="Nome fantasia"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>CNPJ *</Label>
-                  <Input
-                    value={formData.cnpj}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cnpj: e.target.value }))}
-                    placeholder="00.000.000/0000-00"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Email *</Label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="email@empresa.com"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Nome do Contato</Label>
-                <Input
-                  value={formData.contact_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contact_name: e.target.value }))}
-                  placeholder="Nome do contato principal"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Endereço</Label>
-                <Input
-                  value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="Endereço completo"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Senha de Acesso</Label>
-                <Input
-                  type="password"
-                  value={formData.login_password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, login_password: e.target.value }))}
-                  placeholder="Senha para login do fornecedor"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="inactive">Inativo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="bg-sky-600 hover:bg-sky-700"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {(createMutation.isPending || updateMutation.isPending) && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                {editingSupplier ? 'Atualizar' : 'Criar'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <SupplierGDMs
-        supplier={selectedSupplier}
-        open={showGdmsDialog}
-        onClose={() => {
-          setShowGdmsDialog(false);
-          setSelectedSupplier(null);
-        }}
+      <SupplierDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        supplier={editing}
+        onSubmit={(data) => saveMutation.mutate(data)}
+        isSaving={saveMutation.isPending}
       />
+
+      {/* Confirmação de remoção */}
+      {deleting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <Card className="w-full max-w-sm">
+            <CardContent className="p-6 space-y-4">
+              <p className="font-medium">Remover fornecedor?</p>
+              <p className="text-sm text-slate-500">
+                {deleting.company_name} — o histórico dos equipamentos permanece preservado
+                nas GDMs.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDeleting(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => deleteMutation.mutate(deleting.id)}
+                  disabled={deleteMutation.isPending}
+                >
+                  Remover
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

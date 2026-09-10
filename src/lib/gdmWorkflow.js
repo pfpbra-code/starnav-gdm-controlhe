@@ -1,5 +1,5 @@
 // Central GDM workflow definitions: statuses, steps, roles and history builder.
-// Used by GDMDetail, SupplierGDMs, GDMList and StatusBadge to keep the flow consistent.
+// Used by GDMDetail, GDMList and StatusBadge to keep the flow consistent.
 
 export const STATUS_LABELS = {
   pending_coordinator: 'Aguardando Aprovação do Coordenador',
@@ -37,7 +37,6 @@ export const ROLE_LABELS = {
   coordinator: 'Coordenador',
   services: 'Serviços/Compras',
   maintenance: 'Gestor de Manutenção',
-  supplier_user: 'Fornecedor',
   vessel_user: 'Embarcação',
   user: 'Usuário',
 };
