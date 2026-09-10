@@ -16,7 +16,7 @@
     },
     "supplier_id": {
       "type": "string",
-      "description": "ID do fornecedor (denormalizado para escopo de acesso)"
+      "description": "ID do fornecedor (denormalizado para escopo de acesso e rastreabilidade)"
     },
     "user_id": {
       "type": "string",
@@ -91,9 +91,6 @@
         },
         {
           "data.vessel_id": "{{user.data.vessel_id}}"
-        },
-        {
-          "data.supplier_id": "{{user.data.supplier_id}}"
         },
         {
           "data.vessel_id": {
