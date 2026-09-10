@@ -371,9 +371,6 @@
           "data.vessel_id": "{{user.data.vessel_id}}"
         },
         {
-          "data.supplier_id": "{{user.data.supplier_id}}"
-        },
-        {
           "user_condition": {
             "role": "admin"
           }
@@ -402,9 +399,6 @@
         },
         {
           "data.vessel_id": "{{user.data.vessel_id}}"
-        },
-        {
-          "data.supplier_id": "{{user.data.supplier_id}}"
         },
         {
           "user_condition": {
