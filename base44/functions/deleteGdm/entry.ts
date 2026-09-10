@@ -15,8 +15,13 @@ export default async function(req: Request): Promise<Response> {
     const gdmId = body.gdm_id || body.gdmId;
     if (!gdmId) return Response.json({ error: 'gdm_id é obrigatório' }, { status: 400 });
 
-    const gdms = await base44.asServiceRole.entities.GDM.filter({ id: gdmId });
-    const gdm = gdms && gdms[0];
+    let gdm = null;
+    try {
+      const gdms = await base44.asServiceRole.entities.GDM.filter({ id: gdmId });
+      gdm = gdms && gdms[0];
+    } catch {
+      gdm = null;
+    }
     if (!gdm) return Response.json({ error: 'GDM não encontrada' }, { status: 404 });
 
     await base44.asServiceRole.entities.GDMItem.deleteMany({ gdm_id: gdmId });
