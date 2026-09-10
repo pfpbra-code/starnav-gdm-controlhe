@@ -35,10 +35,6 @@
       },
       "description": "Categorias de servi\u00e7o"
     },
-    "login_password": {
-      "type": "string",
-      "description": "Senha de acesso"
-    },
     "status": {
       "type": "string",
       "enum": [

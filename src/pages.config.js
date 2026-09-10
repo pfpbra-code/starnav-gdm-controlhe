@@ -59,8 +59,6 @@ import AuditLogs from './pages/AuditLogs';
 import Settings from './pages/Settings';
 import ServicesTreatments from './pages/ServicesTreatments';
 import MaintenanceAnalysis from './pages/MaintenanceAnalysis';
-import SupplierDashboard from './pages/SupplierDashboard';
-import SupplierMaterials from './pages/SupplierMaterials';
 import VesselDashboard from './pages/VesselDashboard';
 import VesselGDMs from './pages/VesselGDMs';
 import PasswordPolicies from './pages/PasswordPolicies';
@@ -82,8 +80,6 @@ export const PAGES = {
     "Settings": Settings,
     "ServicesTreatments": ServicesTreatments,
     "MaintenanceAnalysis": MaintenanceAnalysis,
-    "SupplierDashboard": SupplierDashboard,
-    "SupplierMaterials": SupplierMaterials,
     "VesselDashboard": VesselDashboard,
     "VesselGDMs": VesselGDMs,
     "PasswordPolicies": PasswordPolicies,

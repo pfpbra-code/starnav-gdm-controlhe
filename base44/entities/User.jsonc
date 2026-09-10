@@ -12,7 +12,6 @@
         "operations",
         "almoxarifado",
         "planejamento",
-        "supplier_user",
         "vessel_user",
         "user"
       ],
@@ -35,9 +34,6 @@
       "items": {
         "type": "string"
       }
-    },
-    "supplier_id": {
-      "type": "string"
     },
     "vessel_id": {
       "type": "string"
