@@ -315,6 +315,35 @@ export function nextActionText(item) {
   }
 }
 
+/**
+ * Grupo de responsabilidade do item para os filtros dos painéis setoriais
+ * (Aguardando Operações / Manutenção / Almoxarifado / Serviços / Concluídos).
+ */
+export function itemResponsibleGroup(item) {
+  if (!item) return "other";
+  if (item.status === "completed") return "completed";
+  switch (item.status) {
+    case "pending_almoxarifado":
+    case "awaiting_discard_confirmation":
+      return "almoxarifado";
+    case "received":
+      return item.destination === "stock_return" ? "almoxarifado" : "services";
+    case "pending_maintenance_authorization":
+      return "maintenance";
+    case "pending_disembark_confirmation":
+    case "disembark_rescheduled":
+      return "operations";
+    case "pending_services":
+      return "services";
+    case "sent_to_supplier":
+    case "in_treatment":
+    case "awaiting_return":
+      return item.destination === "certification" ? "operations" : "services";
+    default:
+      return "other";
+  }
+}
+
 /** Grupo do item para os filtros rápidos. */
 export function itemGroup(item) {
   if (["completed"].includes(item.status)) return "completed";

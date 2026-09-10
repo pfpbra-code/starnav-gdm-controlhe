@@ -1,55 +1,48 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { createPageUrl } from '@/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/hooks/usePermissions';
 import { SECTOR_DESTINATIONS, scopeGdms } from '@/lib/permissions';
 import {
-  ITEM_DESTINATION_LABELS,
-  ITEM_DESTINATION_COLORS,
-  ITEM_STATUS_LABELS,
-  ITEM_STATUS_COLORS,
-  itemGroup,
-  itemResponsible,
+  itemResponsibleGroup,
+  availableItemActions,
   sortItemsByPriority,
 } from '@/lib/gdmItems';
+import SectorItemCard from './SectorItemCard';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Search,
   FileText,
-  Eye,
   Ship,
   ChevronDown,
   ChevronRight,
   Package,
 } from 'lucide-react';
 
-const GROUP_FILTERS = [
+const RESPONSIBLE_FILTERS = [
   { key: 'all', label: 'Todos' },
-  { key: 'pending', label: 'Aguardando Aprovação' },
-  { key: 'in_progress', label: 'Em Andamento' },
-  { key: 'completed', label: 'Finalizados' },
-  { key: 'closed', label: 'Cancelados / Reprovados' },
+  { key: 'mine', label: 'Minha Ação' },
+  { key: 'operations', label: 'Aguardando Operações' },
+  { key: 'maintenance', label: 'Aguardando Manutenção' },
+  { key: 'almoxarifado', label: 'Aguardando Almoxarifado' },
+  { key: 'services', label: 'Aguardando Serviços' },
+  { key: 'completed', label: 'Concluídos' },
 ];
 
 /**
  * Painel setorial (Manutenção ou Operações).
- * Mostra as GDMs agrupadas com os itens do setor correspondente,
- * filtrando os mesmos registros do banco — sem duplicação.
+ * Painel operacional do workflow: cada setor executa suas ações
+ * diretamente no card do item, sobre os mesmos registros da GDM —
+ * sem duplicação e sincronizado em tempo real com todas as telas.
  */
-export default function SectorGDMBoard({
-  sector,
-  title,
-  description,
-  emptyMessage,
-}) {
+export default function SectorGDMBoard({ sector, title, description, emptyMessage }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [groupFilter, setGroupFilter] = useState('all');
+  const [respFilter, setRespFilter] = useState('all');
+  const queryClient = useQueryClient();
   const { user, hasPermission } = usePermissions();
 
   const destinations = SECTOR_DESTINATIONS[sector] || [];
@@ -66,7 +59,22 @@ export default function SectorGDMBoard({
 
   const isLoading = loadingGdms || loadingItems;
 
-  const { groups, totalItems } = useMemo(() => {
+  // Sincronização em tempo real com a GDM completa e demais telas:
+  // qualquer mudança de item (ou da guia) atualiza este painel na hora.
+  useEffect(() => {
+    const unsubItems = base44.entities.GDMItem.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ['gdmItems'] });
+    });
+    const unsubGdms = base44.entities.GDM.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ['gdms'] });
+    });
+    return () => {
+      unsubItems();
+      unsubGdms();
+    };
+  }, [queryClient]);
+
+  const { groups, totalItems, myActionCount } = useMemo(() => {
     const itemsByGdm = {};
     items
       .filter((i) => destinations.includes(i.destination))
@@ -100,24 +108,33 @@ export default function SectorGDMBoard({
         .filter(Boolean);
     }
 
-    if (groupFilter !== 'all') {
-      result = result
-        .map((entry) => {
-          const matched = entry.items.filter((i) => itemGroup(i) === groupFilter);
-          return matched.length ? { gdm: entry.gdm, items: matched } : null;
-        })
-        .filter(Boolean);
-    }
+    // Filtro por responsabilidade: itens pendentes da minha ação primeiro.
+    result = result
+      .map((entry) => {
+        const matched = entry.items.filter((i) => {
+          if (respFilter === 'all') return true;
+          if (respFilter === 'mine')
+            return availableItemActions(i, hasPermission, user).length > 0;
+          return itemResponsibleGroup(i) === respFilter;
+        });
+        return matched.length ? { gdm: entry.gdm, items: matched } : null;
+      })
+      .filter(Boolean);
 
     result.forEach((entry) => {
-      entry.items = sortItemsByPriority(entry.items, hasPermission);
+      entry.items = sortItemsByPriority(entry.items, hasPermission, user);
     });
 
     return {
       groups: result,
       totalItems: result.reduce((s, e) => s + e.items.length, 0),
+      myActionCount: items.filter(
+        (i) =>
+          destinations.includes(i.destination) &&
+          availableItemActions(i, hasPermission, user).length > 0,
+      ).length,
     };
-  }, [gdms, items, destinations, user, searchTerm, groupFilter, hasPermission]);
+  }, [gdms, items, destinations, user, searchTerm, respFilter, hasPermission]);
 
   if (isLoading) {
     return (
@@ -142,9 +159,14 @@ export default function SectorGDMBoard({
           <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
           <p className="text-slate-500 mt-1">{description}</p>
         </div>
-        <p className="text-sm text-slate-500">
+        <div className="text-sm text-slate-500">
           {groups.length} GDMs · {totalItems} itens
-        </p>
+          {myActionCount > 0 && (
+            <span className="ml-2 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">
+              {myActionCount} aguardando sua ação
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Filtros */}
@@ -160,17 +182,17 @@ export default function SectorGDMBoard({
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            {GROUP_FILTERS.map((f) => (
+            {RESPONSIBLE_FILTERS.map((f) => (
               <button
                 key={f.key}
-                onClick={() => setGroupFilter(f.key)}
+                onClick={() => setRespFilter(f.key)}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  groupFilter === f.key
+                  respFilter === f.key
                     ? 'bg-sky-600 text-white'
                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                {f.label}
+                {f.key === 'mine' && myActionCount > 0 ? `${f.label} (${myActionCount})` : f.label}
               </button>
             ))}
           </div>
@@ -179,7 +201,13 @@ export default function SectorGDMBoard({
 
       {/* Grupos por GDM */}
       {groups.map(({ gdm, items }) => (
-        <GDMGroup key={gdm.id} gdm={gdm} items={items} />
+        <GDMGroup
+          key={gdm.id}
+          gdm={gdm}
+          items={items}
+          hasPermission={hasPermission}
+          user={user}
+        />
       ))}
 
       {groups.length === 0 && (
@@ -194,7 +222,7 @@ export default function SectorGDMBoard({
   );
 }
 
-function GDMGroup({ gdm, items }) {
+function GDMGroup({ gdm, items, hasPermission, user }) {
   const [expanded, setExpanded] = useState(true);
 
   return (
@@ -230,44 +258,15 @@ function GDMGroup({ gdm, items }) {
         </button>
 
         {expanded && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 pt-0 border-t border-slate-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 pt-3 border-t border-slate-100">
             {items.map((item) => (
-              <div key={item.id} className="rounded-lg border bg-white p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{item.equipment_name}</p>
-                    <p className="text-xs text-slate-500">
-                      Serial: {item.serial_number || '—'} · Qtd: {item.quantity || 1}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
-                      ITEM_DESTINATION_COLORS[item.destination] || ''
-                    }`}
-                  >
-                    {ITEM_DESTINATION_LABELS[item.destination] || item.destination}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      ITEM_STATUS_COLORS[item.status] || 'bg-slate-100 text-slate-700'
-                    }`}
-                  >
-                    {ITEM_STATUS_LABELS[item.status] || item.status}
-                  </span>
-                  <span className="text-xs text-slate-500 truncate">
-                    {item.supplier_name || itemResponsible(item)}
-                  </span>
-                </div>
-                <Link
-                  to={createPageUrl(`GDMDetail?id=${gdm.id}`)}
-                  className="mt-3 flex items-center gap-1 text-xs text-sky-600 hover:underline"
-                >
-                  <Eye className="h-3 w-3" />
-                  Ver GDM completa
-                </Link>
-              </div>
+              <SectorItemCard
+                key={item.id}
+                item={item}
+                gdm={gdm}
+                hasPermission={hasPermission}
+                user={user}
+              />
             ))}
           </div>
         )}
