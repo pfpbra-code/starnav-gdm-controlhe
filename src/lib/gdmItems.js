@@ -20,14 +20,20 @@ export const ITEM_STATUS_LABELS = {
   cancelled: "Cancelado",
   pending_almoxarifado: "Aguardando Recebimento (Almoxarifado)",
   received: "Recebido pelo Almoxarifado",
+  awaiting_supplier_definition: "Aguardando Definição de Fornecedor",
+  awaiting_shipping_proof: "Aguardando Comprovante de Envio",
+  sent_to_supplier: "Equipamento Enviado ao Fornecedor",
+  in_treatment: "Em Reparo",
+  awaiting_return: "Aguardando Retorno do Equipamento",
+  awaiting_supplier_return: "Aguardando Retorno do Fornecedor",
+  return_confirmed: "Retorno Confirmado",
+  pending_maintenance_authorization: "Aguardando Aprovação da Manutenção",
+  repair_approved: "Reparo Aprovado",
+  discount_negotiation: "Negociação de Desconto",
   pending_disembark_confirmation: "Confirmação de Desembarque (Embarcação)",
   disembark_rescheduled: "Desembarque Reprogramado",
-  pending_services: "Aguardando Serviços",
-  sent_to_supplier: "Enviado ao Fornecedor",
-  in_treatment: "Em Tratativa no Fornecedor",
-  awaiting_return: "Aguardando Retorno do Equipamento",
-  pending_maintenance_authorization: "Aguardando Autorização do Gestor de Manutenção",
   awaiting_discard_confirmation: "Aguardando Confirmação do Descarte",
+  discard_approved: "Descarte Aprovado",
   completed: "Finalizado",
 };
 
@@ -39,21 +45,27 @@ export const ITEM_STATUS_COLORS = {
   cancelled: "bg-slate-200 text-slate-600",
   pending_almoxarifado: "bg-amber-100 text-amber-800",
   received: "bg-sky-100 text-sky-800",
-  pending_disembark_confirmation: "bg-orange-100 text-orange-800",
-  disembark_rescheduled: "bg-purple-100 text-purple-800",
-  pending_services: "bg-indigo-100 text-indigo-800",
+  awaiting_supplier_definition: "bg-indigo-100 text-indigo-800",
+  awaiting_shipping_proof: "bg-orange-100 text-orange-800",
   sent_to_supplier: "bg-indigo-100 text-indigo-800",
   in_treatment: "bg-blue-100 text-blue-800",
   awaiting_return: "bg-blue-100 text-blue-800",
+  awaiting_supplier_return: "bg-purple-100 text-purple-800",
+  return_confirmed: "bg-teal-100 text-teal-800",
   pending_maintenance_authorization: "bg-orange-100 text-orange-800",
+  repair_approved: "bg-emerald-100 text-emerald-800",
+  discount_negotiation: "bg-violet-100 text-violet-800",
+  pending_disembark_confirmation: "bg-orange-100 text-orange-800",
+  disembark_rescheduled: "bg-purple-100 text-purple-800",
   awaiting_discard_confirmation: "bg-orange-100 text-orange-800",
+  discard_approved: "bg-slate-200 text-slate-600",
   completed: "bg-green-100 text-green-800",
 };
 
 export const ITEM_ACTION_LABELS = {
   approve: "Tratativa Confirmada pelo Coordenador",
   reject: "Reprovado pelo Coordenador",
-  confirm_receipt: "Recebimento Confirmado",
+  confirm_receipt: "Recebimento Confirmado (Almoxarifado)",
   report_not_received: "Não Recebido pelo Almoxarifado",
   confirm_disembark: "Desembarque Confirmado pela Embarcação",
   reschedule_disembark: "Desembarque Reprogramado pela Embarcação",
@@ -61,6 +73,14 @@ export const ITEM_ACTION_LABELS = {
   confirm_stock_return: "Devolução ao Estoque Confirmada",
   authorize_discard: "Descarte Autorizado pelo Gestor",
   confirm_discard: "Descarte Confirmado pelo Almoxarifado",
+  select_supplier: "Fornecedor Definido (Serviços)",
+  attach_shipping_proof: "Comprovante de Envio Anexado (Almoxarifado)",
+  attach_quote: "Cotação Anexada (Serviços)",
+  maintenance_decision: "Decisão da Manutenção sobre a Cotação",
+  renegotiate_quote: "Nova Proposta Inserida (Serviços)",
+  register_supplier_return: "NF de Retorno e Comprovante Registrados (Serviços)",
+  confirm_supplier_return: "Retorno do Fornecedor Confirmado (Almoxarifado)",
+  start_repair: "Reparo Iniciado no Fornecedor",
   complete: "Item Finalizado",
   cancel: "Item Cancelado",
   advance_treatment: "Avanço da Tratativa",
@@ -85,12 +105,10 @@ export function availableItemActions(item, can, user) {
   const actions = [];
 
   if (s === "pending_coordinator" && can("approve_gdm")) {
-    // ETAPA 2 — o coordenador apenas confirma a tratativa do item.
     actions.push({ action: "approve", label: "Confirmar Tratativa" });
   }
 
   if (s === "pending_almoxarifado") {
-    // ETAPA 3 — Almoxarifado: Recebido / Não Recebido.
     if (can("confirm_receipt")) {
       actions.push({ action: "confirm_receipt", label: "Recebido" });
     }
@@ -130,20 +148,53 @@ export function availableItemActions(item, can, user) {
     actions.push({ action: "confirm_discard", label: "Confirmar descarte realizado" });
   }
 
-  if (
-    ["repair", "certification"].includes(d) &&
-    ["pending_services", "sent_to_supplier", "in_treatment"].includes(s) &&
-    can("edit_gdm")
-  ) {
-    actions.push({ action: "advance_treatment", label: "Avançar etapa" });
-  }
+  // CICLO DE FORNECEDOR (reparo / calibração) — um fluxo único para todos os módulos.
+  if (["repair", "certification"].includes(d)) {
+    if (
+      ["awaiting_supplier_definition", "pending_services", "return_confirmed"].includes(s) &&
+      can("send_to_supplier")
+    ) {
+      actions.push({
+        action: "select_supplier",
+        label: s === "return_confirmed" ? "Definir novo fornecedor" : "Definir fornecedor",
+      });
+    }
 
-  if (
-    ["repair", "certification"].includes(d) &&
-    ["awaiting_return", "in_treatment"].includes(s) &&
-    can("confirm_return")
-  ) {
-    actions.push({ action: "complete", label: "Finalizar item" });
+    if (s === "awaiting_shipping_proof" && can("confirm_receipt")) {
+      actions.push({ action: "attach_shipping_proof", label: "Anexar comprovante de envio" });
+    }
+
+    if (s === "sent_to_supplier" && can("send_to_supplier")) {
+      actions.push({ action: "attach_quote", label: "Anexar cotação" });
+    }
+
+    if (s === "awaiting_maintenance_authorization") {
+      const approvePerm = d === "certification" ? "approve_operations_quote" : "approve_maintenance";
+      if (can(approvePerm)) {
+        actions.push({ action: "maintenance_decision", label: "Analisar cotação" });
+      }
+    }
+
+    if (s === "discount_negotiation" && can("send_to_supplier")) {
+      actions.push({ action: "renegotiate_quote", label: "Inserir nova proposta" });
+    }
+
+    if (s === "awaiting_supplier_return") {
+      if (!item.return_nf_url && can("send_to_supplier")) {
+        actions.push({ action: "register_supplier_return", label: "Registrar NF de retorno" });
+      }
+      if (item.return_nf_url && can("confirm_receipt")) {
+        actions.push({ action: "confirm_supplier_return", label: "Confirmar recebimento do retorno" });
+      }
+    }
+
+    if (s === "repair_approved" && can("edit_gdm")) {
+      actions.push({ action: "start_repair", label: "Iniciar reparo" });
+    }
+
+    if (["in_treatment", "awaiting_return"].includes(s) && can("confirm_return")) {
+      actions.push({ action: "complete", label: "Finalizar item" });
+    }
   }
 
   return actions;
@@ -166,17 +217,26 @@ export function itemResponsible(item) {
     case "received":
     case "awaiting_discard_confirmation":
       return "Almoxarifado";
+    case "awaiting_shipping_proof":
+      return "Almoxarifado";
     case "pending_disembark_confirmation":
     case "disembark_rescheduled":
       return "Embarcação";
-    case "pending_maintenance_authorization":
-      return "Gestor de Manutenção";
+    case "awaiting_supplier_definition":
     case "pending_services":
-      return "Serviços";
     case "sent_to_supplier":
+    case "repair_approved":
+    case "discount_negotiation":
+    case "return_confirmed":
+      return "Serviços";
+    case "awaiting_supplier_return":
+      return item.return_nf_url ? "Almoxarifado" : "Serviços";
+    case "pending_maintenance_authorization":
+      return item.destination === "certification" ? "Operações" : "Gestor de Manutenção";
     case "in_treatment":
     case "awaiting_return":
       return item.supplier_name || "Fornecedor";
+    case "discard_approved":
     case "completed":
       return "Processo finalizado";
     case "rejected":
@@ -191,10 +251,9 @@ export function itemResponsible(item) {
 /** Resumo da situação geral da guia a partir dos itens. */
 export function summarizeItems(items = []) {
   const total = items.length;
+  const closedList = ["completed", "cancelled", "rejected", "discard_approved"];
   const completed = items.filter((i) => i.status === "completed").length;
-  const pending = items.filter(
-    (i) => !["completed", "cancelled", "rejected"].includes(i.status),
-  ).length;
+  const pending = items.filter((i) => !closedList.includes(i.status)).length;
   const waiting = items.filter((i) => i.status === "pending_coordinator").length;
   const inProgress = Math.max(pending - waiting, 0);
   const byDestination = items.reduce((acc, i) => {
@@ -222,21 +281,23 @@ const FLOW_BY_DESTINATION = {
   repair: [
     { status: "pending_coordinator", label: "Aprovação do Coordenador" },
     { status: "pending_almoxarifado", label: "Recebimento pelo Almoxarifado" },
-    { status: "received", label: "Recebido pelo Almoxarifado" },
-    { status: "pending_services", label: "Aguardando envio" },
-    { status: "sent_to_supplier", label: "Enviado ao fornecedor" },
-    { status: "in_treatment", label: "Em reparo" },
-    { status: "awaiting_return", label: "Aguardando retorno" },
+    { status: "awaiting_supplier_definition", label: "Definição do Fornecedor (Serviços)" },
+    { status: "awaiting_shipping_proof", label: "Comprovante de Envio (Almoxarifado)" },
+    { status: "sent_to_supplier", label: "Enviado — Aguardando Cotação (Serviços)" },
+    { status: "awaiting_maintenance_authorization", label: "Aprovação da Manutenção" },
+    { status: "repair_approved", label: "Reparo Aprovado" },
+    { status: "in_treatment", label: "Em Reparo no Fornecedor" },
     { status: "completed", label: "Finalizado" },
   ],
   certification: [
     { status: "pending_coordinator", label: "Aprovação do Coordenador" },
     { status: "pending_almoxarifado", label: "Recebimento pelo Almoxarifado" },
-    { status: "received", label: "Recebido pelo Almoxarifado" },
-    { status: "pending_services", label: "Aguardando envio" },
-    { status: "sent_to_supplier", label: "Enviado para calibração" },
-    { status: "in_treatment", label: "Em calibração" },
-    { status: "awaiting_return", label: "Aguardando retorno" },
+    { status: "awaiting_supplier_definition", label: "Definição do Fornecedor (Serviços)" },
+    { status: "awaiting_shipping_proof", label: "Comprovante de Envio (Almoxarifado)" },
+    { status: "sent_to_supplier", label: "Enviado — Aguardando Cotação (Serviços)" },
+    { status: "awaiting_maintenance_authorization", label: "Aprovação da Operações" },
+    { status: "repair_approved", label: "Calibração Aprovada" },
+    { status: "in_treatment", label: "Em Calibração no Fornecedor" },
     { status: "completed", label: "Finalizado" },
   ],
   stock_return: [
@@ -254,13 +315,19 @@ const FLOW_BY_DESTINATION = {
   ],
 };
 
-// Etapas de embarcação (não recebido / reprogramado) são exibidas sobre a
-// etapa do Almoxarifado, onde o item retoma o fluxo.
+// Estados que representam a mesma etapa do fluxo (legados ou ramificações
+// que retornam a um ponto já exibido na linha do tempo).
 const STATUS_ALIAS = {
   draft: "pending_coordinator",
   approved: "pending_almoxarifado",
   pending_disembark_confirmation: "pending_almoxarifado",
   disembark_rescheduled: "pending_almoxarifado",
+  pending_services: "awaiting_supplier_definition",
+  discount_negotiation: "awaiting_maintenance_authorization",
+  awaiting_return: "in_treatment",
+  awaiting_supplier_return: "awaiting_shipping_proof",
+  return_confirmed: "awaiting_supplier_definition",
+  discard_approved: "completed",
 };
 
 /** Etapas do item com marcação de concluída / atual / futura. */
@@ -294,16 +361,34 @@ export function nextActionText(item) {
       return item.destination === "stock_return"
         ? "Este item está aguardando a confirmação da devolução ao estoque."
         : "Este item foi recebido pelo Almoxarifado e segue para a próxima etapa.";
+    case "awaiting_supplier_definition":
+    case "pending_services":
+      return "Serviços deve selecionar o fornecedor, informar observações e a previsão de envio.";
+    case "awaiting_shipping_proof":
+      return "Almoxarifado deve anexar obrigatoriamente a foto do equipamento expedido, a NF assinada ou o comprovante de coleta.";
+    case "sent_to_supplier":
+      return "Equipamento enviado ao fornecedor. Serviços deve anexar a cotação (valor e prazo informados pelo fornecedor).";
+    case "awaiting_maintenance_authorization":
+      return "Cotação anexada. Aguardando a decisão da Gerência de Manutenção (aprovar, solicitar desconto ou reprovar).";
+    case "repair_approved":
+      return "Cotação aprovada pela Manutenção. Serviços deve iniciar o reparo junto ao fornecedor.";
+    case "discount_negotiation":
+      return "Manutenção solicitou desconto. Serviços deve negociar, inserir o novo valor e anexar a nova proposta.";
+    case "awaiting_supplier_return":
+      return item.return_nf_url
+        ? "NF e comprovante de devolução registrados. Almoxarifado deve confirmar o recebimento do retorno."
+        : "Cotação reprovada. Serviços deve solicitar a devolução do equipamento e anexar a NF de retorno e o comprovante de devolução.";
+    case "return_confirmed":
+      return "Retorno confirmado pelo Almoxarifado. Serviços deve definir o novo fornecedor (todo o histórico anterior permanece registrado).";
     case "pending_maintenance_authorization":
       return "Este item está aguardando autorização do Gestor de Manutenção.";
     case "awaiting_discard_confirmation":
       return "O descarte foi autorizado pelo Gestor. Confirme quando o descarte físico for realizado.";
-    case "pending_services":
-      return "Este item está aguardando tratativa do setor de Serviços.";
-    case "sent_to_supplier":
     case "in_treatment":
     case "awaiting_return":
       return "Este item está em tratativa no fornecedor.";
+    case "discard_approved":
+      return "Descarte aprovado pela Manutenção. Processo encerrado.";
     case "completed":
       return "Item finalizado.";
     case "rejected":
@@ -321,21 +406,29 @@ export function nextActionText(item) {
  */
 export function itemResponsibleGroup(item) {
   if (!item) return "other";
-  if (item.status === "completed") return "completed";
+  if (["completed", "discard_approved"].includes(item.status)) return "completed";
   switch (item.status) {
     case "pending_almoxarifado":
     case "awaiting_discard_confirmation":
       return "almoxarifado";
     case "received":
       return item.destination === "stock_return" ? "almoxarifado" : "services";
+    case "awaiting_shipping_proof":
+      return "almoxarifado";
+    case "awaiting_supplier_return":
+      return item.return_nf_url ? "almoxarifado" : "services";
     case "pending_maintenance_authorization":
-      return "maintenance";
+      return item.destination === "certification" ? "operations" : "maintenance";
     case "pending_disembark_confirmation":
     case "disembark_rescheduled":
       return "operations";
+    case "awaiting_supplier_definition":
     case "pending_services":
-      return "services";
     case "sent_to_supplier":
+    case "repair_approved":
+    case "discount_negotiation":
+    case "return_confirmed":
+      return "services";
     case "in_treatment":
     case "awaiting_return":
       return item.destination === "certification" ? "operations" : "services";
@@ -346,7 +439,7 @@ export function itemResponsibleGroup(item) {
 
 /** Grupo do item para os filtros rápidos. */
 export function itemGroup(item) {
-  if (["completed"].includes(item.status)) return "completed";
+  if (["completed", "discard_approved"].includes(item.status)) return "completed";
   if (["rejected", "cancelled"].includes(item.status)) return "closed";
   if (item.status === "pending_coordinator") return "pending";
   return "in_progress";
@@ -361,3 +454,15 @@ export function sortItemsByPriority(items, can, user) {
   };
   return [...items].sort((a, b) => rank(a) - rank(b) || a.item_number - b.item_number);
 }
+
+/** Ações do ciclo de fornecedor — usadas pelo roteador de diálogos. */
+export const SUPPLIER_FLOW_ACTIONS = [
+  "select_supplier",
+  "attach_shipping_proof",
+  "attach_quote",
+  "maintenance_decision",
+  "renegotiate_quote",
+  "register_supplier_return",
+  "confirm_supplier_return",
+  "start_repair",
+];

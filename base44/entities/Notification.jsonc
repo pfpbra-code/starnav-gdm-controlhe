@@ -19,6 +19,7 @@
         "supplier_sent",
         "quote_received",
         "quote_analysis",
+        "quote_followup",
         "password_expiring",
         "account_suspended",
         "maintenance_decision",

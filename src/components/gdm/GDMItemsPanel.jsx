@@ -1,20 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import {
   Loader2,
   Package,
@@ -28,14 +17,6 @@ import {
   Dot,
   AlertTriangle,
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { hasPermission } from '@/lib/permissions';
 import {
@@ -56,6 +37,7 @@ import {
 } from '@/lib/gdmItems';
 import GDMItemQrCode from './GDMItemQrCode';
 import GDMItemPdfButton from './GDMItemPdfButton';
+import ItemActionRouter from './ItemActionRouter';
 
 function ItemHistory({ itemId }) {
   const { data: history = [], isLoading } = useQuery({
@@ -142,14 +124,8 @@ const QUICK_FILTERS = [
 ];
 
 export default function GDMItemsPanel({ gdmId, user, gdm }) {
-  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState({});
   const [pending, setPending] = useState(null); // { item, action, label, ... }
-  const [observation, setObservation] = useState('');
-  const [returnNumber, setReturnNumber] = useState('');
-  const [destination, setDestination] = useState('');
-  const [supplierId, setSupplierId] = useState('');
-  const [expectedDisembarkDate, setExpectedDisembarkDate] = useState('');
   const [filter, setFilter] = useState('all');
   const [destFilter, setDestFilter] = useState('all');
 
@@ -159,19 +135,8 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
     enabled: !!gdmId,
   });
 
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: () => base44.entities.Supplier.filter({ status: 'active' }),
-  });
-
   const can = (key) => hasPermission(user, key);
   const summary = summarizeItems(items);
-  const reasonRequired = pending?.action === 'reject' || pending?.action === 'reschedule_disembark';
-  const needsDate = pending?.action === 'reschedule_disembark';
-  const isApproval = pending?.action === 'approve';
-  const needsSupplier =
-    pending?.action === 'advance_treatment' && pending?.item?.status === 'pending_services';
-  const destinationChanged = isApproval && destination && destination !== pending?.item?.destination;
 
   const visibleItems = useMemo(() => {
     const sorted = sortItemsByPriority(items, can, user);
@@ -184,51 +149,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, filter, destFilter, user]);
 
-  const actionMutation = useMutation({
-    mutationFn: ({ item, action, askReturnNumber }) =>
-      base44.functions
-        .invoke('gdmItemAction', {
-          item_id: item.id,
-          action,
-          observation: observation.trim() || undefined,
-          return_number: askReturnNumber ? returnNumber.trim() || undefined : undefined,
-          destination: action === 'approve' ? destination || item.destination : undefined,
-          supplier_id:
-            action === 'advance_treatment' && item.status === 'pending_services'
-              ? supplierId
-              : undefined,
-          expected_disembark_date:
-            action === 'reschedule_disembark' ? expectedDisembarkDate : undefined,
-          supplier_name:
-            action === 'advance_treatment' && item.status === 'pending_services'
-              ? suppliers.find((s) => s.id === supplierId)?.company_name
-              : undefined,
-        })
-        .then((res) => res.data),
-    onSuccess: (_data, variables) => {
-      toast.success('Ação registrada somente neste item');
-      queryClient.invalidateQueries({ queryKey: ['gdmItems', gdmId] });
-      queryClient.invalidateQueries({ queryKey: ['gdmItemHistory', variables.item.id] });
-      queryClient.invalidateQueries({ queryKey: ['gdm', gdmId] });
-      queryClient.invalidateQueries({ queryKey: ['gdms'] });
-      setPending(null);
-      setObservation('');
-      setReturnNumber('');
-      setDestination('');
-      setSupplierId('');
-      setExpectedDisembarkDate('');
-    },
-    onError: (error) => toast.error(error?.message || 'Não foi possível concluir a ação'),
-  });
-
-  const openAction = (item, a) => {
-    setPending({ item, ...a });
-    setObservation('');
-    setReturnNumber('');
-    setSupplierId('');
-    setExpectedDisembarkDate('');
-    setDestination(item.destination || '');
-  };
+  const openAction = (item, a) => setPending({ item, ...a });
 
   const toggle = (id) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
 
@@ -408,6 +329,34 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                           />
                         )}
                         {item.notes && <Field label="Observação" value={item.notes} />}
+                        {item.expected_ship_date && (
+                          <Field label="Previsão de envio" value={item.expected_ship_date} />
+                        )}
+                        {item.quote_value != null && (
+                          <Field
+                            label="Valor da cotação"
+                            value={item.quote_value.toLocaleString('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            })}
+                          />
+                        )}
+                        {item.quote_deadline && (
+                          <Field label="Prazo do fornecedor" value={item.quote_deadline} />
+                        )}
+                        {item.shipping_proof_url && (
+                          <div className="col-span-2">
+                            <span className="text-slate-500 text-xs">Comprovante de envio</span>
+                            <a
+                              href={item.shipping_proof_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-sky-600 hover:underline text-sm font-medium"
+                            >
+                              Visualizar documento anexado pelo Almoxarifado
+                            </a>
+                          </div>
+                        )}
                         {item.expected_disembark_date && (
                           <Field label="Nova data prevista de desembarque" value={item.expected_disembark_date} />
                         )}
@@ -432,150 +381,8 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
         })}
       </CardContent>
 
-      {/* Ação sobre um item */}
-      <Dialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{pending?.label}</DialogTitle>
-            <DialogDescription>
-              Você está tratando somente o item{' '}
-              {pending ? String(pending.item.item_number).padStart(2, '0') : ''} —{' '}
-              {pending?.item?.equipment_name} (destino{' '}
-              {ITEM_DESTINATION_LABELS[pending?.item?.destination] || '—'}). Os demais itens desta
-              GDM não serão alterados.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {isApproval && (
-              <div className="space-y-3 rounded-lg border border-slate-200 p-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <Field label="Equipamento" value={pending?.item?.equipment_name} />
-                  <Field label="Código" value={pending?.item?.equipment_code} />
-                  <Field label="OS" value={pending?.item?.os_number} />
-                  <Field label="Número de série" value={pending?.item?.serial_number} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tratativa / destino do item</Label>
-                  <Select value={destination} onValueChange={setDestination}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a tratativa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ITEM_DESTINATION_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-slate-500">
-                    Tratativa cadastrada:{' '}
-                    {ITEM_DESTINATION_LABELS[pending?.item?.destination] || '—'}.{' '}
-                    {destinationChanged
-                      ? 'Ao confirmar, a tratativa será alterada e o item seguirá o novo fluxo.'
-                      : 'Confirme para manter esta tratativa.'}
-                  </p>
-                  {destinationChanged && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                      A tratativa foi alterada:{' '}
-                      <strong>{ITEM_DESTINATION_LABELS[pending?.item?.destination]}</strong> →{' '}
-                      <strong>{ITEM_DESTINATION_LABELS[destination]}</strong>. Informe o motivo da
-                      alteração no campo abaixo (obrigatório).
-                    </div>
-                  )}
-
-                </div>
-              </div>
-            )}
-            {needsSupplier && (
-              <div className="space-y-2">
-                <Label>Fornecedor *</Label>
-                <Select value={supplierId} onValueChange={setSupplierId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o fornecedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.company_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-500">
-                  O item será vinculado a este fornecedor, que passará a enxergá-lo em seu painel.
-                </p>
-              </div>
-            )}
-            {needsDate && (
-              <div className="space-y-2">
-                <Label>Nova data prevista de desembarque *</Label>
-                <Input
-                  type="date"
-                  value={expectedDisembarkDate}
-                  onChange={(e) => setExpectedDisembarkDate(e.target.value)}
-                />
-                <p className="text-xs text-slate-500">
-                  Após esta data, o item retornará automaticamente ao Almoxarifado para nova
-                  confirmação de recebimento.
-                </p>
-              </div>
-            )}
-            {pending?.askReturnNumber && (
-              <div className="space-y-2">
-                <Label>Número da devolução (opcional)</Label>
-                <Input
-                  value={returnNumber}
-                  onChange={(e) => setReturnNumber(e.target.value)}
-                  placeholder="Pode ficar em branco"
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>
-                {pending?.action === 'reschedule_disembark'
-                  ? 'Justificativa da reprogramação *'
-                  : reasonRequired
-                    ? 'Motivo da reprovação *'
-                    : destinationChanged
-                      ? 'Motivo da alteração da tratativa *'
-                      : 'Observação'}
-              </Label>
-              <Textarea
-                value={observation}
-                onChange={(e) => setObservation(e.target.value)}
-                rows={3}
-                placeholder={
-                  reasonRequired || destinationChanged ? 'Descreva o motivo' : 'Opcional'
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPending(null)}>
-              Cancelar
-            </Button>
-            <Button
-              disabled={
-                actionMutation.isPending ||
-                ((reasonRequired || destinationChanged) && !observation.trim()) ||
-                (isApproval && !destination) ||
-                (needsSupplier && !supplierId) ||
-                (needsDate && !expectedDisembarkDate)
-              }
-              onClick={() => actionMutation.mutate(pending)}
-            >
-
-              {actionMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {isApproval
-                ? destinationChanged
-                  ? 'Alterar tratativa e aprovar'
-                  : 'Confirmar tratativa e aprovar'
-                : 'Confirmar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Ação sobre um item — mesmo diálogo usado pelos painéis setoriais */}
+      <ItemActionRouter pending={pending} onClose={() => setPending(null)} />
     </Card>
   );
 }

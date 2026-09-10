@@ -1,0 +1,44 @@
+{
+  "name": "Follow-up de Cota\u00e7\u00f5es",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 8 * * *",
+      "one_time_date": null,
+      "timezone": "America/Sao_Paulo",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "quote_followup",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "notify_followup": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notifyQuoteFollowup"
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Verificar cota\u00e7\u00f5es pendentes",
+            "description": "Follow-up ap\u00f3s 3 dias sem cota\u00e7\u00e3o"
+          }
+        }
+      }
+    ]
+  },
+  "description": "Ap\u00f3s 3 dias corridos sem cota\u00e7\u00e3o anexada, notifica somente o setor de Servi\u00e7os para realizar follow-up com o fornecedor"
+}

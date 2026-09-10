@@ -11,7 +11,7 @@ import {
   availableItemActions,
   itemResponsible,
 } from '@/lib/gdmItems';
-import ItemActionDialog from './ItemActionDialog';
+import ItemActionRouter from './ItemActionRouter';
 import ItemHistoryTimeline from './ItemHistoryTimeline';
 
 /**
@@ -105,7 +105,7 @@ export default function SectorItemCard({ item, gdm, hasPermission, user }) {
         </div>
       )}
 
-      <ItemActionDialog pending={pending} onClose={() => setPending(null)} />
+      <ItemActionRouter pending={pending} onClose={() => setPending(null)} />
     </div>
   );
 }
