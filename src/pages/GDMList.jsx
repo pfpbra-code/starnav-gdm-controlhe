@@ -38,6 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import GDMCard from '@/components/gdm/GDMCard';
 import GDMPdfButton from '@/components/gdm/GDMPdfButton';
+import GDMDeleteButton from '@/components/gdm/GDMDeleteButton';
 import { STATUS_LABELS } from '@/lib/gdmWorkflow';
 
 const quickFilters = [
@@ -273,6 +274,7 @@ export default function GDMList() {
                         </Button>
                       </Link>
                       <GDMPdfButton gdm={gdm} label="PDF" />
+                      {user?.role === 'admin' && <GDMDeleteButton gdm={gdm} />}
                     </div>
                   </TableCell>
                 </TableRow>
