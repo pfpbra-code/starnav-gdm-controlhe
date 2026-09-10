@@ -109,16 +109,11 @@
     },
     "shipping_proof_url": {
       "type": "string",
-      "description": "URL do comprovante de envio anexado pelo Almoxarifado (foto, NF assinada ou comprovante de coleta)"
+      "description": "URL da NF assinada anexada pelo Almoxarifado no envio ao fornecedor"
     },
-    "shipping_proof_type": {
+    "shipping_photo_url": {
       "type": "string",
-      "enum": [
-        "photo",
-        "nf",
-        "collection"
-      ],
-      "description": "Tipo do comprovante de envio: foto do equipamento, NF assinada ou comprovante de coleta"
+      "description": "URL da foto do envio anexada pelo Almoxarifado (obrigat\u00f3ria junto com a NF)"
     },
     "shipping_proof_at": {
       "type": "string",

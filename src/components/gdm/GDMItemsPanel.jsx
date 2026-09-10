@@ -346,14 +346,27 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                         )}
                         {item.shipping_proof_url && (
                           <div className="col-span-2">
-                            <span className="text-slate-500 text-xs">Comprovante de envio</span>
+                            <span className="text-slate-500 text-xs">NF assinada</span>
                             <a
                               href={item.shipping_proof_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="block text-sky-600 hover:underline text-sm font-medium"
                             >
-                              Visualizar documento anexado pelo Almoxarifado
+                              Visualizar NF assinada
+                            </a>
+                          </div>
+                        )}
+                        {item.shipping_photo_url && (
+                          <div className="col-span-2">
+                            <span className="text-slate-500 text-xs">Foto do envio</span>
+                            <a
+                              href={item.shipping_photo_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-sky-600 hover:underline text-sm font-medium"
+                            >
+                              Visualizar foto do envio
                             </a>
                           </div>
                         )}

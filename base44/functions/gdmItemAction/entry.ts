@@ -216,7 +216,7 @@ export default async function (req: Request): Promise<Response> {
       extra.supplier_selected_by = user.email;
       extra.expected_ship_date = body.expected_ship_date;
       extra.shipping_proof_url = null;
-      extra.shipping_proof_type = null;
+      extra.shipping_photo_url = null;
       extra.shipping_proof_at = null;
       extra.shipping_proof_by = null;
       extra.sent_to_supplier_at = null;
@@ -246,16 +246,17 @@ export default async function (req: Request): Promise<Response> {
         maintenance_decision: null,
       });
     } else if (action === 'attach_shipping_proof') {
-      // Almoxarifado anexa comprovante de envio (foto, NF assinada ou coleta).
+      // Almoxarifado anexa a NF assinada e a foto do envio (ambas obrigatórias).
       if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
         throw new Error('Este item não segue o fluxo de fornecedor');
       }
       if (!can('confirm_receipt')) throw new Error('Sem permissão para anexar comprovante de envio');
       if (prev !== 'awaiting_shipping_proof') throw new Error('Item não está aguardando comprovante de envio');
-      if (!body.proof_url) throw new Error('Anexe a foto do equipamento, a NF assinada ou o comprovante de coleta');
+      if (!body.nf_url) throw new Error('Anexe a NF assinada');
+      if (!body.photo_url) throw new Error('Anexe a foto do envio');
 
-      extra.shipping_proof_url = body.proof_url;
-      extra.shipping_proof_type = body.proof_type || 'photo';
+      extra.shipping_proof_url = body.nf_url;
+      extra.shipping_photo_url = body.photo_url;
       extra.shipping_proof_at = now;
       extra.shipping_proof_by = user.email;
       extra.sent_to_supplier_at = now;

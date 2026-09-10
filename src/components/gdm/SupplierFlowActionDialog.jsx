@@ -24,12 +24,6 @@ import { Loader2, CheckCircle2, Percent, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ITEM_DESTINATION_LABELS, ITEM_STATUS_LABELS } from '@/lib/gdmItems';
 
-const PROOF_TYPES = [
-  { value: 'photo', label: 'Foto do equipamento expedido' },
-  { value: 'nf', label: 'PDF da NF assinada' },
-  { value: 'collection', label: 'Comprovante de coleta' },
-];
-
 /**
  * Diálogo das ações do ciclo de fornecedor (fluxo por item):
  * definição de fornecedor, comprovante de envio, cotação, decisão da
@@ -44,8 +38,8 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
 
   const [supplierId, setSupplierId] = useState('');
   const [expectedShipDate, setExpectedShipDate] = useState('');
-  const [proofUrl, setProofUrl] = useState('');
-  const [proofType, setProofType] = useState('photo');
+  const [nfUrl, setNfUrl] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
   const [quoteUrl, setQuoteUrl] = useState('');
   const [quoteValue, setQuoteValue] = useState('');
   const [quoteDeadline, setQuoteDeadline] = useState('');
@@ -59,8 +53,8 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   useEffect(() => {
     setSupplierId('');
     setExpectedShipDate('');
-    setProofUrl('');
-    setProofType('photo');
+    setNfUrl('');
+    setPhotoUrl('');
     setQuoteUrl('');
     setQuoteValue('');
     setQuoteDeadline('');
@@ -104,8 +98,8 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
       payload.supplier_name = suppliers.find((s) => s.id === supplierId)?.company_name;
       payload.expected_ship_date = expectedShipDate;
     } else if (action === 'attach_shipping_proof') {
-      payload.proof_url = proofUrl;
-      payload.proof_type = proofType;
+      payload.nf_url = nfUrl;
+      payload.photo_url = photoUrl;
     } else if (action === 'attach_quote' || action === 'renegotiate_quote') {
       payload.quote_value = Number(quoteValue);
       if (quoteUrl) payload.quote_document_url = quoteUrl;
@@ -124,7 +118,7 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   const disabled =
     actionMutation.isPending ||
     (needsSupplier && (!supplierId || !expectedShipDate)) ||
-    (action === 'attach_shipping_proof' && !proofUrl) ||
+    (action === 'attach_shipping_proof' && (!nfUrl || !photoUrl)) ||
     (action === 'attach_quote' && (!quoteUrl || !quoteValue || !quoteDeadline)) ||
     (action === 'renegotiate_quote' && !quoteValue) ||
     (action === 'maintenance_decision' &&
@@ -204,26 +198,12 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
 
           {action === 'attach_shipping_proof' && (
             <>
-              <div className="space-y-2">
-                <Label>Tipo de comprovante *</Label>
-                <Select value={proofType} onValueChange={setProofType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PROOF_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-500">
-                  Anexo obrigatório: sem o comprovante o item não pode ser marcado como enviado ao
-                  fornecedor.
-                </p>
-              </div>
-              <AttachmentField label="Comprovante de envio" value={proofUrl} onChange={setProofUrl} />
+              <AttachmentField label="NF assinada" value={nfUrl} onChange={setNfUrl} />
+              <AttachmentField label="Foto do envio" value={photoUrl} onChange={setPhotoUrl} />
+              <p className="text-xs text-slate-500">
+                Ambos os anexos são obrigatórios: sem a NF assinada e a foto do envio o item não
+                pode ser marcado como enviado ao fornecedor.
+              </p>
             </>
           )}
 
