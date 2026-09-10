@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import StatsCard from '@/components/dashboard/StatsCard';
 import GDMKanban from '@/components/dashboard/GDMKanban';
 import RepairCostPanel from '@/components/dashboard/RepairCostPanel';
+import NegotiationSavings from '@/components/dashboard/NegotiationSavings';
 import GDMCard from '@/components/gdm/GDMCard';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -237,6 +238,11 @@ export default function Dashboard() {
         </h2>
         <RepairCostPanel gdms={gdms} />
       </div>
+
+      {/* Economia Obtida em Negociações */}
+      {(hasPermission('view_cost_reports') || hasPermission('view_analytics')) && (
+        <NegotiationSavings gdms={gdms} />
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

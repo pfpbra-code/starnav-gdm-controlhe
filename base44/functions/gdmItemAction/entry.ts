@@ -1,9 +1,17 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { hasPermission, SECTOR_BY_DESTINATION, sectorViewPermission } from '../../shared/itemPermissions.ts';
+import {
+  hasPermission,
+  SECTOR_BY_DESTINATION,
+  sectorViewPermission,
+  VESSEL_STAGE_ACTIONS,
+  canActOnVesselItems,
+} from '../../shared/itemPermissions.ts';
 
-// Ações protegidas sobre itens de GDM (espelha a função gdm_item_action do projeto original):
-// verificação de permissão, bloqueio de saltos de etapa e registro automático no histórico.
-// As operações de entidade rodam como o usuário logado (RLS aplicado).
+// Ações protegidas sobre itens de GDM: verificação de permissão, bloqueio de
+// saltos de etapa e registro automático no histórico (data, hora e usuário).
+// Fluxo individual por item: Reparo, Estoque e Descarte são Manutenção;
+// Calibração é Operações. A etapa de confirmação de desembarque (ETAPA 4) é
+// executada pela própria embarcação, validada por vínculo com o item.
 
 const VALID_DESTINATIONS = ['repair', 'certification', 'stock_return', 'discard'];
 
@@ -19,6 +27,7 @@ export default async function (req: Request): Promise<Response> {
     const observation = body.observation || null;
     const returnNumber = body.return_number || body.returnNumber || null;
     const destination = body.destination || null;
+    const expectedDisembarkDate = body.expected_disembark_date || body.expectedDisembarkDate || null;
 
     if (!itemId || !action) {
       return Response.json({ error: 'item_id e action são obrigatórios' }, { status: 400 });
@@ -34,10 +43,17 @@ export default async function (req: Request): Promise<Response> {
     if (!item) return Response.json({ error: 'Item não encontrado' }, { status: 404 });
 
     const can = (p: string) => hasPermission(user, p);
+    const isVesselStage = VESSEL_STAGE_ACTIONS.includes(action);
+
+    // ETAPA 4 (embarcação): validada por vínculo com a embarcação emissora,
+    // não por permissão de setor.
+    if (isVesselStage && !canActOnVesselItems(user, item)) {
+      throw new Error('Somente a embarcação emissora pode confirmar o desembarque deste item');
+    }
 
     // Separação de setores: só usuários autorizados no setor do item podem agir sobre ele.
     const itemSector = SECTOR_BY_DESTINATION[item.destination] || 'maintenance';
-    if (!can(sectorViewPermission(itemSector))) {
+    if (!isVesselStage && !can(sectorViewPermission(itemSector))) {
       throw new Error('Sem permissão para atuar em itens deste setor');
     }
 
@@ -47,8 +63,9 @@ export default async function (req: Request): Promise<Response> {
     const extra: Record<string, any> = {};
 
     if (action === 'approve') {
-      if (!can('approve_gdm')) throw new Error('Sem permissão para aprovar');
-      if (prev !== 'pending_coordinator') throw new Error('Item não está aguardando aprovação');
+      // ETAPA 2 — Coordenador confirma a tratativa do item.
+      if (!can('approve_gdm')) throw new Error('Sem permissão para confirmar a tratativa');
+      if (prev !== 'pending_coordinator') throw new Error('Item não está aguardando o coordenador');
       next = 'pending_almoxarifado';
       if (destination && destination !== item.destination) {
         if (!VALID_DESTINATIONS.includes(destination)) {
@@ -64,6 +81,7 @@ export default async function (req: Request): Promise<Response> {
       if (prev !== 'pending_coordinator') throw new Error('Item não está aguardando aprovação');
       next = 'rejected';
     } else if (action === 'confirm_receipt') {
+      // ETAPA 3 — Almoxarifado confirma recebimento.
       if (!can('confirm_receipt')) throw new Error('Sem permissão para confirmar recebimento');
       if (prev !== 'pending_almoxarifado') throw new Error('Item não está aguardando o almoxarifado');
       next =
@@ -74,6 +92,33 @@ export default async function (req: Request): Promise<Response> {
             : 'pending_services';
       extra.stock_received_at = now;
       extra.stock_received_by = user.id;
+    } else if (action === 'report_not_received') {
+      // ETAPA 3 — Almoxarifado informa que NÃO recebeu o item: devolve para a embarcação.
+      if (!can('report_not_received')) throw new Error('Sem permissão para informar não recebimento');
+      if (prev !== 'pending_almoxarifado') throw new Error('Item não está aguardando o almoxarifado');
+      next = 'pending_disembark_confirmation';
+      extra.not_received_at = now;
+      extra.not_received_by = user.email;
+    } else if (action === 'confirm_disembark') {
+      // ETAPA 4 — Embarcação confirma o desembarque: retorna ao Almoxarifado.
+      if (prev !== 'pending_disembark_confirmation') {
+        throw new Error('Item não está aguardando confirmação de desembarque');
+      }
+      next = 'pending_almoxarifado';
+      extra.disembark_confirmed_at = now;
+      extra.disembark_confirmed_by = user.email;
+    } else if (action === 'reschedule_disembark') {
+      // ETAPA 4 — Embarcação informa que NÃO desembarcou: nova data + justificativa.
+      if (prev !== 'pending_disembark_confirmation') {
+        throw new Error('Item não está aguardando confirmação de desembarque');
+      }
+      if (!expectedDisembarkDate) throw new Error('Informe a nova data prevista de desembarque');
+      if (!observation || !String(observation).trim()) {
+        throw new Error('Informe a justificativa da reprogramação');
+      }
+      next = 'disembark_rescheduled';
+      extra.expected_disembark_date = expectedDisembarkDate;
+      extra.reschedule_justification = observation;
     } else if (action === 'confirm_stock_return') {
       if (!can('confirm_receipt')) throw new Error('Sem permissão para confirmar devolução');
       if (item.destination !== 'stock_return') throw new Error('Item não é de retorno ao estoque');
@@ -166,6 +211,7 @@ export default async function (req: Request): Promise<Response> {
       previous_status: prev,
       new_status: next,
       observation: observation || null,
+      data: Object.keys(extra).length ? extra : null,
     });
 
     // Sincroniza o status da GDM com a situação consolidada dos itens

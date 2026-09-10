@@ -149,6 +149,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
   const [returnNumber, setReturnNumber] = useState('');
   const [destination, setDestination] = useState('');
   const [supplierId, setSupplierId] = useState('');
+  const [expectedDisembarkDate, setExpectedDisembarkDate] = useState('');
   const [filter, setFilter] = useState('all');
   const [destFilter, setDestFilter] = useState('all');
 
@@ -165,14 +166,15 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
 
   const can = (key) => hasPermission(user, key);
   const summary = summarizeItems(items);
-  const reasonRequired = pending?.action === 'reject';
+  const reasonRequired = pending?.action === 'reject' || pending?.action === 'reschedule_disembark';
+  const needsDate = pending?.action === 'reschedule_disembark';
   const isApproval = pending?.action === 'approve';
   const needsSupplier =
     pending?.action === 'advance_treatment' && pending?.item?.status === 'pending_services';
   const destinationChanged = isApproval && destination && destination !== pending?.item?.destination;
 
   const visibleItems = useMemo(() => {
-    const sorted = sortItemsByPriority(items, can);
+    const sorted = sortItemsByPriority(items, can, user);
     return sorted.filter((i) => {
       if (destFilter !== 'all' && i.destination !== destFilter) return false;
       if (filter === 'all') return true;
@@ -195,6 +197,8 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
             action === 'advance_treatment' && item.status === 'pending_services'
               ? supplierId
               : undefined,
+          expected_disembark_date:
+            action === 'reschedule_disembark' ? expectedDisembarkDate : undefined,
           supplier_name:
             action === 'advance_treatment' && item.status === 'pending_services'
               ? suppliers.find((s) => s.id === supplierId)?.company_name
@@ -212,6 +216,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
       setReturnNumber('');
       setDestination('');
       setSupplierId('');
+      setExpectedDisembarkDate('');
     },
     onError: (error) => toast.error(error?.message || 'Não foi possível concluir a ação'),
   });
@@ -221,6 +226,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
     setObservation('');
     setReturnNumber('');
     setSupplierId('');
+    setExpectedDisembarkDate('');
     setDestination(item.destination || '');
   };
 
@@ -305,7 +311,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
           </p>
         )}
         {visibleItems.map((item) => {
-          const actions = availableItemActions(item, can);
+          const actions = availableItemActions(item, can, user);
           const primary = actions.filter((a) => !a.destructive);
           const isOpen = !!expanded[item.id];
           const needsMe = primary.length > 0;
@@ -402,6 +408,12 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                           />
                         )}
                         {item.notes && <Field label="Observação" value={item.notes} />}
+                        {item.expected_disembark_date && (
+                          <Field label="Nova data prevista de desembarque" value={item.expected_disembark_date} />
+                        )}
+                        {item.reschedule_justification && (
+                          <Field label="Justificativa da reprogramação" value={item.reschedule_justification} />
+                        )}
                       </div>
                     </div>
                     <div>
@@ -495,6 +507,20 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                 </p>
               </div>
             )}
+            {needsDate && (
+              <div className="space-y-2">
+                <Label>Nova data prevista de desembarque *</Label>
+                <Input
+                  type="date"
+                  value={expectedDisembarkDate}
+                  onChange={(e) => setExpectedDisembarkDate(e.target.value)}
+                />
+                <p className="text-xs text-slate-500">
+                  Após esta data, o item retornará automaticamente ao Almoxarifado para nova
+                  confirmação de recebimento.
+                </p>
+              </div>
+            )}
             {pending?.askReturnNumber && (
               <div className="space-y-2">
                 <Label>Número da devolução (opcional)</Label>
@@ -507,11 +533,13 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
             )}
             <div className="space-y-2">
               <Label>
-                {reasonRequired
-                  ? 'Motivo da reprovação *'
-                  : destinationChanged
-                    ? 'Motivo da alteração da tratativa *'
-                    : 'Observação'}
+                {pending?.action === 'reschedule_disembark'
+                  ? 'Justificativa da reprogramação *'
+                  : reasonRequired
+                    ? 'Motivo da reprovação *'
+                    : destinationChanged
+                      ? 'Motivo da alteração da tratativa *'
+                      : 'Observação'}
               </Label>
               <Textarea
                 value={observation}
@@ -532,7 +560,8 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                 actionMutation.isPending ||
                 ((reasonRequired || destinationChanged) && !observation.trim()) ||
                 (isApproval && !destination) ||
-                (needsSupplier && !supplierId)
+                (needsSupplier && !supplierId) ||
+                (needsDate && !expectedDisembarkDate)
               }
               onClick={() => actionMutation.mutate(pending)}
             >

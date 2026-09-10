@@ -96,3 +96,25 @@ export const SECTOR_BY_DESTINATION: Record<string, string> = {
 export function sectorViewPermission(sector: string): string {
   return sector === 'operations' ? 'view_operations' : 'view_maintenance';
 }
+
+// ---------------------------------------------------------------------------
+// Etapa de confirmação da embarcação (ETAPA 4 do fluxo de aprovação)
+// ---------------------------------------------------------------------------
+
+/** Ações executadas pela própria embarcação: validadas por vínculo com o item. */
+export const VESSEL_STAGE_ACTIONS = ['confirm_disembark', 'reschedule_disembark'];
+
+/** Recupera o campo customizado do usuário (topo ou user.data). */
+export function userCustomField(user: any, key: string): any {
+  const custom = user?.data || {};
+  return user?.[key] !== undefined ? user[key] : custom[key];
+}
+
+/** Usuário da embarcação só pode atuar em itens da própria embarcação. */
+export function canActOnVesselItems(user: any, item: any): boolean {
+  if (!user || !item) return false;
+  if (user.role === 'admin') return true;
+  if (user.role !== 'vessel_user') return false;
+  const vesselId = userCustomField(user, 'vessel_id');
+  return !!vesselId && vesselId === item.vessel_id;
+}

@@ -26,6 +26,14 @@
       "type": "string",
       "description": "ID do coordenador respons\u00e1vel"
     },
+    "responsible_user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio respons\u00e1vel pela embarca\u00e7\u00e3o (perfil Embarca\u00e7\u00e3o)"
+    },
+    "responsible_email": {
+      "type": "string",
+      "description": "E-mail do usu\u00e1rio respons\u00e1vel pela embarca\u00e7\u00e3o"
+    },
     "status": {
       "type": "string",
       "enum": [

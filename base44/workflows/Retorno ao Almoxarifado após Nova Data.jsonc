@@ -1,0 +1,45 @@
+{
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 6 * * *",
+      "one_time_date": null,
+      "timezone": "America/Sao_Paulo",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Diariamente, devolve ao Almoxarifado os itens de GDM reprogramados pela embarca\u00e7\u00e3o cuja nova data prevista de desembarque j\u00e1 foi atingida",
+  "name": "Retorno ao Almoxarifado ap\u00f3s Nova Data",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "retorno_almoxarifado_nova_data",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "processar_itens_reprogramados": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "processRescheduledItems",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Processar itens reprogramados",
+            "description": "Itens cuja nova data j\u00e1 passou"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -20,7 +20,9 @@ export const ITEM_STATUS_LABELS = {
   cancelled: "Cancelado",
   pending_almoxarifado: "Aguardando Recebimento (Almoxarifado)",
   received: "Recebido pelo Almoxarifado",
-  pending_services: "Aguardando Serviços/Compras",
+  pending_disembark_confirmation: "Confirmação de Desembarque (Embarcação)",
+  disembark_rescheduled: "Desembarque Reprogramado",
+  pending_services: "Aguardando Serviços",
   sent_to_supplier: "Enviado ao Fornecedor",
   in_treatment: "Em Tratativa no Fornecedor",
   awaiting_return: "Aguardando Retorno do Equipamento",
@@ -37,6 +39,8 @@ export const ITEM_STATUS_COLORS = {
   cancelled: "bg-slate-200 text-slate-600",
   pending_almoxarifado: "bg-amber-100 text-amber-800",
   received: "bg-sky-100 text-sky-800",
+  pending_disembark_confirmation: "bg-orange-100 text-orange-800",
+  disembark_rescheduled: "bg-purple-100 text-purple-800",
   pending_services: "bg-indigo-100 text-indigo-800",
   sent_to_supplier: "bg-indigo-100 text-indigo-800",
   in_treatment: "bg-blue-100 text-blue-800",
@@ -47,9 +51,13 @@ export const ITEM_STATUS_COLORS = {
 };
 
 export const ITEM_ACTION_LABELS = {
-  approve: "Aprovado pelo Coordenador",
+  approve: "Tratativa Confirmada pelo Coordenador",
   reject: "Reprovado pelo Coordenador",
   confirm_receipt: "Recebimento Confirmado",
+  report_not_received: "Não Recebido pelo Almoxarifado",
+  confirm_disembark: "Desembarque Confirmado pela Embarcação",
+  reschedule_disembark: "Desembarque Reprogramado pela Embarcação",
+  return_to_almoxarifado: "Retornado ao Almoxarifado (Nova Data Atingida)",
   confirm_stock_return: "Devolução ao Estoque Confirmada",
   authorize_discard: "Descarte Autorizado pelo Gestor",
   confirm_discard: "Descarte Confirmado pelo Almoxarifado",
@@ -59,24 +67,51 @@ export const ITEM_ACTION_LABELS = {
   created: "Item Criado",
 };
 
+/** Recupera campo customizado do usuário (topo ou user.data). */
+function userVesselId(user) {
+  if (!user) return null;
+  return user.vessel_id !== undefined ? user.vessel_id : user.data?.vessel_id;
+}
+
 /**
  * Ações disponíveis para um item, considerando destino, situação e permissões.
  * `can` é a função hasPermission já aplicada ao usuário: (key) => boolean.
+ * `user` (opcional) habilita as ações da etapa de confirmação da embarcação.
  */
-export function availableItemActions(item, can) {
+export function availableItemActions(item, can, user) {
   if (!item) return [];
   const s = item.status;
   const d = item.destination;
   const actions = [];
 
-  if (s === "pending_coordinator") {
-    if (can("approve_gdm")) actions.push({ action: "approve", label: "Aprovar item" });
-    if (can("reject_gdm"))
-      actions.push({ action: "reject", label: "Reprovar item", destructive: true });
+  if (s === "pending_coordinator" && can("approve_gdm")) {
+    // ETAPA 2 — o coordenador apenas confirma a tratativa do item.
+    actions.push({ action: "approve", label: "Confirmar Tratativa" });
   }
 
-  if (s === "pending_almoxarifado" && can("confirm_receipt")) {
-    actions.push({ action: "confirm_receipt", label: "Confirmar recebimento" });
+  if (s === "pending_almoxarifado") {
+    // ETAPA 3 — Almoxarifado: Recebido / Não Recebido.
+    if (can("confirm_receipt")) {
+      actions.push({ action: "confirm_receipt", label: "Recebido" });
+    }
+    if (can("report_not_received")) {
+      actions.push({ action: "report_not_received", label: "Não Recebido", destructive: true });
+    }
+  }
+
+  // ETAPA 4 — Confirmação da embarcação (apenas a embarcação emissora).
+  const isVesselOwner =
+    !!user &&
+    (user.role === "admin" ||
+      (user.role === "vessel_user" && userVesselId(user) === item.vessel_id));
+  if (s === "pending_disembark_confirmation" && isVesselOwner) {
+    actions.push({ action: "confirm_disembark", label: "Confirmo Desembarque" });
+    actions.push({
+      action: "reschedule_disembark",
+      label: "Não Desembarcado",
+      destructive: true,
+      askDate: true,
+    });
   }
 
   if (d === "stock_return" && s === "received" && can("confirm_receipt")) {
@@ -111,10 +146,6 @@ export function availableItemActions(item, can) {
     actions.push({ action: "complete", label: "Finalizar item" });
   }
 
-  if (!["completed", "cancelled"].includes(s) && can("edit_gdm")) {
-    actions.push({ action: "cancel", label: "Cancelar item", destructive: true });
-  }
-
   return actions;
 }
 
@@ -135,10 +166,13 @@ export function itemResponsible(item) {
     case "received":
     case "awaiting_discard_confirmation":
       return "Almoxarifado";
+    case "pending_disembark_confirmation":
+    case "disembark_rescheduled":
+      return "Embarcação";
     case "pending_maintenance_authorization":
       return "Gestor de Manutenção";
     case "pending_services":
-      return "Serviços/Compras";
+      return "Serviços";
     case "sent_to_supplier":
     case "in_treatment":
     case "awaiting_return":
@@ -220,9 +254,13 @@ const FLOW_BY_DESTINATION = {
   ],
 };
 
+// Etapas de embarcação (não recebido / reprogramado) são exibidas sobre a
+// etapa do Almoxarifado, onde o item retoma o fluxo.
 const STATUS_ALIAS = {
   draft: "pending_coordinator",
   approved: "pending_almoxarifado",
+  pending_disembark_confirmation: "pending_almoxarifado",
+  disembark_rescheduled: "pending_almoxarifado",
 };
 
 /** Etapas do item com marcação de concluída / atual / futura. */
@@ -245,9 +283,13 @@ export function nextActionText(item) {
   if (!item) return "";
   switch (item.status) {
     case "pending_coordinator":
-      return "Este item está aguardando aprovação do Coordenador.";
+      return "Este item está aguardando o coordenador confirmar a tratativa (reparo, estoque, descarte ou calibração).";
     case "pending_almoxarifado":
       return "Este item está aguardando o recebimento pelo Almoxarifado.";
+    case "pending_disembark_confirmation":
+      return "O Almoxarifado não recebeu o item. A embarcação deve confirmar o desembarque ou informar a nova data prevista.";
+    case "disembark_rescheduled":
+      return `Desembarque reprogramado${item.expected_disembark_date ? ` para ${item.expected_disembark_date}` : ""}. Após a nova data, o item retorna ao Almoxarifado.`;
     case "received":
       return item.destination === "stock_return"
         ? "Este item está aguardando a confirmação da devolução ao estoque."
@@ -257,7 +299,7 @@ export function nextActionText(item) {
     case "awaiting_discard_confirmation":
       return "O descarte foi autorizado pelo Gestor. Confirme quando o descarte físico for realizado.";
     case "pending_services":
-      return "Este item está aguardando tratativa de Serviços/Compras.";
+      return "Este item está aguardando tratativa do setor de Serviços.";
     case "sent_to_supplier":
     case "in_treatment":
     case "awaiting_return":
@@ -282,9 +324,9 @@ export function itemGroup(item) {
 }
 
 /** Ordena: primeiro o que precisa da minha ação, depois pendentes, andamento e finalizados. */
-export function sortItemsByPriority(items, can) {
+export function sortItemsByPriority(items, can, user) {
   const rank = (i) => {
-    if (availableItemActions(i, can).some((a) => !a.destructive)) return 0;
+    if (availableItemActions(i, can, user).some((a) => !a.destructive)) return 0;
     const g = itemGroup(i);
     return g === "pending" ? 1 : g === "in_progress" ? 2 : g === "completed" ? 3 : 4;
   };

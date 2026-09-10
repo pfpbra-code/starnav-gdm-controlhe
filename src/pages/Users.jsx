@@ -267,6 +267,7 @@ export default function Users() {
 
       {/* Table */}
       <Card className="border-0 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50">
@@ -382,6 +383,7 @@ export default function Users() {
             )}
           </TableBody>
         </Table>
+        </div>
       </Card>
 
       {/* Invite Dialog */}

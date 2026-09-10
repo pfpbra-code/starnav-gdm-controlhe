@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import SectorResponsibles from '@/components/settings/SectorResponsibles';
 import {
   Settings as SettingsIcon,
   Ship,
@@ -192,6 +193,9 @@ export default function Settings() {
           </div>
         </div>
       ))}
+
+      {/* Responsáveis por Setor */}
+      <SectorResponsibles />
 
       {/* System Info */}
       <Card className="border-0 shadow-sm bg-slate-50">

@@ -42,6 +42,7 @@ const MENU_ITEMS = [
           : 'Dashboard',
   },
   { icon: FilePlus2, label: 'Criar GDM', page: 'CreateGDM', permission: 'create_gdm' },
+  { icon: FileText, label: 'GDM', page: 'GDMList', permission: 'view_gdm' },
   { icon: Wrench, label: 'Manutenção', page: 'Maintenance', permission: 'view_maintenance' },
   { icon: Cog, label: 'Operações', page: 'Operations', permission: 'view_operations' },
   {

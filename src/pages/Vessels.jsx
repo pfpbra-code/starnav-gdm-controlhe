@@ -44,6 +44,7 @@ export default function Vessels() {
     code: '',
     type: '',
     coordinator_id: '',
+    responsible_user_id: '',
     status: 'active',
     login_password: ''
   });
@@ -64,6 +65,15 @@ export default function Vessels() {
       const users = await base44.entities.User.list();
       return users.filter(u => u.role === 'coordinator');
     },
+  });
+
+  const { data: vesselUsers = [] } = useQuery({
+    queryKey: ['vesselUsers'],
+    queryFn: async () => {
+      const users = await base44.entities.User.list();
+      return users.filter(u => u.role === 'vessel_user');
+    },
+    enabled: user?.role === 'admin',
   });
 
   const createMutation = useMutation({
@@ -116,6 +126,7 @@ export default function Vessels() {
       code: vessel.code || '',
       type: vessel.type || '',
       coordinator_id: vessel.coordinator_id || '',
+      responsible_user_id: vessel.responsible_user_id || '',
       status: vessel.status || 'active',
       login_password: vessel.login_password || ''
     });
@@ -125,6 +136,9 @@ export default function Vessels() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = { ...formData };
+    const existingId = editingVessel?.id;
+    const responsibleId = formData.responsible_user_id;
+    const coordinatorId = formData.coordinator_id;
     if (photoFile) {
       try {
         const { file_url } = await base44.integrations.Core.UploadFile({ file: photoFile });
@@ -134,10 +148,40 @@ export default function Vessels() {
         return;
       }
     }
-    if (editingVessel) {
-      updateMutation.mutate({ id: editingVessel.id, data });
-    } else {
-      createMutation.mutate(data);
+    const responsible = vesselUsers.find((u) => u.id === responsibleId);
+    data.responsible_email = responsible?.email || '';
+    delete data.responsible_user_id;
+
+    try {
+      const saved = editingVessel
+        ? await updateMutation.mutateAsync({ id: editingVessel.id, data })
+        : await createMutation.mutateAsync(data);
+      const vesselId = saved?.id || existingId;
+      if (isAdmin && vesselId) {
+        // Vincula o usuário responsável e o coordenador: a GDM da embarcação é
+        // encaminhada automaticamente ao coordenador com acesso garantido.
+        try {
+          if (responsibleId) {
+            await base44.entities.User.update(responsibleId, { vessel_id: vesselId });
+          }
+          if (coordinatorId) {
+            const coord = coordinators.find((c) => c.id === coordinatorId);
+            const assigned = (coord?.assigned_vessels ?? coord?.data?.assigned_vessels) || [];
+            if (coord && !assigned.includes(vesselId)) {
+              await base44.entities.User.update(coord.id, {
+                assigned_vessels: [...assigned, vesselId],
+              });
+            }
+          }
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+          queryClient.invalidateQueries({ queryKey: ['coordinators'] });
+          queryClient.invalidateQueries({ queryKey: ['vesselUsers'] });
+        } catch {
+          toast.error('Embarcação salva, mas houve erro ao vincular os usuários responsáveis');
+        }
+      }
+    } catch {
+      // Erros já são exibidos pelas mutations
     }
   };
 
@@ -199,6 +243,7 @@ export default function Vessels() {
 
       {/* Table */}
       <Card className="border-0 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50">
@@ -206,6 +251,7 @@ export default function Vessels() {
               <TableHead>Código</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Coordenador</TableHead>
+              <TableHead>Responsável</TableHead>
               <TableHead>Status</TableHead>
               {isAdmin && <TableHead className="text-right">Ações</TableHead>}
             </TableRow>
@@ -234,6 +280,7 @@ export default function Vessels() {
                   <TableCell>{vessel.code}</TableCell>
                   <TableCell>{vessel.type || '-'}</TableCell>
                   <TableCell>{coordinator?.full_name || '-'}</TableCell>
+                  <TableCell className="max-w-[180px] truncate">{vessel.responsible_email || '-'}</TableCell>
                   <TableCell>
                     <StatusBadge status={vessel.status} />
                   </TableCell>
@@ -259,7 +306,7 @@ export default function Vessels() {
             })}
             {filteredVessels.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 6 : 5} className="h-32 text-center">
+                <TableCell colSpan={isAdmin ? 7 : 6} className="h-32 text-center">
                   <Ship className="h-8 w-8 mx-auto text-slate-300 mb-2" />
                   <p className="text-slate-500">Nenhuma embarcação encontrada</p>
                 </TableCell>
@@ -267,6 +314,7 @@ export default function Vessels() {
             )}
           </TableBody>
         </Table>
+        </div>
       </Card>
 
       {/* Dialog */}
@@ -336,6 +384,36 @@ export default function Vessels() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Usuário Responsável (Embarcação)</Label>
+                {isAdmin ? (
+                  <Select
+                    value={formData.responsible_user_id}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, responsible_user_id: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o usuário da embarcação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vesselUsers.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.full_name || u.email} ({u.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={editingVessel?.responsible_email || ''}
+                    disabled
+                    placeholder="Sem responsável vinculado"
+                  />
+                )}
+                <p className="text-xs text-slate-500">
+                  E-mail de acesso do responsável. O login/senha da embarcação é definido no
+                  campo "Senha de Acesso" e o vínculo concede acesso individual à embarcação.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Foto da Embarcação</Label>

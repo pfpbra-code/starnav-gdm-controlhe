@@ -184,7 +184,7 @@ export default function GDMList() {
               <SelectContent>
                 <SelectItem value="all">Todos os Status</SelectItem>
                 <SelectItem value="pending_coordinator">GDM Emitida</SelectItem>
-                <SelectItem value="pending_services">Aguardando Serviços/Compras</SelectItem>
+                <SelectItem value="pending_services">Aguardando Serviços</SelectItem>
                 <SelectItem value="sent_to_supplier">Enviado ao Fornecedor</SelectItem>
                 <SelectItem value="quote_attached">Cotação Anexada</SelectItem>
                 <SelectItem value="quote_analysis">Em Aprovação da Manutenção</SelectItem>
@@ -231,6 +231,7 @@ export default function GDMList() {
       {/* Content */}
       {viewMode === 'table' ? (
         <Card className="border-0 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50">
@@ -288,6 +289,7 @@ export default function GDMList() {
               )}
             </TableBody>
           </Table>
+          </div>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
