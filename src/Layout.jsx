@@ -52,13 +52,6 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <style>{`
-        :root {
-          --primary: 14 165 233;
-          --primary-foreground: 255 255 255;
-        }
-      `}</style>
-      
       <Sidebar 
         user={user} 
         collapsed={collapsed} 
