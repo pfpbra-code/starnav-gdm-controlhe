@@ -62,10 +62,7 @@ const EXTRA_ITEMS = [
   { icon: ClipboardList, label: 'Tratativas', page: 'ServicesTreatments', permission: 'manage_service_treatments' },
   { icon: FileText, label: 'Minhas GDMs', page: 'VesselGDMs', permission: null, roles: ['vessel_user'] },
   { icon: Package, label: 'Materiais Recebidos', page: 'SupplierMaterials', permission: null, roles: ['supplier_user'] },
-  { icon: Package, label: 'Equipamentos', page: 'Equipment', permission: 'view_equipment' },
-  { icon: Users, label: 'Usuários', page: 'Users', permission: 'manage_users' },
   { icon: History, label: 'Auditoria', page: 'AuditLogs', permission: 'view_audit_logs' },
-  { icon: Settings, label: 'Políticas de Senha', page: 'PasswordPolicies', permission: 'system_settings' },
   { icon: Bell, label: 'Notificações', page: 'Notifications', permission: null },
 ];
 
