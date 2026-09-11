@@ -10,6 +10,7 @@
 export const AVAILABLE_PERMISSIONS = [
   // GDM
   { id: "view_gdm", label: "Visualizar GDM", category: "GDM" },
+  { id: "view_all_gdms", label: "Visualizar todas as Guias de Desembarque", category: "GDM" },
   { id: "create_gdm", label: "Criar GDM", category: "GDM" },
   { id: "edit_gdm", label: "Editar GDM", category: "GDM" },
   { id: "delete_gdm", label: "Deletar GDM", category: "GDM" },
@@ -272,7 +273,10 @@ export function effectivePermissions(user) {
     : [];
   const base =
     own.length > 0 ? own : (ROLE_PERMISSION_PRESETS[user.role] || ROLE_PERMISSION_PRESETS.user);
-  return mergeRoleImplied(user.role, base);
+  const merged = mergeRoleImplied(user.role, base);
+  // Quem vê todas as Guias de Desembarque também precisa abrir os detalhes.
+  if (merged.includes("view_all_gdms")) merged.push("view_gdm");
+  return merged;
 }
 
 export function hasPermission(user, permission) {
@@ -354,7 +358,7 @@ export const MODULE_PERMISSIONS = {
   Notifications: null,
   NotificationPreferences: null,
   VesselDashboard: "view_dashboard",
-  GDMList: "view_gdm",
+  GDMList: "view_all_gdms",
   GDMDetail: "view_gdm",
   VesselGDMs: "view_gdm",
   CreateGDM: "create_gdm",

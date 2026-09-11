@@ -37,7 +37,7 @@ const MENU_ITEMS = [
       user?.role === 'vessel_user' ? 'VesselDashboard' : 'Dashboard',
   },
   { icon: FilePlus2, label: 'Criar GDM', page: 'CreateGDM', permission: 'create_gdm' },
-  { icon: FileText, label: 'GDM', page: 'GDMList', permission: 'view_gdm' },
+  { icon: FileText, label: 'Guias de Desembarque', page: 'GDMList', permission: 'view_all_gdms' },
   { icon: Wrench, label: 'Manutenção', page: 'Maintenance', permission: 'view_maintenance' },
   { icon: Cog, label: 'Operações', page: 'Operations', permission: 'view_operations' },
   {
