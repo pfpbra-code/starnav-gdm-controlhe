@@ -26,7 +26,7 @@ export default function PendingBoard({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
-  const { user } = usePermissions();
+  const { user, hasPermission } = usePermissions();
 
   const { data: gdms = [], isLoading: loadingGdms } = useQuery({
     queryKey: ['gdms'],
@@ -190,6 +190,8 @@ export default function PendingBoard({
                   key={`${cat.key}-${item.id}`}
                   item={item}
                   gdm={gdmById[item.gdm_id]}
+                  hasPermission={hasPermission}
+                  user={user}
                 />
               ))}
             </div>
