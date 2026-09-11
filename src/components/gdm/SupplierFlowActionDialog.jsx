@@ -43,6 +43,8 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   const [quoteUrl, setQuoteUrl] = useState('');
   const [quoteValue, setQuoteValue] = useState('');
   const [quoteDeadline, setQuoteDeadline] = useState('');
+  const [warrantyDays, setWarrantyDays] = useState('');
+  const [proposalNumber, setProposalNumber] = useState('');
   const [decision, setDecision] = useState('');
   const [discountPercentage, setDiscountPercentage] = useState('');
   const [rejectOutcome, setRejectOutcome] = useState('');
@@ -63,6 +65,8 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     setQuoteUrl('');
     setQuoteValue('');
     setQuoteDeadline('');
+    setWarrantyDays('');
+    setProposalNumber('');
     setDecision('');
     setDiscountPercentage('');
     setRejectOutcome('');
@@ -114,6 +118,12 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
       payload.quote_value = Number(quoteValue);
       if (quoteUrl) payload.quote_document_url = quoteUrl;
       if (quoteDeadline) payload.quote_deadline = quoteDeadline;
+      if (warrantyDays) payload.warranty_days = Number(warrantyDays);
+      if (action === 'attach_quote' && proposalNumber.trim()) {
+        payload.quote_proposal_number = proposalNumber.trim();
+      }
+    } else if (action === 'update_warranty') {
+      payload.warranty_days = Number(warrantyDays);
     } else if (action === 'maintenance_decision') {
       payload.decision = decision;
       if (discountPercentage) payload.discount_percentage = Number(discountPercentage);
@@ -138,8 +148,9 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     actionMutation.isPending ||
     (needsSupplier && (!supplierId || !expectedShipDate)) ||
     (action === 'attach_shipping_proof' && (!nfUrl || !photoUrl)) ||
-    (action === 'attach_quote' && (!quoteUrl || !quoteValue || !quoteDeadline)) ||
+    (action === 'attach_quote' && (!quoteUrl || !quoteValue || !quoteDeadline || !warrantyDays)) ||
     (action === 'renegotiate_quote' && !quoteValue) ||
+    (action === 'update_warranty' && (!warrantyDays || Number(warrantyDays) <= 0)) ||
     (action === 'maintenance_decision' &&
       (!decision || (decision === 'reject' && (!rejectOutcome || !observation.trim())))) ||
     (action === 'register_supplier_return' && (!returnNfUrl || !returnProofUrl)) ||
@@ -253,6 +264,32 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Garantia oferecida pelo fornecedor (dias) *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={warrantyDays}
+                    onChange={(e) => setWarrantyDays(e.target.value)}
+                    placeholder="Ex: 90"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Número da proposta comercial</Label>
+                  <Input
+                    value={proposalNumber}
+                    onChange={(e) => setProposalNumber(e.target.value)}
+                    placeholder="Opcional"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                Garantia vinculada a este item. O início da contagem é registrado
+                automaticamente quando o Almoxarifado confirmar o recebimento do
+                equipamento, e o término é calculado a partir dos dias informados.
+              </p>
               <p className="text-xs text-slate-500">
                 Após o anexo, o item segue automaticamente para a Gerência de Manutenção.
               </p>
@@ -405,6 +442,17 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
                   onChange={(e) => setQuoteDeadline(e.target.value)}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Garantia da nova proposta (dias, opcional)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={warrantyDays}
+                  onChange={(e) => setWarrantyDays(e.target.value)}
+                  placeholder="Mantém a garantia anterior se vazio"
+                />
+              </div>
               <p className="text-xs text-slate-500">
                 Após a nova proposta, o item retorna para nova aprovação da Manutenção. Todo o
                 histórico de valores permanece registrado.
@@ -520,6 +568,27 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
               <p className="text-xs text-slate-500">
                 Ambos os anexos são obrigatórios: a confirmação do recebimento finaliza o fluxo do
                 item com data e responsável registrados.
+              </p>
+            </>
+          )}
+
+          {action === 'update_warranty' && (
+            <>
+              <div className="space-y-2">
+                <Label>Nova garantia (dias) *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={warrantyDays}
+                  onChange={(e) => setWarrantyDays(e.target.value)}
+                  placeholder="Ex: 180"
+                />
+              </div>
+              <p className="text-xs text-slate-500">
+                A alteração da garantia é sempre registrada no histórico do item com data,
+                hora e responsável. Se a garantia já começou a contar, o término é
+                recalculado a partir da data de início registrada.
               </p>
             </>
           )}

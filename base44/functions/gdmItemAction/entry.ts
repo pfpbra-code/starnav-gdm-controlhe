@@ -306,9 +306,19 @@ export default async function (req: Request): Promise<Response> {
         throw new Error('Informe o valor do reparo');
       }
       if (!body.quote_deadline) throw new Error('Informe o prazo informado pelo fornecedor');
+      if (!can('register_warranty')) {
+        throw new Error('Sem permissão para registrar a garantia da cotação');
+      }
+      const warrantyDays = Number(body.warranty_days);
+      if (!body.warranty_days || !Number.isFinite(warrantyDays) || warrantyDays <= 0) {
+        throw new Error('Informe a garantia oferecida pelo fornecedor (em dias)');
+      }
+      const proposalNumber = String(body.quote_proposal_number || '').trim() || null;
 
       const quoteValue = Number(body.quote_value);
       extra.quote_value = quoteValue;
+      extra.warranty_days = warrantyDays;
+      extra.quote_proposal_number = proposalNumber;
       extra.quote_document_url = body.quote_document_url;
       extra.quote_deadline = body.quote_deadline;
       extra.quote_attached_at = now;
@@ -320,6 +330,8 @@ export default async function (req: Request): Promise<Response> {
         quote_value: quoteValue,
         quote_document_url: body.quote_document_url,
         quote_deadline: body.quote_deadline,
+        quote_proposal_number: proposalNumber,
+        warranty_days: warrantyDays,
         registered_by: user.email,
         registered_at: now,
         outcome: 'submitted',
@@ -442,6 +454,20 @@ export default async function (req: Request): Promise<Response> {
       extra.quote_value = quoteValue;
       extra.quote_attached_at = now;
       extra.quote_attached_by = user.email;
+      // Garantia pode ser ajustada na renegociação (opcional; sempre no histórico).
+      if (body.warranty_days !== undefined && body.warranty_days !== null && body.warranty_days !== '') {
+        if (!can('register_warranty')) throw new Error('Sem permissão para alterar a garantia');
+        const warrantyDays = Number(body.warranty_days);
+        if (!Number.isFinite(warrantyDays) || warrantyDays <= 0) {
+          throw new Error('Garantia inválida');
+        }
+        extra.warranty_days = warrantyDays;
+        if (item.warranty_start_at) {
+          extra.warranty_end_at = new Date(
+            new Date(item.warranty_start_at).getTime() + warrantyDays * 86400000,
+          ).toISOString();
+        }
+      }
       const quotes = Array.isArray(item.quotes_history) ? [...item.quotes_history] : [];
       if (body.quote_document_url) extra.quote_document_url = body.quote_document_url;
       quotes.push({
@@ -512,6 +538,13 @@ export default async function (req: Request): Promise<Response> {
       }
       if (!['in_treatment', 'awaiting_return'].includes(prev)) {
         throw new Error('Item só pode ser finalizado em reparo ou aguardando retorno');
+      }
+      // Garantia: o prazo começa a contar no recebimento confirmado pelo Almoxarifado.
+      if (item.warranty_days && Number(item.warranty_days) > 0) {
+        extra.warranty_start_at = now;
+        extra.warranty_end_at = new Date(
+          new Date(now).getTime() + Number(item.warranty_days) * 86400000,
+        ).toISOString();
       }
       next = 'completed';
       extra.completed_at = now;
@@ -612,9 +645,39 @@ export default async function (req: Request): Promise<Response> {
       extra.return_laudo_url = body.laudo_url;
       extra.return_received_at = now;
       extra.return_received_by = user.email;
+      // Garantia: o prazo começa a contar no recebimento confirmado pelo Almoxarifado.
+      if (item.warranty_days && Number(item.warranty_days) > 0) {
+        extra.warranty_start_at = now;
+        extra.warranty_end_at = new Date(
+          new Date(now).getTime() + Number(item.warranty_days) * 86400000,
+        ).toISOString();
+      }
       extra.completed_at = now;
       extra.completed_by = user.email;
       next = 'completed';
+    } else if (action === 'update_warranty') {
+      // Serviços altera a garantia informada na cotação — a mudança é sempre
+      // registrada no histórico imutável do item (data, hora e usuário).
+      if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
+        throw new Error('Este item não segue o fluxo de fornecedor');
+      }
+      if (!can('register_warranty')) throw new Error('Sem permissão para alterar a garantia');
+      if (!item.quote_attached_at) throw new Error('O item ainda não possui cotação registrada');
+      if (['completed', 'cancelled', 'rejected', 'discard_approved'].includes(prev)) {
+        throw new Error('Processo encerrado — a garantia não pode ser alterada');
+      }
+      const warrantyDays = Number(body.warranty_days);
+      if (!body.warranty_days || !Number.isFinite(warrantyDays) || warrantyDays <= 0) {
+        throw new Error('Informe a garantia em dias');
+      }
+      extra.warranty_days = warrantyDays;
+      // Se a garantia já começou a contar, o término é recalculado a partir do início.
+      if (item.warranty_start_at) {
+        extra.warranty_end_at = new Date(
+          new Date(item.warranty_start_at).getTime() + warrantyDays * 86400000,
+        ).toISOString();
+      }
+      next = prev;
     } else if (action === 'cancel') {
       if (!can('edit_gdm') && user.role !== 'admin') throw new Error('Sem permissão para cancelar');
       if (prev === 'completed') throw new Error('Item já finalizado');

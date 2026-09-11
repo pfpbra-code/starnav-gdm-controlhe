@@ -1,5 +1,7 @@
 import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PendingBoard from '@/components/gdm/PendingBoard';
+import RepairControlPanel from '@/components/gdm/RepairControlPanel';
 
 // Pendências exclusivas do setor de Serviços, por categoria.
 // Cada item sai da pendência assim que a ação é concluída e permanece no histórico.
@@ -46,15 +48,26 @@ const CATEGORIES = [
   },
 ];
 
-/** Aba Serviços: somente GDMs e itens que aguardam ação do setor. */
+/** Aba Serviços: pendências do setor + controle completo de reparos e certificações. */
 export default function ServicesBoard() {
   return (
-    <PendingBoard
-      title="Serviços"
-      description="GDMs e itens que aguardam ação do setor de Serviços"
-      emptyMessage="Nenhuma pendência para o setor de Serviços"
-      categories={CATEGORIES}
-      showDeadlineAlerts
-    />
+    <Tabs defaultValue="pending" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="pending">Pendências do Setor</TabsTrigger>
+        <TabsTrigger value="control">Controle de Reparos e Certificações</TabsTrigger>
+      </TabsList>
+      <TabsContent value="pending">
+        <PendingBoard
+          title="Serviços"
+          description="GDMs e itens que aguardam ação do setor de Serviços"
+          emptyMessage="Nenhuma pendência para o setor de Serviços"
+          categories={CATEGORIES}
+          showDeadlineAlerts
+        />
+      </TabsContent>
+      <TabsContent value="control">
+        <RepairControlPanel />
+      </TabsContent>
+    </Tabs>
   );
 }

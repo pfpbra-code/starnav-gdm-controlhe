@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { hasPermission } from '@/lib/permissions';
+import WarrantyStatusBadge from './WarrantyStatusBadge';
 import {
   ITEM_DESTINATION_LABELS,
   ITEM_DESTINATION_OPTIONS,
@@ -28,6 +29,7 @@ import {
   ITEM_ACTION_LABELS,
   availableItemActions,
   itemResponsible,
+  warrantyInfo,
   itemFlow,
   itemGroup,
   nextActionText,
@@ -234,6 +236,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
         )}
         {visibleItems.map((item) => {
           const actions = availableItemActions(item, can, user);
+          const warranty = warrantyInfo(item);
           const primary = actions.filter((a) => !a.destructive);
           const isOpen = !!expanded[item.id];
           const needsMe = primary.length > 0;
@@ -265,6 +268,9 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                 >
                   {ITEM_DESTINATION_LABELS[item.destination] || item.destination}
                 </span>
+                {['repair', 'certification'].includes(item.destination) && (
+                  <WarrantyStatusBadge item={item} />
+                )}
                 <span
                   className={`ml-auto text-xs px-2 py-1 rounded-full ${ITEM_STATUS_COLORS[item.status] || 'bg-slate-100 text-slate-700'}`}
                 >
@@ -297,6 +303,26 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                       {a.label}
                     </Button>
                   ))}
+                  {['repair', 'certification'].includes(item.destination) &&
+                    item.warranty_days &&
+                    item.quote_attached_at &&
+                    !['completed', 'cancelled', 'rejected', 'discard_approved'].includes(
+                      item.status,
+                    ) &&
+                    can('register_warranty') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          openAction(item, {
+                            action: 'update_warranty',
+                            label: 'Alterar garantia',
+                          })
+                        }
+                      >
+                        Alterar garantia
+                      </Button>
+                    )}
                   <GDMItemQrCode item={item} gdm={gdm} variant="outline" size="sm" />
                   <GDMItemPdfButton item={item} gdm={gdm} variant="outline" size="sm" />
                   {item.destination === 'discard' &&
@@ -359,6 +385,34 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                         )}
                         {item.quote_deadline && (
                           <Field label="Prazo do fornecedor" value={item.quote_deadline} />
+                        )}
+                        {['repair', 'certification'].includes(item.destination) && (
+                          <>
+                            <Field
+                              label="Garantia (dias)"
+                              value={warranty.days ? `${warranty.days} dias` : '—'}
+                            />
+                            <Field
+                              label="Início da garantia"
+                              value={
+                                warranty.start
+                                  ? format(warranty.start, 'dd/MM/yyyy HH:mm')
+                                  : 'Após recebimento pelo Almoxarifado'
+                              }
+                            />
+                            <Field
+                              label="Término da garantia"
+                              value={
+                                warranty.end ? format(warranty.end, 'dd/MM/yyyy HH:mm') : '—'
+                              }
+                            />
+                            <div className="col-span-2">
+                              <span className="text-slate-500 text-xs block mb-1">
+                                Situação
+                              </span>
+                              <WarrantyStatusBadge item={item} />
+                            </div>
+                          </>
                         )}
                         {item.shipping_proof_url && (
                           <div className="col-span-2">
