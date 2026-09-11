@@ -92,6 +92,7 @@ export const ITEM_ACTION_LABELS = {
   confirm_oc_approved: "OC Aprovada e Enviada ao Fornecedor (Serviços)",
   register_return_dispatch: "Saída para Entrega Registrada (Serviços)",
   confirm_return_receipt: "Recebimento do Retorno Confirmado (Almoxarifado)",
+  update_warranty: "Garantia Alterada (Serviços)",
   complete: "Item Finalizado",
   cancel: "Item Cancelado",
   advance_treatment: "Avanço da Tratativa",
@@ -564,6 +565,32 @@ export function returnDeadlineState(item) {
   return "ok";
 }
 
+export const WARRANTY_STATUS_LABELS = {
+  none: "Sem garantia informada",
+  pending: "Aguardando início",
+  active: "Garantia vigente",
+  expired: "Garantia vencida",
+};
+
+/**
+ * Situação da garantia do item, vinculada à cotação aprovada. O prazo começa a
+ * contar quando o Almoxarifado confirma o recebimento do equipamento
+ * (warranty_start_at); o término é calculado automaticamente (início + dias).
+ * Sem alterar o prazo da cotação nem o prazo de retorno do fornecedor.
+ */
+export function warrantyInfo(item) {
+  if (!item || !item.warranty_days || Number(item.warranty_days) <= 0) {
+    return { days: null, start: null, end: null, status: "none" };
+  }
+  const days = Number(item.warranty_days);
+  if (!item.warranty_start_at) {
+    return { days, start: null, end: null, status: "pending" };
+  }
+  const start = new Date(item.warranty_start_at);
+  const end = new Date(start.getTime() + days * 86400000);
+  return { days, start, end, status: end >= new Date() ? "active" : "expired" };
+}
+
 /** Ações do ciclo de fornecedor — usadas pelo roteador de diálogos. */
 export const SUPPLIER_FLOW_ACTIONS = [
   "select_supplier",
@@ -579,4 +606,5 @@ export const SUPPLIER_FLOW_ACTIONS = [
   "confirm_oc_approved",
   "register_return_dispatch",
   "confirm_return_receipt",
+  "update_warranty",
 ];

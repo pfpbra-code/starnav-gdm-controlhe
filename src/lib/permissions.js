@@ -31,6 +31,7 @@ export const AVAILABLE_PERMISSIONS = [
 
   // Serviços / OC
   { id: "send_to_supplier", label: "Enviar ao Fornecedor", category: "Serviços" },
+  { id: "register_warranty", label: "Registrar/Alterar Garantia de Cotação", category: "Serviços" },
   { id: "manage_service_treatments", label: "Registrar Tratativas", category: "Serviços" },
   { id: "view_oc", label: "Visualizar OC", category: "OC" },
   { id: "create_oc", label: "Criar OC", category: "OC" },
@@ -154,6 +155,7 @@ export const ROLE_PERMISSION_PRESETS = {
     "edit_gdm",
     "change_gdm_destination",
     "send_to_supplier",
+    "register_warranty",
     "generate_gdm_pdf",
     "manage_service_treatments",
     "view_oc",
