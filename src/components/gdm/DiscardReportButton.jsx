@@ -84,6 +84,7 @@ export default function DiscardReportButton({ item, gdm, variant = 'outline', si
       doc.setFontSize(9);
       doc.text('Relatório formal de descarte de material', margin, 16);
       doc.setFontSize(8);
+      doc.text('PIS ALMOX 001.07 - Formulário para Descarte de Materiais', margin, 21);
       doc.text(
         `Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
         pageW - margin,

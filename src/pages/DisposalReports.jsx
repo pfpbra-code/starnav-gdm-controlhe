@@ -258,6 +258,8 @@ export default function DisposalReports() {
     doc.setFontSize(9);
     doc.text('Relatório consolidado de materiais descartados', margin, 16);
     doc.setFontSize(8);
+    doc.text('PIS ALMOX 001.07 - Formulário para Descarte de Materiais', margin, 21);
+    doc.setFontSize(8);
     doc.text(`Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageW - margin, 16, { align: 'right' });
     y = 30;
 
