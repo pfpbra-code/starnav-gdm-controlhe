@@ -378,6 +378,15 @@
       "format": "date-time",
       "description": "Data/hora da confirma\u00e7\u00e3o do descarte"
     },
+    "discard_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data em que o descarte f\u00edsico foi realizado"
+    },
+    "discard_responsible": {
+      "type": "string",
+      "description": "Respons\u00e1vel pelo descarte f\u00edsico do material"
+    },
     "discard_notes": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es da confirma\u00e7\u00e3o do descarte"

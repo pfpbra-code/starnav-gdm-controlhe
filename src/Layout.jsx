@@ -18,6 +18,7 @@ const pageTitles = {
   Users: "Usuários",
   Equipment: "Equipamentos",
   Suppliers: "Fornecedores",
+  DisposalReports: "Relatórios de Descarte",
   AuditLogs: "Logs de Auditoria",
   Settings: "Configurações",
   ServicesTreatments: "Tratativas",

@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   FileText,
   FilePlus2,
+  FileDown,
   Ship,
   Users,
   Building2,
@@ -48,6 +49,7 @@ const MENU_ITEMS = [
   },
   { icon: Ship, label: 'Embarcações', page: 'Vessels', permission: 'view_vessels' },
   { icon: Building2, label: 'Fornecedores', page: 'Suppliers', permission: 'view_suppliers' },
+  { icon: FileDown, label: 'Relatórios de Descarte', page: 'DisposalReports', permission: 'view_disposal_reports' },
   { icon: Upload, label: 'Importar Planilha', page: 'ImportData', permission: 'import_spreadsheet' },
   { icon: Settings, label: 'Configurações', page: 'Settings', permission: 'system_settings' },
 ];

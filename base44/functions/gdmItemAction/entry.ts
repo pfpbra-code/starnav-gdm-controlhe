@@ -155,7 +155,9 @@ export default async function (req: Request): Promise<Response> {
       extra.discard_authorized_by = user.id;
       extra.discard_authorized_at = now;
     } else if (action === 'confirm_discard') {
-      if (!can('confirm_receipt')) throw new Error('Sem permissão para confirmar descarte');
+      if (!can('confirm_disposal') && !can('confirm_receipt')) {
+        throw new Error('Sem permissão para confirmar descarte');
+      }
       if (
         item.destination !== 'discard' ||
         !item.discard_authorized ||
@@ -164,11 +166,32 @@ export default async function (req: Request): Promise<Response> {
       ) {
         throw new Error('Item não está aguardando confirmação de descarte');
       }
+      // Registro obrigatório: data, responsável e comprovação (anexo ou justificativa).
+      const discardDate = body.discard_date || body.discardDate || null;
+      const discardResponsible = String(body.discard_responsible || body.discardResponsible || '').trim();
+      if (!discardDate) throw new Error('Informe a data do descarte');
+      if (!discardResponsible) throw new Error('Informe o responsável pelo descarte');
+      let evidenceCount = 0;
+      try {
+        const atts = await base44.entities.GDMAttachment.filter({ gdm_item_id: item.id });
+        evidenceCount = (atts || []).filter((a: any) =>
+          ['descarte_foto', 'descarte_pdf', 'documento_descarte'].includes(a.attachment_type),
+        ).length;
+      } catch {
+        evidenceCount = 0;
+      }
+      const justification = (observation || '').trim();
+      if (evidenceCount === 0 && !justification) {
+        throw new Error('Anexe ao menos uma foto ou PDF de comprovação do descarte, ou informe uma justificativa obrigatória');
+      }
       next = 'completed';
       extra.discard_confirmed = true;
       extra.discard_confirmed_by = user.id;
       extra.discard_confirmed_at = now;
-      extra.discard_notes = observation;
+      extra.discard_date = discardDate;
+      extra.discard_responsible = discardResponsible;
+      extra.discard_notes = justification || null;
+      extra.evidence_files = Array.isArray(body.evidence_file_names) ? body.evidence_file_names : [];
       extra.completed_at = now;
       extra.completed_by = user.email;
 

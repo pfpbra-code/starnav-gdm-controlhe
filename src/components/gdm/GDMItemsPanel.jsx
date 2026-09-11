@@ -37,6 +37,7 @@ import {
 } from '@/lib/gdmItems';
 import GDMItemQrCode from './GDMItemQrCode';
 import GDMItemPdfButton from './GDMItemPdfButton';
+import DiscardReportButton from './DiscardReportButton';
 import ItemActionRouter from './ItemActionRouter';
 
 function ItemHistory({ itemId }) {
@@ -298,6 +299,11 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                   ))}
                   <GDMItemQrCode item={item} gdm={gdm} variant="outline" size="sm" />
                   <GDMItemPdfButton item={item} gdm={gdm} variant="outline" size="sm" />
+                  {item.destination === 'discard' &&
+                    ['completed', 'discard_approved'].includes(item.status) &&
+                    can('generate_disposal_report') && (
+                      <DiscardReportButton item={item} gdm={gdm} variant="outline" size="sm" />
+                    )}
                   <Button size="sm" variant="ghost" onClick={() => toggle(item.id)}>
                     {isOpen ? 'Fechar tratativa' : 'Abrir tratativa'}
                   </Button>
@@ -327,6 +333,16 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                             label="Descarte autorizado em"
                             value={format(new Date(item.discard_authorized_at), 'dd/MM/yyyy HH:mm')}
                           />
+                        )}
+                        {item.destination === 'discard' && item.discard_confirmed_at && (
+                          <>
+                            <Field
+                              label="Descarte confirmado em"
+                              value={format(new Date(item.discard_confirmed_at), 'dd/MM/yyyy HH:mm')}
+                            />
+                            <Field label="Data do descarte" value={item.discard_date} />
+                            <Field label="Responsável pelo descarte" value={item.discard_responsible} />
+                          </>
                         )}
                         {item.notes && <Field label="Observação" value={item.notes} />}
                         {item.expected_ship_date && (

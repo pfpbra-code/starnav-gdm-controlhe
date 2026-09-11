@@ -144,7 +144,11 @@ export function availableItemActions(item, can, user) {
     actions.push({ action: "authorize_discard", label: "Autorizar descarte" });
   }
 
-  if (d === "discard" && s === "awaiting_discard_confirmation" && can("confirm_receipt")) {
+  if (
+    d === "discard" &&
+    s === "awaiting_discard_confirmation" &&
+    (can("confirm_receipt") || can("confirm_disposal"))
+  ) {
     actions.push({ action: "confirm_discard", label: "Confirmar descarte realizado" });
   }
 

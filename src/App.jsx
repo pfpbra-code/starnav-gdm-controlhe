@@ -9,6 +9,7 @@ import MyProfile from './pages/MyProfile';
 import Maintenance from './pages/Maintenance';
 import Operations from './pages/Operations';
 import SupplierDetail from './pages/SupplierDetail';
+import DisposalReports from './pages/DisposalReports';
 import RequirePermission from '@/components/RequirePermission';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
@@ -99,6 +100,13 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="SupplierDetail">
           <RequirePermission module="SupplierDetail">
             <SupplierDetail />
+          </RequirePermission>
+        </LayoutWrapper>
+      } />
+      <Route path="/DisposalReports" element={
+        <LayoutWrapper currentPageName="DisposalReports">
+          <RequirePermission module="DisposalReports">
+            <DisposalReports />
           </RequirePermission>
         </LayoutWrapper>
       } />

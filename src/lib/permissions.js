@@ -23,6 +23,12 @@ export const AVAILABLE_PERMISSIONS = [
   { id: "confirm_receipt", label: "Confirmar Recebimento", category: "Recebimento" },
   { id: "report_not_received", label: "Informar Não Recebimento", category: "Recebimento" },
 
+  // Descarte
+  { id: "confirm_disposal", label: "Confirmar descarte", category: "Descarte" },
+  { id: "upload_disposal_evidence", label: "Anexar comprovação de descarte", category: "Descarte" },
+  { id: "view_disposal_reports", label: "Visualizar relatórios de descarte", category: "Descarte" },
+  { id: "generate_disposal_report", label: "Gerar relatório de descarte", category: "Descarte" },
+
   // Serviços / OC
   { id: "send_to_supplier", label: "Enviar ao Fornecedor", category: "Serviços" },
   { id: "manage_service_treatments", label: "Registrar Tratativas", category: "Serviços" },
@@ -188,6 +194,8 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_supplier_ranking",
     "view_equipment_ranking",
     "view_critical_equipment",
+    "view_disposal_reports",
+    "generate_disposal_report",
   ],
   almoxarifado: [
     "view_dashboard",
@@ -197,6 +205,10 @@ export const ROLE_PERMISSION_PRESETS = {
     "generate_gdm_pdf",
     "confirm_receipt",
     "report_not_received",
+    "confirm_disposal",
+    "upload_disposal_evidence",
+    "view_disposal_reports",
+    "generate_disposal_report",
     "view_ot",
     "confirm_return",
     "view_equipment",
@@ -210,6 +222,8 @@ export const ROLE_PERMISSION_PRESETS = {
     "issue_pwt",
     "view_oc",
     "view_ot",
+    "view_disposal_reports",
+    "generate_disposal_report",
     "view_reports",
     "view_cost_reports",
     "view_analytics",
@@ -370,6 +384,7 @@ export const MODULE_PERMISSIONS = {
   Vessels: "view_vessels",
   Equipment: "view_equipment",
   Suppliers: "view_suppliers",
+  DisposalReports: "view_disposal_reports",
   SupplierDetail: "view_suppliers",
   Users: "manage_users",
   AuditLogs: "view_audit_logs",
