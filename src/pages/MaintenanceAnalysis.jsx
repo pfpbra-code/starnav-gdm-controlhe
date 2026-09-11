@@ -53,7 +53,7 @@ const SECTOR_TABS = [
   },
 ];
 
-export default function MaintenanceAnalysis() {
+export default function MaintenanceAnalysis({ embedded = false }) {
   const { hasPermission } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [pending, setPending] = useState(null); // { item, action, label }
@@ -139,14 +139,16 @@ export default function MaintenanceAnalysis() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Análise de Cotações</h1>
-        <p className="text-slate-500 mt-1">
-          Decisão da Gerência por item: aprovar, solicitar desconto ou reprovar (com troca de
-          fornecedor ou descarte). Todo o histórico é preservado.
-        </p>
-      </div>
+      {/* Header (oculto quando embutido na aba Manutenção) */}
+      {!embedded && (
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Análise de Cotações</h1>
+          <p className="text-slate-500 mt-1">
+            Decisão da Gerência por item: aprovar, solicitar desconto ou reprovar (com troca de
+            fornecedor ou descarte). Todo o histórico é preservado.
+          </p>
+        </div>
+      )}
 
       {/* Abas por setor */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

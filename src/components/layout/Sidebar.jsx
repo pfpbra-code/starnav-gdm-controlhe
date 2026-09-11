@@ -16,7 +16,8 @@ import {
   Wrench,
   Cog,
   ClipboardList,
-  ClipboardCheck,
+  Handshake,
+  Warehouse,
   History,
   Upload,
   ChevronLeft,
@@ -41,12 +42,8 @@ const MENU_ITEMS = [
   { icon: FileText, label: 'Guias de Desembarque', page: 'GDMList', permission: 'view_all_gdms' },
   { icon: Wrench, label: 'Manutenção', page: 'Maintenance', permission: 'view_maintenance' },
   { icon: Cog, label: 'Operações', page: 'Operations', permission: 'view_operations' },
-  {
-    icon: ClipboardCheck,
-    label: 'Análise de Cotações',
-    page: 'MaintenanceAnalysis',
-    anyOf: ['view_maintenance_quotes', 'view_operations_quotes'],
-  },
+  { icon: Handshake, label: 'Serviços', page: 'ServicesBoard', permission: 'send_to_supplier' },
+  { icon: Warehouse, label: 'Almoxarifado', page: 'AlmoxarifadoBoard', permission: 'confirm_receipt' },
   { icon: Ship, label: 'Embarcações', page: 'Vessels', permission: 'view_vessels' },
   { icon: Building2, label: 'Fornecedores', page: 'Suppliers', permission: 'view_suppliers' },
   { icon: FileDown, label: 'Relatórios de Descarte', page: 'DisposalReports', permission: 'view_disposal_reports' },
@@ -82,10 +79,7 @@ export default function Sidebar({ user, collapsed, setCollapsed, currentPage }) 
 
   const renderLink = (item, key) => {
     const Icon = item.icon;
-    const isActive =
-      currentPage === item.page ||
-      currentPage === item.target ||
-      (item.page === 'MaintenanceAnalysis' && currentPage === 'MaintenanceAnalysis');
+    const isActive = currentPage === item.page || currentPage === item.target;
     return (
       <Link
         key={key}

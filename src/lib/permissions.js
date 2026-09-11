@@ -159,6 +159,7 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_oc",
     "create_oc",
     "issue_oc",
+    "approve_oc",
     "view_ot",
     "create_ot",
     "issue_ot",
@@ -377,6 +378,8 @@ export const MODULE_PERMISSIONS = {
   VesselGDMs: "view_gdm",
   CreateGDM: "create_gdm",
   ServicesTreatments: "manage_service_treatments",
+  ServicesBoard: "send_to_supplier",
+  AlmoxarifadoBoard: "confirm_receipt",
   Maintenance: "view_maintenance",
   Operations: "view_operations",
   // A Análise de Cotações controla as abas (Manutenção/Operações) internamente.

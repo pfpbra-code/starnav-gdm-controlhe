@@ -22,6 +22,8 @@ const pageTitles = {
   AuditLogs: "Logs de Auditoria",
   Settings: "Configurações",
   ServicesTreatments: "Tratativas",
+  ServicesBoard: "Serviços",
+  AlmoxarifadoBoard: "Almoxarifado",
   MaintenanceAnalysis: "Análise de Cotações",
   SupplierDetail: "Detalhes do Fornecedor",
   VesselDashboard: "Painel da Embarcação",

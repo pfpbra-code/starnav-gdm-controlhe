@@ -1,0 +1,44 @@
+{
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "alerta_prazos_retorno",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "notify_deadlines": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notifyReturnDeadlines"
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Verificar prazos de retorno",
+            "description": "Alerta o setor de Servi\u00e7os"
+          }
+        }
+      }
+    ]
+  },
+  "name": "Alerta de Prazos de Retorno",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 8 * * *",
+      "one_time_date": null,
+      "timezone": "America/Sao_Paulo",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Notifica o setor de Servi\u00e7os sobre prazos de retorno vencidos ou pr\u00f3ximos do vencimento (prazo da cota\u00e7\u00e3o do fornecedor, por item)"
+}

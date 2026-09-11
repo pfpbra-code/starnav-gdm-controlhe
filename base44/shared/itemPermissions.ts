@@ -12,7 +12,7 @@ const PRESETS: Record<string, any> = {
   services: [
     'view_dashboard', 'view_maintenance', 'view_operations', 'view_gdm', 'edit_gdm',
     'change_gdm_destination', 'send_to_supplier', 'generate_gdm_pdf',
-    'manage_service_treatments', 'view_oc', 'create_oc', 'issue_oc', 'view_ot', 'create_ot',
+    'manage_service_treatments', 'view_oc', 'create_oc', 'issue_oc', 'approve_oc', 'view_ot', 'create_ot',
     'issue_ot', 'edit_ot', 'confirm_return', 'close_ot', 'view_vessels', 'view_equipment',
     'view_suppliers', 'view_reports', 'export_reports', 'view_cost_reports', 'view_analytics',
     'view_supplier_ranking', 'view_equipment_ranking', 'view_critical_equipment',

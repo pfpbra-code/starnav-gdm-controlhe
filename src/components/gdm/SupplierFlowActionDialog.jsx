@@ -48,6 +48,11 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   const [rejectOutcome, setRejectOutcome] = useState('');
   const [returnNfUrl, setReturnNfUrl] = useState('');
   const [returnProofUrl, setReturnProofUrl] = useState('');
+  const [pwtNumber, setPwtNumber] = useState('');
+  const [ocNumber, setOcNumber] = useState('');
+  const [dispatchDate, setDispatchDate] = useState('');
+  const [receiptNfUrl, setReceiptNfUrl] = useState('');
+  const [laudoUrl, setLaudoUrl] = useState('');
   const [observation, setObservation] = useState('');
 
   useEffect(() => {
@@ -63,6 +68,11 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     setRejectOutcome('');
     setReturnNfUrl('');
     setReturnProofUrl('');
+    setPwtNumber('');
+    setOcNumber('');
+    setDispatchDate('');
+    setReceiptNfUrl('');
+    setLaudoUrl('');
     setObservation('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending]);
@@ -111,6 +121,15 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     } else if (action === 'register_supplier_return') {
       payload.return_nf_url = returnNfUrl;
       payload.return_proof_url = returnProofUrl;
+    } else if (action === 'issue_pwt') {
+      payload.pwt_number = pwtNumber.trim();
+    } else if (action === 'issue_oc') {
+      payload.oc_number = ocNumber.trim();
+    } else if (action === 'register_return_dispatch') {
+      if (dispatchDate) payload.dispatch_date = dispatchDate;
+    } else if (action === 'confirm_return_receipt') {
+      payload.nf_url = receiptNfUrl;
+      payload.laudo_url = laudoUrl;
     }
     actionMutation.mutate(payload);
   };
@@ -123,7 +142,10 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     (action === 'renegotiate_quote' && !quoteValue) ||
     (action === 'maintenance_decision' &&
       (!decision || (decision === 'reject' && (!rejectOutcome || !observation.trim())))) ||
-    (action === 'register_supplier_return' && (!returnNfUrl || !returnProofUrl));
+    (action === 'register_supplier_return' && (!returnNfUrl || !returnProofUrl)) ||
+    (action === 'issue_pwt' && !pwtNumber.trim()) ||
+    (action === 'issue_oc' && !ocNumber.trim()) ||
+    (action === 'confirm_return_receipt' && (!receiptNfUrl || !laudoUrl));
 
   const decisionOption = (value, icon, title, hint) => (
     <button
@@ -422,6 +444,84 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
               Confirma o início do reparo no fornecedor{' '}
               <strong>{item?.supplier_name || ''}</strong>. O item passa para "Em Reparo".
             </p>
+          )}
+
+          {action === 'issue_pwt' && (
+            <>
+              <div className="space-y-2">
+                <Label>Número do PWT *</Label>
+                <Input
+                  value={pwtNumber}
+                  onChange={(e) => setPwtNumber(e.target.value)}
+                  placeholder="Ex: PWT-00123"
+                />
+              </div>
+              <p className="text-xs text-slate-500">
+                Emitido pelo Planejamento com data, hora e responsável registrados no histórico.
+                Após o PWT, o item segue para Serviços emitir a Ordem de Compra (OC).
+              </p>
+            </>
+          )}
+
+          {action === 'issue_oc' && (
+            <>
+              <div className="space-y-2">
+                <Label>Número da Ordem de Compra (OC) *</Label>
+                <Input
+                  value={ocNumber}
+                  onChange={(e) => setOcNumber(e.target.value)}
+                  placeholder="Ex: OC-00456"
+                />
+              </div>
+              <p className="text-xs text-slate-500">
+                Após a emissão, o item aguarda a confirmação de aprovação e envio da OC ao
+                fornecedor.
+              </p>
+            </>
+          )}
+
+          {action === 'confirm_oc_approved' && (
+            <p className="text-xs text-slate-500">
+              Confirma que a OC foi aprovada e enviada ao fornecedor{' '}
+              <strong>{item?.supplier_name || ''}</strong>. O item passa a aguardar o retorno do
+              material.
+            </p>
+          )}
+
+          {action === 'register_return_dispatch' && (
+            <>
+              <div className="space-y-2">
+                <Label>Data de saída para entrega</Label>
+                <Input
+                  type="date"
+                  value={dispatchDate}
+                  onChange={(e) => setDispatchDate(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-slate-500">
+                Registre quando o material saiu do fornecedor para entrega. Sem data informada,
+                vale a data de hoje. O prazo de retorno continua monitorado individualmente.
+              </p>
+            </>
+          )}
+
+          {action === 'confirm_return_receipt' && (
+            <>
+              <AttachmentField
+                label="NF do material retornado"
+                value={receiptNfUrl}
+                onChange={setReceiptNfUrl}
+              />
+              <AttachmentField
+                label="Laudo técnico"
+                value={laudoUrl}
+                onChange={setLaudoUrl}
+              />
+              <p className="text-xs text-slate-500">
+                Ambos os anexos são obrigatórios: a confirmação do recebimento finaliza o fluxo do
+                item com data e responsável registrados.
+              </p>
+            </>
           )}
 
           {action !== 'maintenance_decision' && (

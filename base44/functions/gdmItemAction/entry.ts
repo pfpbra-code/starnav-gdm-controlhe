@@ -366,7 +366,12 @@ export default async function (req: Request): Promise<Response> {
           quotes[quotes.length - 1] = lastQuote;
           extra.quotes_history = quotes;
         }
-        next = 'repair_approved';
+        // Após a aprovação: reparo aguarda o PWT (Planejamento); calibração
+        // (Operações) não exige PWT e vai direto para a emissão da OC.
+        next =
+          item.destination === 'certification'
+            ? 'awaiting_oc_issuance'
+            : 'awaiting_pwt';
       } else if (decision === 'discount') {
         extra.maintenance_decision = 'discount_requested';
         extra.maintenance_decided_by = user.email;
@@ -511,6 +516,105 @@ export default async function (req: Request): Promise<Response> {
       next = 'completed';
       extra.completed_at = now;
       extra.completed_by = user.email;
+    } else if (action === 'issue_pwt') {
+      // Planejamento emite o PWT (apenas itens de reparo) e registra o número.
+      if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
+        throw new Error('Este item não segue o fluxo de fornecedor');
+      }
+      if (item.destination === 'certification') {
+        throw new Error('Itens de calibração (Operações) não exigem PWT — emita a OC diretamente');
+      }
+      if (!can('issue_pwt')) throw new Error('Sem permissão para emitir PWT');
+      if (!['awaiting_pwt', 'repair_approved'].includes(prev)) {
+        throw new Error('Item não está aguardando PWT');
+      }
+      const pwtNumber = String(body.pwt_number || body.pwtNumber || '').trim();
+      if (!pwtNumber) throw new Error('Informe o número do PWT');
+
+      extra.pwt_number = pwtNumber;
+      extra.pwt_issued_at = now;
+      extra.pwt_issued_by = user.email;
+      next = 'awaiting_oc_issuance';
+
+      await mirrorGdm(base44, item.gdm_id, {
+        pwt_number: pwtNumber,
+        pwt_issued_by: user.email,
+        pwt_issued_at: now,
+      });
+    } else if (action === 'issue_oc') {
+      // Serviços emite a Ordem de Compra e registra o número da OC.
+      if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
+        throw new Error('Este item não segue o fluxo de fornecedor');
+      }
+      if (!can('issue_oc')) throw new Error('Sem permissão para emitir OC');
+      if (prev !== 'awaiting_oc_issuance') {
+        throw new Error('Item não está aguardando emissão da OC');
+      }
+      const ocNumber = String(body.oc_number || body.ocNumber || '').trim();
+      if (!ocNumber) throw new Error('Informe o número da OC');
+
+      extra.oc_number = ocNumber;
+      extra.oc_issued_at = now;
+      extra.oc_issued_by = user.email;
+      next = 'awaiting_oc_approval';
+
+      await mirrorGdm(base44, item.gdm_id, {
+        oc_number: ocNumber,
+        oc_issued_by: user.email,
+        oc_issued_at: now,
+      });
+    } else if (action === 'confirm_oc_approved') {
+      // Usuário autorizado de Serviços confirma que a OC foi aprovada e
+      // enviada ao fornecedor — o item passa a aguardar o retorno.
+      if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
+        throw new Error('Este item não segue o fluxo de fornecedor');
+      }
+      if (!can('approve_oc')) throw new Error('Sem permissão para confirmar a aprovação da OC');
+      if (prev !== 'awaiting_oc_approval') {
+        throw new Error('Item não está aguardando aprovação da OC');
+      }
+
+      extra.oc_approval_confirmed_at = now;
+      extra.oc_approval_confirmed_by = user.email;
+      next = 'awaiting_return';
+    } else if (action === 'register_return_dispatch') {
+      // Serviços registra quando o material saiu do fornecedor para entrega.
+      if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
+        throw new Error('Este item não segue o fluxo de fornecedor');
+      }
+      if (!can('send_to_supplier')) throw new Error('Sem permissão para registrar a saída para entrega');
+      if (prev !== 'awaiting_return') {
+        throw new Error('Item não está aguardando retorno');
+      }
+      if (item.return_dispatched_at) {
+        throw new Error('A saída para entrega já foi registrada');
+      }
+
+      extra.return_dispatched_at = body.dispatch_date
+        ? new Date(`${body.dispatch_date}T12:00:00`).toISOString()
+        : now;
+      extra.return_dispatched_by = user.email;
+      next = 'awaiting_return';
+    } else if (action === 'confirm_return_receipt') {
+      // Almoxarifado confirma o recebimento do material retornado, anexando
+      // obrigatoriamente a NF e o laudo técnico — finaliza o fluxo do item.
+      if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
+        throw new Error('Este item não segue o fluxo de fornecedor');
+      }
+      if (!can('confirm_receipt')) throw new Error('Sem permissão para confirmar o recebimento');
+      if (!['awaiting_return', 'in_treatment'].includes(prev)) {
+        throw new Error('Item não está aguardando retorno do fornecedor');
+      }
+      if (!body.nf_url) throw new Error('Anexe a NF do material retornado');
+      if (!body.laudo_url) throw new Error('Anexe o laudo técnico');
+
+      extra.return_receipt_nf_url = body.nf_url;
+      extra.return_laudo_url = body.laudo_url;
+      extra.return_received_at = now;
+      extra.return_received_by = user.email;
+      extra.completed_at = now;
+      extra.completed_by = user.email;
+      next = 'completed';
     } else if (action === 'cancel') {
       if (!can('edit_gdm') && user.role !== 'admin') throw new Error('Sem permissão para cancelar');
       if (prev === 'completed') throw new Error('Item já finalizado');

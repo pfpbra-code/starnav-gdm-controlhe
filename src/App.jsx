@@ -8,6 +8,8 @@ import ItemPublic from './pages/ItemPublic';
 import MyProfile from './pages/MyProfile';
 import Maintenance from './pages/Maintenance';
 import Operations from './pages/Operations';
+import ServicesBoard from './pages/ServicesBoard';
+import AlmoxarifadoBoard from './pages/AlmoxarifadoBoard';
 import SupplierDetail from './pages/SupplierDetail';
 import DisposalReports from './pages/DisposalReports';
 import RequirePermission from '@/components/RequirePermission';
@@ -93,6 +95,20 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="Operations">
           <RequirePermission module="Operations">
             <Operations />
+          </RequirePermission>
+        </LayoutWrapper>
+      } />
+      <Route path="/ServicesBoard" element={
+        <LayoutWrapper currentPageName="ServicesBoard">
+          <RequirePermission module="ServicesBoard">
+            <ServicesBoard />
+          </RequirePermission>
+        </LayoutWrapper>
+      } />
+      <Route path="/AlmoxarifadoBoard" element={
+        <LayoutWrapper currentPageName="AlmoxarifadoBoard">
+          <RequirePermission module="AlmoxarifadoBoard">
+            <AlmoxarifadoBoard />
           </RequirePermission>
         </LayoutWrapper>
       } />

@@ -29,6 +29,9 @@ export const ITEM_STATUS_LABELS = {
   return_confirmed: "Retorno Confirmado",
   pending_maintenance_authorization: "Aguardando Aprovação da Manutenção",
   repair_approved: "Reparo Aprovado",
+  awaiting_pwt: "Aguardando PWT (Planejamento)",
+  awaiting_oc_issuance: "Aguardando Emissão da OC (Serviços)",
+  awaiting_oc_approval: "Aguardando Aprovação da OC",
   discount_negotiation: "Negociação de Desconto",
   pending_disembark_confirmation: "Confirmação de Desembarque (Embarcação)",
   disembark_rescheduled: "Desembarque Reprogramado",
@@ -54,6 +57,9 @@ export const ITEM_STATUS_COLORS = {
   return_confirmed: "bg-teal-100 text-teal-800",
   pending_maintenance_authorization: "bg-orange-100 text-orange-800",
   repair_approved: "bg-emerald-100 text-emerald-800",
+  awaiting_pwt: "bg-cyan-100 text-cyan-800",
+  awaiting_oc_issuance: "bg-indigo-100 text-indigo-800",
+  awaiting_oc_approval: "bg-orange-100 text-orange-800",
   discount_negotiation: "bg-violet-100 text-violet-800",
   pending_disembark_confirmation: "bg-orange-100 text-orange-800",
   disembark_rescheduled: "bg-purple-100 text-purple-800",
@@ -81,6 +87,11 @@ export const ITEM_ACTION_LABELS = {
   register_supplier_return: "NF de Retorno e Comprovante Registrados (Serviços)",
   confirm_supplier_return: "Retorno do Fornecedor Confirmado (Almoxarifado)",
   start_repair: "Reparo Iniciado no Fornecedor",
+  issue_pwt: "PWT Emitido (Planejamento)",
+  issue_oc: "OC Emitida (Serviços)",
+  confirm_oc_approved: "OC Aprovada e Enviada ao Fornecedor (Serviços)",
+  register_return_dispatch: "Saída para Entrega Registrada (Serviços)",
+  confirm_return_receipt: "Recebimento do Retorno Confirmado (Almoxarifado)",
   complete: "Item Finalizado",
   cancel: "Item Cancelado",
   advance_treatment: "Avanço da Tratativa",
@@ -192,11 +203,50 @@ export function availableItemActions(item, can, user) {
       }
     }
 
-    if (s === "repair_approved" && can("edit_gdm")) {
-      actions.push({ action: "start_repair", label: "Iniciar reparo" });
+    // Etapas pós-aprovação da cotação: PWT (reparo, emitido pelo Planejamento),
+    // OC e aprovação/envio da OC (Serviços).
+    if (s === "awaiting_pwt" && can("issue_pwt")) {
+      actions.push({ action: "issue_pwt", label: "Emitir PWT" });
     }
 
-    if (["in_treatment", "awaiting_return"].includes(s) && can("confirm_return")) {
+    if (s === "awaiting_oc_issuance" && can("issue_oc")) {
+      actions.push({ action: "issue_oc", label: "Emitir OC" });
+    }
+
+    if (s === "awaiting_oc_approval" && can("approve_oc")) {
+      actions.push({
+        action: "confirm_oc_approved",
+        label: "OC aprovada e enviada ao fornecedor",
+      });
+    }
+
+    if (s === "awaiting_return") {
+      if (!item.return_dispatched_at && can("send_to_supplier")) {
+        actions.push({
+          action: "register_return_dispatch",
+          label: "Registrar saída para entrega",
+        });
+      }
+      if (can("confirm_receipt")) {
+        actions.push({
+          action: "confirm_return_receipt",
+          label: "Receber retorno (NF + laudo)",
+        });
+      }
+    }
+
+    // Itens aprovados antes das etapas de PWT/OC (fluxo antigo) seguem direto
+    // para a emissão do PWT (reparo) ou da OC (calibração).
+    if (s === "repair_approved") {
+      if (d === "repair" && can("issue_pwt")) {
+        actions.push({ action: "issue_pwt", label: "Emitir PWT" });
+      }
+      if (can("edit_gdm")) {
+        actions.push({ action: "start_repair", label: "Iniciar reparo" });
+      }
+    }
+
+    if (s === "in_treatment" && can("confirm_return")) {
       actions.push({ action: "complete", label: "Finalizar item" });
     }
   }
@@ -229,16 +279,23 @@ export function itemResponsible(item) {
     case "awaiting_supplier_definition":
     case "pending_services":
     case "sent_to_supplier":
-    case "repair_approved":
     case "discount_negotiation":
     case "return_confirmed":
       return "Serviços";
+    case "awaiting_pwt":
+      return "Planejamento";
+    case "awaiting_oc_issuance":
+    case "awaiting_oc_approval":
+      return "Serviços";
+    case "awaiting_return":
+      return item.return_dispatched_at ? "Almoxarifado" : "Serviços";
     case "awaiting_supplier_return":
       return item.return_nf_url ? "Almoxarifado" : "Serviços";
     case "pending_maintenance_authorization":
       return item.destination === "certification" ? "Operações" : "Gestor de Manutenção";
+    case "repair_approved":
+      return item.destination === "certification" ? "Serviços" : "Planejamento";
     case "in_treatment":
-    case "awaiting_return":
       return item.supplier_name || "Fornecedor";
     case "discard_approved":
     case "completed":
@@ -289,8 +346,10 @@ const FLOW_BY_DESTINATION = {
     { status: "awaiting_shipping_proof", label: "Comprovante de Envio (Almoxarifado)" },
     { status: "sent_to_supplier", label: "Enviado — Aguardando Cotação (Serviços)" },
     { status: "awaiting_maintenance_authorization", label: "Aprovação da Manutenção" },
-    { status: "repair_approved", label: "Reparo Aprovado" },
-    { status: "in_treatment", label: "Em Reparo no Fornecedor" },
+    { status: "awaiting_pwt", label: "Emissão do PWT (Planejamento)" },
+    { status: "awaiting_oc_issuance", label: "Emissão da OC (Serviços)" },
+    { status: "awaiting_oc_approval", label: "Aprovação e Envio da OC (Serviços)" },
+    { status: "awaiting_return", label: "Aguardando Retorno do Fornecedor" },
     { status: "completed", label: "Finalizado" },
   ],
   certification: [
@@ -300,8 +359,9 @@ const FLOW_BY_DESTINATION = {
     { status: "awaiting_shipping_proof", label: "Comprovante de Envio (Almoxarifado)" },
     { status: "sent_to_supplier", label: "Enviado — Aguardando Cotação (Serviços)" },
     { status: "awaiting_maintenance_authorization", label: "Aprovação da Operações" },
-    { status: "repair_approved", label: "Calibração Aprovada" },
-    { status: "in_treatment", label: "Em Calibração no Fornecedor" },
+    { status: "awaiting_oc_issuance", label: "Emissão da OC (Serviços)" },
+    { status: "awaiting_oc_approval", label: "Aprovação e Envio da OC (Serviços)" },
+    { status: "awaiting_return", label: "Aguardando Retorno do Fornecedor" },
     { status: "completed", label: "Finalizado" },
   ],
   stock_return: [
@@ -328,7 +388,7 @@ const STATUS_ALIAS = {
   disembark_rescheduled: "pending_almoxarifado",
   pending_services: "awaiting_supplier_definition",
   discount_negotiation: "awaiting_maintenance_authorization",
-  awaiting_return: "in_treatment",
+  in_treatment: "awaiting_return",
   awaiting_supplier_return: "awaiting_shipping_proof",
   return_confirmed: "awaiting_supplier_definition",
   discard_approved: "completed",
@@ -341,7 +401,11 @@ export function itemFlow(item) {
   if (["rejected", "cancelled"].includes(item.status)) {
     return steps.map((s, i) => ({ ...s, state: i === 0 ? "done" : "todo" }));
   }
-  const current = STATUS_ALIAS[item.status] || item.status;
+  let current = STATUS_ALIAS[item.status] || item.status;
+  // Itens aprovados antes das etapas de PWT/OC: exibem a etapa que os substitui.
+  if (item.status === "repair_approved") {
+    current = item.destination === "certification" ? "awaiting_oc_issuance" : "awaiting_pwt";
+  }
   const idx = steps.findIndex((s) => s.status === current);
   return steps.map((s, i) => ({
     ...s,
@@ -373,11 +437,23 @@ export function nextActionText(item) {
     case "sent_to_supplier":
       return "Equipamento enviado ao fornecedor. Serviços deve anexar a cotação (valor e prazo informados pelo fornecedor).";
     case "awaiting_maintenance_authorization":
-      return "Cotação anexada. Aguardando a decisão da Gerência de Manutenção (aprovar, solicitar desconto ou reprovar).";
+      return "Cotação anexada. Aguardando a decisão da Gerência (aprovar, solicitar desconto ou reprovar).";
     case "repair_approved":
-      return "Cotação aprovada pela Manutenção. Serviços deve iniciar o reparo junto ao fornecedor.";
+      return "Cotação aprovada. O item segue para a emissão do PWT (Planejamento) — itens de calibração vão direto para a OC.";
+    case "awaiting_pwt":
+      return "Cotação aprovada. O Planejamento deve emitir o PWT e registrar o número.";
+    case "awaiting_oc_issuance":
+      return item.destination === "certification"
+        ? "Cotação aprovada. Serviços deve emitir a Ordem de Compra (OC)."
+        : "PWT emitido. Serviços deve emitir a Ordem de Compra (OC).";
+    case "awaiting_oc_approval":
+      return "OC emitida. Aguardando a confirmação de que a OC foi aprovada e enviada ao fornecedor.";
+    case "awaiting_return":
+      return item.return_dispatched_at
+        ? "Material saiu para entrega. O Almoxarifado deve confirmar o recebimento anexando a NF e o laudo."
+        : "OC aprovada e enviada ao fornecedor. Serviços deve registrar a saída para entrega quando o material for despachado.";
     case "discount_negotiation":
-      return "Manutenção solicitou desconto. Serviços deve negociar, inserir o novo valor e anexar a nova proposta.";
+      return "A Gerência solicitou desconto. Serviços deve negociar, inserir o novo valor e anexar a nova proposta.";
     case "awaiting_supplier_return":
       return item.return_nf_url
         ? "NF e comprovante de devolução registrados. Almoxarifado deve confirmar o recebimento do retorno."
@@ -389,7 +465,6 @@ export function nextActionText(item) {
     case "awaiting_discard_confirmation":
       return "O descarte foi autorizado pelo Gestor. Confirme quando o descarte físico for realizado.";
     case "in_treatment":
-    case "awaiting_return":
       return "Este item está em tratativa no fornecedor.";
     case "discard_approved":
       return "Descarte aprovado pela Manutenção. Processo encerrado.";
@@ -419,6 +494,13 @@ export function itemResponsibleGroup(item) {
       return item.destination === "stock_return" ? "almoxarifado" : "services";
     case "awaiting_shipping_proof":
       return "almoxarifado";
+    case "awaiting_pwt":
+      return "planejamento";
+    case "awaiting_oc_issuance":
+    case "awaiting_oc_approval":
+      return "services";
+    case "awaiting_return":
+      return item.return_dispatched_at ? "almoxarifado" : "services";
     case "awaiting_supplier_return":
       return item.return_nf_url ? "almoxarifado" : "services";
     case "pending_maintenance_authorization":
@@ -429,12 +511,10 @@ export function itemResponsibleGroup(item) {
     case "awaiting_supplier_definition":
     case "pending_services":
     case "sent_to_supplier":
-    case "repair_approved":
     case "discount_negotiation":
     case "return_confirmed":
       return "services";
     case "in_treatment":
-    case "awaiting_return":
       return item.destination === "certification" ? "operations" : "services";
     default:
       return "other";
@@ -459,6 +539,31 @@ export function sortItemsByPriority(items, can, user) {
   return [...items].sort((a, b) => rank(a) - rank(b) || a.item_number - b.item_number);
 }
 
+/**
+ * Alerta de prazo de retorno por item, controlado individualmente pelo prazo
+ * informado na cotação do fornecedor (quote_deadline). O alerta desaparece
+ * quando o item é recebido ou o fluxo é finalizado (status fora da lista).
+ * Retorna 'overdue' (vencido), 'near' (próximo), 'ok' (no prazo) ou null.
+ */
+export function returnDeadlineState(item) {
+  if (!item?.quote_deadline) return null;
+  const IN_FLOW = [
+    "awaiting_maintenance_authorization",
+    "discount_negotiation",
+    "awaiting_pwt",
+    "awaiting_oc_issuance",
+    "awaiting_oc_approval",
+    "awaiting_return",
+    "in_treatment",
+  ];
+  if (!IN_FLOW.includes(item.status)) return null;
+  const deadline = new Date(`${item.quote_deadline}T23:59:59`);
+  const diffDays = (deadline - new Date()) / 86400000;
+  if (diffDays < 0) return "overdue";
+  if (diffDays <= 3) return "near";
+  return "ok";
+}
+
 /** Ações do ciclo de fornecedor — usadas pelo roteador de diálogos. */
 export const SUPPLIER_FLOW_ACTIONS = [
   "select_supplier",
@@ -469,4 +574,9 @@ export const SUPPLIER_FLOW_ACTIONS = [
   "register_supplier_return",
   "confirm_supplier_return",
   "start_repair",
+  "issue_pwt",
+  "issue_oc",
+  "confirm_oc_approved",
+  "register_return_dispatch",
+  "confirm_return_receipt",
 ];
