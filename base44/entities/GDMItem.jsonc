@@ -168,6 +168,24 @@
       "type": "string",
       "description": "Email de quem anexou a cota\u00e7\u00e3o"
     },
+    "quote_proposal_number": {
+      "type": "string",
+      "description": "N\u00famero da proposta comercial informada pelo fornecedor na cota\u00e7\u00e3o atual"
+    },
+    "warranty_days": {
+      "type": "number",
+      "description": "Garantia oferecida pelo fornecedor para o servi\u00e7o/equipamento, em dias (registrada por Servi\u00e7os junto \u00e0 cota\u00e7\u00e3o, vinculada a este item)"
+    },
+    "warranty_start_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora de in\u00edcio da garantia: registrada automaticamente quando o Almoxarifado confirma o recebimento do equipamento"
+    },
+    "warranty_end_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora de t\u00e9rmino da garantia, calculada automaticamente (in\u00edcio + dias de garantia)"
+    },
     "quotes_history": {
       "type": "array",
       "items": {
@@ -188,6 +206,13 @@
           "quote_deadline": {
             "type": "string",
             "format": "date"
+          },
+          "quote_proposal_number": {
+            "type": "string"
+          },
+          "warranty_days": {
+            "type": "number",
+            "description": "Garantia (dias) oferecida nesta cota\u00e7\u00e3o"
           },
           "registered_by": {
             "type": "string",
