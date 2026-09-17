@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { base44 } from '@/api/base44Client';
 
 const roleLabels = {
@@ -55,6 +55,7 @@ export default function Header({ user, pageTitle }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
+                {user?.photo_url ? <AvatarImage src={user.photo_url} alt={user?.full_name} /> : null}
                 <AvatarFallback className="bg-sky-100 text-sky-700 text-sm">
                   {initials}
                 </AvatarFallback>
