@@ -51,20 +51,23 @@ export default function MyProfile() {
     <div className="space-y-6">
       {/* Identidade */}
       <Card className="border-0 shadow-sm overflow-hidden">
-        <div className="h-28 bg-gradient-to-r from-sky-700 via-sky-600 to-sky-400" />
-        <CardContent className="p-6 -mt-12">
-          <div className="flex flex-col md:flex-row md:items-end gap-4">
-            <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
+        <div className="relative h-28 bg-gradient-to-r from-sky-800 via-sky-600 to-sky-400">
+          <div className="absolute -top-12 right-20 h-44 w-44 rounded-full bg-white/10" />
+          <div className="absolute top-8 right-44 h-14 w-14 rounded-full bg-white/10" />
+        </div>
+        <CardContent className="p-6 -mt-14">
+          <div className="flex flex-col lg:flex-row lg:items-end gap-5">
+            <Avatar className="h-28 w-28 border-4 border-white shadow-lg">
               {photoUrl ? <AvatarImage src={photoUrl} alt={user.full_name} /> : null}
               <AvatarFallback className="bg-sky-100 text-sky-700 text-2xl">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-900">
-                  {user.full_name || 'Usuário'}
-                </h1>
+            <div className="flex-1 min-w-0 space-y-2">
+              <h1 className="text-2xl font-bold text-slate-900">
+                {user.full_name || 'Usuário'}
+              </h1>
+              <div className="flex flex-wrap gap-2">
                 <Badge className="bg-sky-100 text-sky-800 border-sky-200">
                   {ROLE_LABELS[user.role] || user.role}
                 </Badge>
@@ -78,31 +81,35 @@ export default function MyProfile() {
                   {(user.status || 'active') === 'active' ? 'Ativo' : user.status}
                 </Badge>
               </div>
-              <p className="text-slate-500 flex items-center gap-1.5">
-                <Mail className="h-4 w-4" /> {user.email}
-              </p>
-              {jobTitle ? (
-                <p className="text-sm text-slate-500 flex items-center gap-1.5">
-                  <Briefcase className="h-4 w-4" /> {jobTitle}
-                </p>
-              ) : null}
-              {phone ? (
-                <p className="text-sm text-slate-500 flex items-center gap-1.5">
-                  <Phone className="h-4 w-4" /> {phone}
-                </p>
-              ) : null}
             </div>
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="bg-white hover:bg-slate-50"
-            >
-              <Link to={createPageUrl('NotificationPreferences')}>
-                <Bell className="h-4 w-4" />
-                Preferências de Notificação
-              </Link>
-            </Button>
+            <div className="flex flex-col items-start lg:items-end gap-3">
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-600">
+                  <Mail className="h-3.5 w-3.5 text-sky-600" /> {user.email}
+                </span>
+                {jobTitle ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-600">
+                    <Briefcase className="h-3.5 w-3.5 text-sky-600" /> {jobTitle}
+                  </span>
+                ) : null}
+                {phone ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-600">
+                    <Phone className="h-3.5 w-3.5 text-sky-600" /> {phone}
+                  </span>
+                ) : null}
+              </div>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="bg-white hover:bg-slate-50"
+              >
+                <Link to={createPageUrl('NotificationPreferences')}>
+                  <Bell className="h-4 w-4" />
+                  Preferências de Notificação
+                </Link>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
