@@ -49,6 +49,10 @@
       "type": "string",
       "description": "URL da foto de perfil (edit\u00e1vel pelo pr\u00f3prio usu\u00e1rio)"
     },
+    "cover_url": {
+      "type": "string",
+      "description": "URL da imagem de capa do perfil (edit\u00e1vel pelo pr\u00f3prio usu\u00e1rio)"
+    },
     "phone": {
       "type": "string",
       "description": "Telefone de contato (edit\u00e1vel pelo pr\u00f3prio usu\u00e1rio)"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
@@ -11,7 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/hooks/usePermissions';
 import { ROLE_LABELS } from '@/lib/permissions';
 import ProfileEditForm from '@/components/profile/ProfileEditForm';
-import { Ship, Bell, Mail, Briefcase, Phone } from 'lucide-react';
+import { toast } from 'sonner';
+import { Ship, Bell, Mail, Briefcase, Phone, Camera, Loader2 } from 'lucide-react';
 
 /**
  * Meu Perfil: identidade do usuário, edição das próprias
@@ -24,6 +25,21 @@ export default function MyProfile() {
     queryKey: ['vessels'],
     queryFn: () => base44.entities.Vessel.list(),
     enabled: !!user,
+  });
+
+  const queryClient = useQueryClient();
+  const coverInputRef = React.useRef(null);
+
+  const coverMutation = useMutation({
+    mutationFn: async (file) => {
+      const res = await base44.integrations.Core.UploadPublicFile({ file });
+      return base44.auth.updateMe({ cover_url: res.file_url });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      toast.success('Capa do perfil atualizada!');
+    },
+    onError: () => toast.error('Não foi possível atualizar a capa'),
   });
 
   if (isLoading || !user) {
@@ -46,14 +62,46 @@ export default function MyProfile() {
   const photoUrl = user.photo_url || user.data?.photo_url || '';
   const phone = user.phone || user.data?.phone || '';
   const jobTitle = user.job_title || user.data?.job_title || '';
+  const coverUrl = user.cover_url || user.data?.cover_url || '';
 
   return (
     <div className="space-y-6">
       {/* Identidade */}
       <Card className="border-0 shadow-sm overflow-hidden">
-        <div className="relative h-28 bg-gradient-to-r from-sky-800 via-sky-600 to-sky-400">
-          <div className="absolute -top-12 right-20 h-44 w-44 rounded-full bg-white/10" />
-          <div className="absolute top-8 right-44 h-14 w-14 rounded-full bg-white/10" />
+        <div className="relative h-32 overflow-hidden bg-gradient-to-r from-sky-800 via-sky-600 to-sky-400">
+          {coverUrl ? (
+            <img src={coverUrl} alt="Capa do perfil" className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            <>
+              <div className="absolute -top-12 right-20 h-44 w-44 rounded-full bg-white/10" />
+              <div className="absolute top-8 right-44 h-14 w-14 rounded-full bg-white/10" />
+            </>
+          )}
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) coverMutation.mutate(file);
+              e.target.value = '';
+            }}
+          />
+          <Button
+            type="button"
+            size="sm"
+            className="absolute right-3 top-3 h-8 bg-white/20 text-white backdrop-blur-sm hover:bg-white/30"
+            disabled={coverMutation.isPending}
+            onClick={() => coverInputRef.current?.click()}
+          >
+            {coverMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4" />
+            )}
+            {coverUrl ? 'Alterar capa' : 'Adicionar capa'}
+          </Button>
         </div>
         <CardContent className="p-6 -mt-14">
           <div className="flex flex-col lg:flex-row lg:items-end gap-5">
@@ -64,7 +112,7 @@ export default function MyProfile() {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0 space-y-2">
-              <h1 className="text-2xl font-bold text-slate-900">
+              <h1 className="text-3xl font-bold tracking-tight break-words text-slate-900">
                 {user.full_name || 'Usuário'}
               </h1>
               <div className="flex flex-wrap gap-2">
