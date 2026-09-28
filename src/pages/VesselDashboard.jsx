@@ -16,6 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
+import { groupItemsByGdm, computeGeneralStatus } from "@/lib/gdmOverview";
 
 export default function VesselDashboard() {
   const { data: user, isLoading: loadingUser } = useQuery({
@@ -35,14 +36,29 @@ export default function VesselDashboard() {
     enabled: !!user?.vessel_id,
   });
 
-  const stats = {
-    total: gdms.length,
-    pending: gdms.filter(g => g.status === 'pending_coordinator').length,
-    inProgress: gdms.filter(g => ['pending_services', 'sent_to_supplier', 'awaiting_quote', 'quote_analysis'].includes(g.status)).length,
-    completed: gdms.filter(g => ['approved', 'completed'].includes(g.status)).length,
-  };
+  const { data: vesselItems = [] } = useQuery({
+    queryKey: ['vesselGDMItems', user?.vessel_id],
+    queryFn: () => base44.entities.GDMItem.filter({ vessel_id: user?.vessel_id }),
+    enabled: !!user?.vessel_id,
+  });
 
-  const recentGDMs = gdms.slice(0, 4);
+  // Status geral derivado dos itens de cada GDM (o status do cabeçalho é legado)
+  const gdmViews = React.useMemo(() => {
+    const byGdm = groupItemsByGdm(vesselItems);
+    return gdms.map((g) => ({ ...g, items: byGdm[g.id] || [] }));
+  }, [gdms, vesselItems]);
+
+  const stats = React.useMemo(() => {
+    const generalOf = (g) => computeGeneralStatus(g.items || []);
+    return {
+      total: gdmViews.length,
+      pending: gdmViews.filter(g => ['pending', 'awaiting_approval'].includes(generalOf(g).key)).length,
+      inProgress: gdmViews.filter(g => generalOf(g).key === 'in_progress').length,
+      completed: gdmViews.filter(g => generalOf(g).key === 'completed').length,
+    };
+  }, [gdmViews]);
+
+  const recentGDMs = gdmViews.slice(0, 4);
 
   if (loadingUser || loadingGDMs) {
     return (

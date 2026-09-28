@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { FileDown, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { base44 } from '@/api/base44Client';
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { STATUS_LABELS,  ROLE_LABELS } from '@/lib/gdmWorkflow';
+import { STATUS_LABELS, ROLE_LABELS } from '@/lib/gdmWorkflow';
+import { computeGeneralStatus } from '@/lib/gdmOverview';
+import { ITEM_DESTINATION_LABELS } from '@/lib/gdmItems';
 
 const treatmentLabels = {
   repair: 'Reparo',
@@ -18,9 +21,19 @@ const currency = (v) =>
 export default function GDMPdfButton({ gdm, variant = 'ghost', size = 'sm', label, className }) {
   const [generating, setGenerating] = useState(false);
 
-  const generate = () => {
+  const generate = async () => {
     setGenerating(true);
     try {
+      // Fluxo real é por item: dados derivados dos itens da GDM
+      const items = await base44.entities.GDMItem
+        .filter({ gdm_id: gdm.id }, 'item_number')
+        .catch(() => []);
+      const general = computeGeneralStatus(items);
+      const suppliers = Array.from(new Set(items.map((i) => i.supplier_name).filter(Boolean)));
+      const destinations = Array.from(
+        new Set(items.map((i) => i.destination).filter(Boolean).map((d) => ITEM_DESTINATION_LABELS[d] || d)),
+      );
+
       const doc = new jsPDF();
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
@@ -56,7 +69,7 @@ export default function GDMPdfButton({ gdm, variant = 'ghost', size = 'sm', labe
       doc.setTextColor(80, 80, 80);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.text(STATUS_LABELS[gdm.status] || gdm.status || '-', pageW - margin - 3, y + 8, { align: 'right' });
+      doc.text(general.label, pageW - margin - 3, y + 8, { align: 'right' });
       y += 18;
 
       // ===== SECTIONS =====
@@ -99,13 +112,13 @@ export default function GDMPdfButton({ gdm, variant = 'ghost', size = 'sm', labe
       lB = drawField('Data de Desembarque', gdm.disembark_date ? format(new Date(gdm.disembark_date), 'dd/MM/yyyy', { locale: ptBR }) : '-', right);
       y += rowGap(lA, lB);
       lA = drawField('Tratativa', treatmentLabels[gdm.treatment] || gdm.treatment || '-', left);
-      lB = drawField('Etapa Atual', STATUS_LABELS[gdm.status] || gdm.status || '-', right);
+      lB = drawField('Etapa Atual (derivada dos itens)', general.label, right);
       y += rowGap(lA, lB);
-      lA = drawField('Destino Definido', gdm.destination, left);
-      lB = drawField('Fornecedor', gdm.supplier_name, right);
+      lA = drawField('Itens', items.length, left);
+      lB = drawField('Itens Finalizados', items.filter((i) => i.status === 'completed').length, right);
       y += rowGap(lA, lB);
-      lA = drawField('Nota Fiscal', gdm.invoice_number, left);
-      lB = drawField('Data Envio Fornecedor', gdm.sent_to_supplier_date ? format(new Date(gdm.sent_to_supplier_date), 'dd/MM/yyyy', { locale: ptBR }) : '-', right);
+      lA = drawField('Destinos (itens)', destinations.join(', '), left);
+      lB = drawField('Fornecedores (itens)', suppliers.join(', '), right);
       y += rowGap(lA, lB) + 3;
 
       // DESCRIÇÃO
@@ -136,92 +149,35 @@ export default function GDMPdfButton({ gdm, variant = 'ghost', size = 'sm', labe
         y += 4;
       }
 
-      // COTAÇÃO ATUAL
-      if (gdm.quote_value || gdm.quote_document_url || gdm.commercial_proposal_url || gdm.technical_report_url) {
-        section('COTAÇÃO / PROPOSTA ATUAL');
-        doc.setTextColor(15, 23, 42);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        ensure(6);
-        doc.text(`Valor da Cotação: ${currency(gdm.quote_value)}`, margin + 2, y);
-        y += 6;
-        if (gdm.discount_percentage) {
-          ensure(5);
-          doc.setTextColor(194, 65, 12);
-          doc.setFontSize(9);
-          doc.text(`Desconto solicitado: ${gdm.discount_percentage}%`, margin + 2, y);
-          y += 5;
-          doc.setTextColor(15, 23, 42);
-        }
-        const linkField = (label, url) => {
-          if (!url) return;
-          ensure(5);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
-          doc.setTextColor(100, 116, 139);
-          doc.text(`${label}:`, margin + 2, y);
-          doc.setTextColor(2, 132, 199);
-          const lines = doc.splitTextToSize(String(url), pageW - margin * 2 - 40);
-          doc.text(lines, margin + 36, y);
-          y += Math.max(5, lines.length * 4);
-        };
-        linkField('Documento da Cotação', gdm.quote_document_url);
-        linkField('Laudo Técnico', gdm.technical_report_url);
-        linkField('Proposta Comercial', gdm.commercial_proposal_url);
-        y += 3;
-      }
-
-      // HISTÓRICO DE COTAÇÕES ANTERIORES
-      const histQuotes = gdm.quotes_history || [];
-      if (histQuotes.length) {
-        section(`HISTÓRICO DE COTAÇÕES ANTERIORES (${histQuotes.length})`);
-        histQuotes.forEach((q, idx) => {
+      // ITENS DA GDM
+      if (items.length) {
+        section(`ITENS DA GDM (${items.length})`);
+        items.forEach((item) => {
           ensure(14);
           doc.setFillColor(248, 250, 252);
           doc.rect(margin, y, pageW - margin * 2, 12, 'F');
           doc.setTextColor(15, 23, 42);
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
-          doc.text(`#${idx + 1} — ${currency(q.quote_value)}  ${q.supplier_name ? `(${q.supplier_name})` : ''}`, margin + 3, y + 5);
+          doc.text(
+            `#${item.item_number || '-'} — ${item.equipment_name || '-'}${item.serial_number ? ` (S/N: ${item.serial_number})` : ''}`,
+            margin + 3,
+            y + 5,
+          );
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(7);
           doc.setTextColor(100, 116, 139);
-          doc.text(q.preserved_at ? format(new Date(q.preserved_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : '-', margin + 3, y + 9.5);
-          if (q.reason) {
-            doc.text(`Motivo: ${q.reason}`, margin + 60, y + 9.5);
-          }
+          const itemMeta = [
+            item.supplier_name,
+            item.quote_value != null ? currency(item.quote_value) : null,
+            item.pwt_number ? `PWT: ${item.pwt_number}` : null,
+            item.oc_number ? `OC: ${item.oc_number}` : null,
+            item.warranty_days != null ? `Garantia: ${item.warranty_days} dias` : null,
+          ].filter(Boolean).join('  •  ');
+          doc.text(itemMeta || '-', margin + 3, y + 9.5);
           y += 14;
         });
         y += 2;
-      }
-
-      // PWT / OC / OT
-      const hasOrders = gdm.pwt_number || gdm.oc_number || gdm.ot_number;
-      if (hasOrders) {
-        section('PWT / OC / OT EMITIDOS');
-        const orderField = (label, num, by, at) => {
-          if (!num) return;
-          ensure(8);
-          doc.setTextColor(100, 116, 139);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7);
-          doc.text(label, margin + 2, y);
-          doc.setTextColor(15, 23, 42);
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          doc.text(String(num), margin + 30, y);
-          if (by || at) {
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7);
-            doc.setTextColor(100, 116, 139);
-            doc.text(`${by ? `por ${by}` : ''}${at ? ` em ${format(new Date(at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}` : ''}`, margin + 60, y);
-          }
-          y += 7;
-        };
-        orderField('PWT', gdm.pwt_number, gdm.pwt_issued_by, gdm.pwt_issued_at);
-        orderField('OC', gdm.oc_number, gdm.oc_issued_by, gdm.oc_issued_at);
-        orderField('OT', gdm.ot_number, gdm.ot_issued_by, gdm.ot_issued_at);
-        y += 3;
       }
 
       // HISTÓRICO DO PROCESSO (TRAIL)

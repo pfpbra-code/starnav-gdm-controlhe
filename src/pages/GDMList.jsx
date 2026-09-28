@@ -54,19 +54,10 @@ import {
 const PAGE_SIZE = 15;
 
 const GDM_STATUS_OPTIONS = [
-  ['pending_coordinator', 'GDM Emitida'],
-  ['pending_services', 'Aguardando Serviços'],
-  ['sent_to_supplier', 'Enviado ao Fornecedor'],
-  ['awaiting_quote', 'Aguardando Cotação'],
-  ['quote_attached', 'Cotação Anexada'],
-  ['quote_analysis', 'Em Aprovação da Manutenção'],
-  ['new_quote_requested', 'Nova Cotação Solicitada'],
-  ['approved', 'Cotação Aprovada'],
-  ['pwt_issued', 'PWT Emitido'],
-  ['oc_issued', 'OC Emitida'],
-  ['ot_issued', 'OT Emitida'],
-  ['rejected', 'Reprovada'],
-  ['completed', 'Processo Finalizado'],
+  ['pending', 'Pendente'],
+  ['awaiting_approval', 'Aguardando Aprovação'],
+  ['in_progress', 'Em Andamento'],
+  ['completed', 'Finalizada'],
 ];
 
 export default function GDMList() {
@@ -159,7 +150,7 @@ export default function GDMList() {
       );
     }
 
-    if (statusFilter !== 'all') list = list.filter((g) => g.status === statusFilter);
+    if (statusFilter !== 'all') list = list.filter((g) => g.general.key === statusFilter);
     if (destinationFilter !== 'all') {
       list = list.filter((g) => g.items.some((i) => i.destination === destinationFilter));
     }

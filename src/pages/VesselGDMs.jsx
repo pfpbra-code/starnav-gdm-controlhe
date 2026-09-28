@@ -32,6 +32,8 @@ import {
   Package
 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { groupItemsByGdm, computeGeneralStatus } from "@/lib/gdmOverview";
 
 export default function VesselGDMs() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,10 +50,25 @@ export default function VesselGDMs() {
     enabled: !!user?.vessel_id,
   });
 
-  const filteredGDMs = gdms.filter(gdm => {
+  const { data: vesselItems = [] } = useQuery({
+    queryKey: ['vesselGDMItems', user?.vessel_id],
+    queryFn: () => base44.entities.GDMItem.filter({ vessel_id: user?.vessel_id }),
+    enabled: !!user?.vessel_id,
+  });
+
+  // Status geral derivado dos itens de cada GDM (o status do cabeçalho é legado)
+  const gdmViews = React.useMemo(() => {
+    const byGdm = groupItemsByGdm(vesselItems);
+    return gdms.map((g) => {
+      const items = byGdm[g.id] || [];
+      return { ...g, items, general: computeGeneralStatus(items) };
+    });
+  }, [gdms, vesselItems]);
+
+  const filteredGDMs = gdmViews.filter(gdm => {
     const matchesSearch = gdm.gdm_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       gdm.equipment_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || gdm.status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || gdm.general.key === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -108,12 +125,10 @@ export default function VesselGDMs() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="pending_coordinator">Aguardando Coordenador</SelectItem>
-                <SelectItem value="pending_services">Aguardando Serviços</SelectItem>
-                <SelectItem value="sent_to_supplier">Enviado ao Fornecedor</SelectItem>
-                <SelectItem value="approved">Aprovado</SelectItem>
-                <SelectItem value="rejected">Reprovado</SelectItem>
-                <SelectItem value="completed">Concluído</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="awaiting_approval">Aguardando Aprovação</SelectItem>
+                <SelectItem value="in_progress">Em Andamento</SelectItem>
+                <SelectItem value="completed">Finalizada</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -152,7 +167,9 @@ export default function VesselGDMs() {
                   <StatusBadge status={gdm.treatment} type="treatment" />
                 </TableCell>
                 <TableCell>
-                  <StatusBadge status={gdm.status} />
+                  <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", gdm.general.className)}>
+                    {gdm.general.label}
+                  </span>
                 </TableCell>
                 <TableCell className="text-right">
                   <Link to={createPageUrl(`GDMDetail?id=${gdm.id}`)}>

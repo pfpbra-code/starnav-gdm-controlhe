@@ -23,7 +23,8 @@ import {
   ArrowRight,
   XCircle,
   Gauge,
-  DollarSign
+  DollarSign,
+  Truck
 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -40,6 +41,7 @@ import {
 } from 'recharts';
 import { usePermissions } from '@/hooks/usePermissions';
 import { SECTOR_DESTINATIONS } from '@/lib/permissions';
+import { groupItemsByGdm, computeGeneralStatus } from '@/lib/gdmOverview';
 import { Wrench, Cog } from 'lucide-react';
 
 const statusColors = {
@@ -48,8 +50,6 @@ const statusColors = {
   completed: '#22c55e',
   rejected: '#ef4444',
 };
-
-const APPROVED_STATUSES = ['approved', 'pwt_issued', 'oc_issued', 'ot_issued', 'completed'];
 
 export default function Dashboard() {
   const { data: user } = useQuery({
@@ -64,13 +64,18 @@ export default function Dashboard() {
   const { data: items = [] } = useQuery({
     queryKey: ['gdmItems'],
     queryFn: () => base44.entities.GDMItem.list('-created_date', 500),
-    enabled: canViewMaintenance || canViewOperations,
   });
 
   const { data: gdms = [], isLoading: loadingGDMs } = useQuery({
     queryKey: ['gdms'],
     queryFn: () => base44.entities.GDM.list('-created_date', 200),
   });
+
+  // Itens anexados a cada GDM: base de derivação do status geral
+  const gdmViews = React.useMemo(() => {
+    const byGdm = groupItemsByGdm(items);
+    return gdms.map((g) => ({ ...g, items: byGdm[g.id] || [] }));
+  }, [gdms, items]);
 
   const { data: vessels = [] } = useQuery({
     queryKey: ['vessels'],
@@ -84,23 +89,27 @@ export default function Dashboard() {
     enabled: user?.role === 'admin' || user?.role === 'services',
   });
 
-  // KPIs reais
+  // KPIs reais — derivados dos itens (o status do cabeçalho da GDM é legado)
   const stats = React.useMemo(() => {
-    const open = gdms.filter(g => ['pending_coordinator', 'pending_services', 'sent_to_supplier', 'awaiting_quote', 'quote_attached', 'quote_analysis', 'new_quote_requested'].includes(g.status)).length;
-    const approved = gdms.filter(g => APPROVED_STATUSES.includes(g.status)).length;
-    const rejected = gdms.filter(g => g.status === 'rejected').length;
-    const finalized = gdms.filter(g => g.status === 'completed').length;
-    const inProgress = gdms.filter(g => ['sent_to_supplier', 'awaiting_quote', 'quote_attached', 'quote_analysis', 'approved', 'pwt_issued', 'oc_issued', 'ot_issued'].includes(g.status)).length;
-    const pending = gdms.filter(g => ['pending_coordinator', 'pending_services', 'new_quote_requested'].includes(g.status)).length;
+    const generalOf = (g) => computeGeneralStatus(g.items || []);
+    const open = gdmViews.filter(g => ['pending', 'awaiting_approval', 'in_progress'].includes(generalOf(g).key)).length;
+    // Itens com cotação aprovada, aguardando emissão de documentos ou retorno
+    const approved = items.filter(i =>
+      ['awaiting_pwt', 'awaiting_oc_issuance', 'awaiting_oc_approval', 'awaiting_return'].includes(i.status)
+    ).length;
+    const rejected = gdmViews.filter(g => generalOf(g).hasCancelled).length;
+    const finalized = gdmViews.filter(g => generalOf(g).key === 'completed').length;
+    const inProgress = gdmViews.filter(g => generalOf(g).key === 'in_progress').length;
+    const pending = gdmViews.filter(g => ['pending', 'awaiting_approval'].includes(generalOf(g).key)).length;
 
-    // Tempo médio de aprovação (criação -> conclusão) em dias
-    const doneWithDates = gdms.filter(g => g.created_date && (g.completed_at || g.ot_issued_at || g.oc_issued_at));
-    const avgDays = doneWithDates.length
-      ? doneWithDates.reduce((s, g) => s + (differenceInDays(new Date(g.completed_at || g.ot_issued_at || g.oc_issued_at), new Date(g.created_date)) || 0), 0) / doneWithDates.length
+    // Tempo médio de aprovação (criação -> conclusão do item) em dias
+    const doneItems = items.filter(i => i.created_date && i.completed_at);
+    const avgDays = doneItems.length
+      ? doneItems.reduce((s, i) => s + (differenceInDays(new Date(i.completed_at), new Date(i.created_date)) || 0), 0) / doneItems.length
       : 0;
 
-    return { total: gdms.length, open, approved, rejected, finalized, inProgress, pending, avgDays };
-  }, [gdms]);
+    return { total: gdmViews.length, open, approved, rejected, finalized, inProgress, pending, avgDays };
+  }, [gdmViews, items]);
 
   // Indicadores por setor: Manutenção + Operações = Dashboard geral
   const sectorStats = React.useMemo(() => {
@@ -115,9 +124,9 @@ export default function Dashboard() {
       // Cotações pendentes: situação real dos itens (o item é a fonte de
       // verdade do fluxo; o status 'quote_analysis' da GDM é legado).
       pendingQuotes: items.filter((i) => i.status === 'awaiting_maintenance_authorization').length,
-      openOTs: gdms.filter((g) => g.status === 'ot_issued').length,
+      awaitingReturn: items.filter((i) => i.status === 'awaiting_return').length,
     };
-  }, [items, gdms]);
+  }, [items]);
 
   // Dados mensais reais (últimos 6 meses)
   const monthlyData = React.useMemo(() => {
@@ -134,15 +143,18 @@ export default function Dashboard() {
         const m = months.find((x) => x.key === key);
         if (m) m.created += 1;
       }
-      if (g.completed_at) {
-        const d = new Date(g.completed_at);
+    });
+    // Conclusões derivadas dos itens (campo legado `completed_at` da GDM não é usado)
+    items.forEach((i) => {
+      if (i.completed_at) {
+        const d = new Date(i.completed_at);
         const key = `${d.getFullYear()}-${d.getMonth()}`;
         const m = months.find((x) => x.key === key);
         if (m) m.completed += 1;
       }
     });
     return months;
-  }, [gdms]);
+  }, [gdms, items]);
 
   const statusChartData = [
     { name: 'Pendentes', value: stats.pending, color: statusColors.pending },
@@ -151,7 +163,7 @@ export default function Dashboard() {
     { name: 'Reprovadas', value: stats.rejected, color: statusColors.rejected },
   ];
 
-  const recentGDMs = gdms.slice(0, 6);
+  const recentGDMs = gdmViews.slice(0, 6);
 
   if (loadingGDMs) {
     return (
@@ -219,7 +231,7 @@ export default function Dashboard() {
             <StatsCard title="Equipamentos em Calibração" value={sectorStats.inCalibration} icon={Cog} color="purple" />
           )}
           <StatsCard title="Cotações Pendentes" value={sectorStats.pendingQuotes} icon={AlertTriangle} color="red" />
-          <StatsCard title="OTs Emitidas" value={sectorStats.openOTs} icon={FileText} color="green" />
+          <StatsCard title="Aguardando Retorno do Fornecedor" value={sectorStats.awaitingReturn} icon={Truck} color="green" />
         </div>
       )}
 
@@ -228,7 +240,7 @@ export default function Dashboard() {
         <h2 className="text-xl font-semibold text-slate-900 mb-4">Fluxo de GDMs por Status</h2>
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
-            <GDMKanban gdms={gdms} />
+            <GDMKanban gdms={gdmViews} />
           </CardContent>
         </Card>
       </div>

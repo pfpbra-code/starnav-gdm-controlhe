@@ -7,8 +7,18 @@ import { ptBR } from 'date-fns/locale';
 import { Ship, Calendar, Package, Eye, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { cn } from '@/lib/utils';
+import { computeGeneralStatus } from '@/lib/gdmOverview';
 
 export default function GDMCard({ gdm, showActions = true }) {
+  // Status geral e cotações derivados dos itens (fonte de verdade do fluxo)
+  const general = gdm.items?.length ? computeGeneralStatus(gdm.items) : null;
+  const itemsQuote = (gdm.items || []).reduce((sum, i) => sum + (i.quote_value || 0), 0);
+  const quoteValue = itemsQuote > 0 ? itemsQuote : gdm.quote_value;
+  const suppliers = Array.from(
+    new Set((gdm.items || []).map((i) => i.supplier_name).filter(Boolean)),
+  );
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-sm">
       <CardHeader className="pb-3">
@@ -17,7 +27,13 @@ export default function GDMCard({ gdm, showActions = true }) {
             <p className="text-xs font-medium text-slate-500">GDM</p>
             <h3 className="text-lg font-bold text-slate-900">{gdm.gdm_number}</h3>
           </div>
-          <StatusBadge status={gdm.status} />
+          {general ? (
+            <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", general.className)}>
+              {general.label}
+            </span>
+          ) : (
+            <StatusBadge status={gdm.status} />
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -33,7 +49,7 @@ export default function GDMCard({ gdm, showActions = true }) {
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Calendar className="h-4 w-4 text-slate-400" />
             <span>
-              {gdm.disembark_date 
+              {gdm.disembark_date
                 ? format(new Date(gdm.disembark_date), "dd/MM/yyyy", { locale: ptBR })
                 : 'Data não definida'}
             </span>
@@ -42,22 +58,35 @@ export default function GDMCard({ gdm, showActions = true }) {
 
         <div className="flex items-center gap-2">
           <StatusBadge status={gdm.treatment} type="treatment" />
+          {general?.hasCancelled && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+              Reprovados/Cancelados
+            </span>
+          )}
         </div>
 
-        {gdm.quote_value != null && (
+        {quoteValue != null && quoteValue > 0 && (
           <div className="flex items-center justify-between bg-emerald-50 rounded-lg px-3 py-2">
-            <span className="text-xs text-emerald-700 font-medium">Cotação</span>
+            <span className="text-xs text-emerald-700 font-medium">
+              {itemsQuote > 0 ? 'Cotações (itens)' : 'Cotação'}
+            </span>
             <span className="text-sm font-bold text-emerald-700">
-              R$ {gdm.quote_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              R$ {quoteValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
+        )}
+
+        {suppliers.length > 0 && (
+          <p className="text-xs text-slate-500 truncate">
+            → {suppliers.join(', ')}
+          </p>
         )}
 
         {showActions && (
           <div className="pt-2 border-t">
             <Link to={createPageUrl(`GDMDetail?id=${gdm.id}`)}>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="w-full justify-between group-hover:bg-sky-50 group-hover:text-sky-700"
               >
                 <span className="flex items-center gap-2">
