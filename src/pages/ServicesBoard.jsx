@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PendingBoard from '@/components/gdm/PendingBoard';
 import RepairControlPanel from '@/components/gdm/RepairControlPanel';
+import ServicesKpis from '@/components/gdm/ServicesKpis';
 
 // Pendências exclusivas do setor de Serviços, por categoria.
 // Cada item sai da pendência assim que a ação é concluída e permanece no histórico.
@@ -53,6 +54,7 @@ export default function ServicesBoard() {
           emptyMessage="Nenhuma pendência para o setor de Serviços"
           categories={CATEGORIES}
           showDeadlineAlerts
+          headerExtra={<ServicesKpis />}
         />
       </TabsContent>
       <TabsContent value="control">

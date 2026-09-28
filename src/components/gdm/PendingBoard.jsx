@@ -6,9 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/hooks/usePermissions';
 import { scopeGdms } from '@/lib/permissions';
-import { returnDeadlineState } from '@/lib/gdmItems';
+import { returnDeadlineState, availableItemActions } from '@/lib/gdmItems';
 import SectorItemCard from './SectorItemCard';
-import { Search, Package, AlertTriangle, Clock } from 'lucide-react';
+import { Search, Package, AlertTriangle, Clock, UserCheck } from 'lucide-react';
 
 /**
  * Painel de pendências setoriais (Serviços / Almoxarifado): agrupa os itens
@@ -23,8 +23,10 @@ export default function PendingBoard({
   emptyMessage,
   categories,
   showDeadlineAlerts = false,
+  headerExtra = null,
 }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [myActionOnly, setMyActionOnly] = useState(false);
   const queryClient = useQueryClient();
   const { user, hasPermission } = usePermissions();
 
@@ -64,6 +66,11 @@ export default function PendingBoard({
     const scoped = scopeGdms(user, gdms);
     const gdmIds = new Set(scoped.map((g) => g.id));
     let pool = items.filter((i) => gdmIds.has(i.gdm_id));
+    if (myActionOnly) {
+      pool = pool.filter((i) =>
+        availableItemActions(i, hasPermission, user).some((a) => !a.destructive),
+      );
+    }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       pool = pool.filter(
@@ -78,7 +85,18 @@ export default function PendingBoard({
     return categories
       .map((c) => ({ ...c, list: pool.filter(c.match) }))
       .filter((c) => c.list.length > 0);
-  }, [items, gdms, user, searchTerm, categories, gdmById]);
+  }, [items, gdms, user, searchTerm, categories, gdmById, myActionOnly, hasPermission]);
+
+  // Itens com ação disponível para o usuário logado (sem filtro de busca).
+  const myActionCount = useMemo(() => {
+    const scoped = scopeGdms(user, gdms);
+    const gdmIds = new Set(scoped.map((g) => g.id));
+    return items.filter(
+      (i) =>
+        gdmIds.has(i.gdm_id) &&
+        availableItemActions(i, hasPermission, user).some((a) => !a.destructive),
+    ).length;
+  }, [items, gdms, user, hasPermission]);
 
   // Alertas de prazo de retorno por equipamento (vencido / próximo).
   const deadlineAlerts = useMemo(() => {
@@ -117,6 +135,8 @@ export default function PendingBoard({
           {categorized.length} pendências · {totalPending} itens
         </div>
       </div>
+
+      {headerExtra}
 
       {/* Alertas de prazo (vencido / próximo do vencimento) */}
       {showDeadlineAlerts && deadlineAlerts.length > 0 && (
@@ -161,8 +181,8 @@ export default function PendingBoard({
 
       {/* Busca */}
       <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
-          <div className="relative">
+        <CardContent className="p-4 flex flex-col md:flex-row gap-3 md:items-center">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
               placeholder="Buscar por GDM, embarcação, equipamento, serial ou fornecedor..."
@@ -171,6 +191,27 @@ export default function PendingBoard({
               className="pl-9"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => setMyActionOnly((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
+              myActionOnly
+                ? 'bg-sky-600 text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <UserCheck className="h-4 w-4" />
+            Somente minhas ações
+            {myActionCount > 0 && (
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-xs ${
+                  myActionOnly ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {myActionCount}
+              </span>
+            )}
+          </button>
         </CardContent>
       </Card>
 
