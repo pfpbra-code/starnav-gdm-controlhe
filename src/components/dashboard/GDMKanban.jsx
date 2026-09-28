@@ -44,7 +44,7 @@ export default function GDMKanban({ gdms }) {
               </span>
             </div>
 
-            <div className="bg-slate-100 rounded-b-lg p-2 min-h-[200px] space-y-2">
+            <div className="bg-slate-100 rounded-b-lg p-2 min-h-[200px] max-h-[456px] overflow-y-auto space-y-2">
               {columnGdms.length === 0 ? (
                 <div className="text-center py-8">
                   <Clock className="h-6 w-6 mx-auto text-slate-300 mb-2" />
