@@ -22,7 +22,7 @@ import { hasPermission } from '@/lib/permissions';
 import WarrantyStatusBadge from './WarrantyStatusBadge';
 import {
   ITEM_DESTINATION_LABELS,
-  ITEM_DESTINATION_OPTIONS,
+
   ITEM_DESTINATION_COLORS,
   ITEM_STATUS_LABELS,
   ITEM_STATUS_COLORS,

@@ -19,7 +19,6 @@ import { format } from 'date-fns';
 import {
   FileText,
   Ship,
-  Package,
   Calendar,
   Hash,
   Upload,

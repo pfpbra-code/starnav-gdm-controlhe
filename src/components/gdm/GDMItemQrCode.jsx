@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { QrCode, Download, Printer, Loader2, ExternalLink } from 'lucide-react';
-import { ITEM_DESTINATION_LABELS } from '@/lib/gdmItems';
 
 const QR_API = 'https://api.qrserver.com/v1/create-qr-code/';
 

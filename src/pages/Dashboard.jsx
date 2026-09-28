@@ -49,7 +49,6 @@ const statusColors = {
   rejected: '#ef4444',
 };
 
-const COMPLETED_STATUSES = ['completed'];
 const APPROVED_STATUSES = ['approved', 'pwt_issued', 'oc_issued', 'ot_issued', 'completed'];
 
 export default function Dashboard() {

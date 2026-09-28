@@ -25,7 +25,6 @@ import {
   Eye,
   CheckCircle,
   XCircle,
-  Percent,
   FileText,
   ShieldX,
 } from 'lucide-react';

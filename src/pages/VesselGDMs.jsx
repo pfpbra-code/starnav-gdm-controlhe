@@ -32,7 +32,6 @@ import {
   Package
 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
-import GDMCard from '@/components/gdm/GDMCard';
 
 export default function VesselGDMs() {
   const [searchTerm, setSearchTerm] = useState('');

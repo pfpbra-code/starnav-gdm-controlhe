@@ -9,7 +9,6 @@ import {
   FilePlus2,
   FileDown,
   Ship,
-  Users,
   Building2,
   Settings,
   LogOut,

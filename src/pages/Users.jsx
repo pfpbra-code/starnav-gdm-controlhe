@@ -31,7 +31,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Users as UsersIcon, Plus, Search, Edit, Trash2, Loader2, UserPlus, Mail, History, Shield, XCircle } from 'lucide-react';
+import { Users as UsersIcon, Search, Edit, Loader2, UserPlus, Mail, History, Shield, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
 import UserActivityLog from '@/components/users/UserActivityLog';

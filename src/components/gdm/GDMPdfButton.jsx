@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { STATUS_LABELS, STEP_NAMES, ROLE_LABELS } from '@/lib/gdmWorkflow';
+import { STATUS_LABELS,  ROLE_LABELS } from '@/lib/gdmWorkflow';
 
 const treatmentLabels = {
   repair: 'Reparo',
