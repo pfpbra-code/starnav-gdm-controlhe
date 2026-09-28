@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +68,8 @@ import {
   validateProposalFile,
   fileNameFromUrl,
 } from '@/lib/gdmWorkflow';
+import { ITEM_STATUS_LABELS } from '@/lib/gdmItems';
+import { Badge } from "@/components/ui/badge";
 
 export default function GDMDetail() {
   const navigate = useNavigate();
@@ -111,6 +113,34 @@ export default function GDMDetail() {
     queryFn: () => base44.entities.GDM.filter({ id: gdmId }).then(res => res[0]),
     enabled: !!gdmId,
   });
+
+  const { data: gdmItems = [] } = useQuery({
+    queryKey: ['gdmItems', gdmId],
+    queryFn: () => base44.entities.GDMItem.filter({ gdm_id: gdmId }, 'item_number'),
+    enabled: !!gdmId,
+  });
+
+  // Etapa atual derivada dos itens (o status geral acompanha os itens)
+  const currentStep = useMemo(() => {
+    const items = gdmItems || [];
+    if (!items.length) return null;
+    const closed = ['completed', 'cancelled', 'rejected', 'discard_approved'];
+    const openItems = items.filter((i) => !closed.includes(i.status));
+    if (!openItems.length) {
+      return { label: 'Concluída', step: 'Todos os itens foram finalizados' };
+    }
+    const statuses = [...new Set(openItems.map((i) => i.status))];
+    if (statuses.length === 1) {
+      return {
+        label: ITEM_STATUS_LABELS[statuses[0]] || statuses[0],
+        step: `${openItems.length} ${openItems.length === 1 ? 'item nesta etapa' : 'itens nesta etapa'}`,
+      };
+    }
+    return {
+      label: 'Em Andamento',
+      step: `${openItems.length} itens em ${statuses.length} etapas distintas — acompanhe o status de cada item`,
+    };
+  }, [gdmItems]);
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers'],
@@ -445,7 +475,13 @@ export default function GDMDetail() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">GDM {gdm.gdm_number}</h1>
             <div className="flex items-center gap-2 mt-1">
-              <StatusBadge status={gdm.status} />
+              {currentStep ? (
+                <Badge className="bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100">
+                  {currentStep.label}
+                </Badge>
+              ) : (
+                <StatusBadge status={gdm.status} />
+              )}
               <StatusBadge status={gdm.treatment} type="treatment" />
             </div>
           </div>
@@ -533,9 +569,11 @@ export default function GDMDetail() {
                     <div>
                       <p className="text-xs text-sky-700 font-medium uppercase tracking-wide">Etapa atual do processo</p>
                       <p className="text-base font-semibold text-slate-900">
-                        {STATUS_LABELS[gdm.status] || gdm.status}
+                        {currentStep ? currentStep.label : (STATUS_LABELS[gdm.status] || gdm.status)}
                       </p>
-                      <p className="text-sm text-slate-600">{STEP_NAMES[gdm.status] || '-'}</p>
+                      <p className="text-sm text-slate-600">
+                        {currentStep ? currentStep.step : (STEP_NAMES[gdm.status] || '-')}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <User className="h-4 w-4 text-sky-600" />
