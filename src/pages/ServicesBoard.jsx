@@ -22,11 +22,6 @@ const CATEGORIES = [
     match: (i) => i.status === 'discount_negotiation',
   },
   {
-    key: 'pwt',
-    label: 'GDMs Aguardando PWT (emissão pelo Planejamento)',
-    match: (i) => i.status === 'awaiting_pwt',
-  },
-  {
     key: 'oc',
     label: 'GDMs Aguardando Emissão da OC',
     match: (i) => i.status === 'awaiting_oc_issuance',
@@ -40,11 +35,6 @@ const CATEGORIES = [
     key: 'dispatch',
     label: 'Registrar Saída para Entrega',
     match: (i) => i.status === 'awaiting_return' && !i.return_dispatched_at,
-  },
-  {
-    key: 'return',
-    label: 'GDMs Aguardando Retorno do Fornecedor',
-    match: (i) => ['awaiting_return', 'in_treatment'].includes(i.status),
   },
 ];
 

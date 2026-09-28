@@ -506,9 +506,11 @@ export function itemResponsibleGroup(item) {
       return item.return_nf_url ? "almoxarifado" : "services";
     case "pending_maintenance_authorization":
       return item.destination === "certification" ? "operations" : "maintenance";
+    // Confirmação/reprogramação do desembarque é ação da própria embarcação —
+    // não pertence a nenhum setor interno (não aparece nos filtros setoriais).
     case "pending_disembark_confirmation":
     case "disembark_rescheduled":
-      return "operations";
+      return "vessel";
     case "awaiting_supplier_definition":
     case "pending_services":
     case "sent_to_supplier":

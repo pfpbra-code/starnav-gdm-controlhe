@@ -40,6 +40,8 @@ import {
 } from '@/lib/gdmItems';
 import WarrantyStatusBadge from './WarrantyStatusBadge';
 import ItemHistoryTimeline from './ItemHistoryTimeline';
+import { usePermissions } from '@/hooks/usePermissions';
+import { scopeGdms } from '@/lib/permissions';
 
 const SUPPLIER_DESTINATIONS = ['repair', 'certification'];
 const CLOSED = ['completed', 'cancelled', 'rejected', 'discard_approved'];
@@ -80,6 +82,7 @@ export default function RepairControlPanel() {
   const [warrantyFilter, setWarrantyFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const { user } = usePermissions();
 
   const { data: gdms = [], isLoading: loadingGdms } = useQuery({
     queryKey: ['gdms'],
@@ -90,19 +93,25 @@ export default function RepairControlPanel() {
     queryFn: () => base44.entities.GDMItem.list('-created_date', 500),
   });
 
+  // Escopo de embarcação do usuário: só exibe itens de GDMs do seu escopo,
+  // na mesma regra dos demais painéis setoriais.
+  const scopedGdms = useMemo(() => scopeGdms(user, gdms), [user, gdms]);
+
   const gdmById = useMemo(
-    () => Object.fromEntries(gdms.map((g) => [g.id, g])),
-    [gdms],
+    () => Object.fromEntries(scopedGdms.map((g) => [g.id, g])),
+    [scopedGdms],
   );
 
-  const supplierItems = useMemo(
-    () => items.filter((i) => SUPPLIER_DESTINATIONS.includes(i.destination)),
-    [items],
-  );
+  const supplierItems = useMemo(() => {
+    const scopedIds = new Set(scopedGdms.map((g) => g.id));
+    return items.filter(
+      (i) => SUPPLIER_DESTINATIONS.includes(i.destination) && scopedIds.has(i.gdm_id),
+    );
+  }, [items, scopedGdms]);
 
   const vesselOptions = useMemo(() => {
     const seen = new Map();
-    gdms.forEach((g) => {
+    scopedGdms.forEach((g) => {
       if (g.vessel_id && g.vessel_name && !seen.has(g.vessel_id)) {
         seen.set(g.vessel_id, g.vessel_name);
       }
@@ -111,7 +120,7 @@ export default function RepairControlPanel() {
       { value: 'all', label: 'Todas as embarcações' },
       ...Array.from(seen, ([value, label]) => ({ value, label })),
     ];
-  }, [gdms]);
+  }, [scopedGdms]);
 
   const supplierOptions = useMemo(() => {
     const seen = new Map();
