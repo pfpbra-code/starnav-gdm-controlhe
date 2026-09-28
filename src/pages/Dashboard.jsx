@@ -105,13 +105,17 @@ export default function Dashboard() {
 
   // Indicadores por setor: Manutenção + Operações = Dashboard geral
   const sectorStats = React.useMemo(() => {
-    const isOpen = (i) => !['completed', 'cancelled', 'rejected'].includes(i.status);
+    // Processos encerrados (inclusive descarte aprovado) não contam como abertos.
+    const isOpen = (i) =>
+      !['completed', 'cancelled', 'rejected', 'discard_approved'].includes(i.status);
     return {
       maintenance: items.filter((i) => SECTOR_DESTINATIONS.maintenance.includes(i.destination) && isOpen(i)).length,
       operations: items.filter((i) => SECTOR_DESTINATIONS.operations.includes(i.destination) && isOpen(i)).length,
       inRepair: items.filter((i) => i.destination === 'repair' && i.status === 'in_treatment').length,
       inCalibration: items.filter((i) => i.destination === 'certification' && i.status === 'in_treatment').length,
-      pendingQuotes: gdms.filter((g) => g.status === 'quote_analysis').length,
+      // Cotações pendentes: situação real dos itens (o item é a fonte de
+      // verdade do fluxo; o status 'quote_analysis' da GDM é legado).
+      pendingQuotes: items.filter((i) => i.status === 'awaiting_maintenance_authorization').length,
       openOTs: gdms.filter((g) => g.status === 'ot_issued').length,
     };
   }, [items, gdms]);
@@ -236,7 +240,7 @@ export default function Dashboard() {
           <DollarSign className="h-5 w-5 text-emerald-600" />
           Valor Gasto com Reparos de Equipamentos
         </h2>
-        <RepairCostPanel gdms={gdms} />
+        <RepairCostPanel />
       </div>
 
       {/* Economia Obtida em Negociações */}

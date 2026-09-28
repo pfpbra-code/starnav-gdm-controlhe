@@ -1,4 +1,6 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart,
@@ -8,36 +10,70 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DollarSign, Wrench, TrendingUp } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const currency = (v) =>
   (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
 
-// GDMs whose repair cost is considered "gasto" (aprovada em diante, tratativa reparo, com valor)
-const COST_STATUSES = ['approved', 'pwt_issued', 'oc_issued', 'ot_issued', 'completed'];
+// O custo é o valor da cotação APROVADA de cada item (GDMItem é a fonte de
+// verdade — a cotação é registrada individualmente por item). Contam como
+// gasto os itens com cotação aprovada em diante, até a conclusão.
+const COST_STATUSES = [
+  'repair_approved',
+  'awaiting_pwt',
+  'awaiting_oc_issuance',
+  'awaiting_oc_approval',
+  'awaiting_return',
+  'in_treatment',
+  'completed',
+];
 
-export default function RepairCostPanel({ gdms = [] }) {
-  const repairGdms = gdms.filter(
-    (g) => g.treatment === 'repair' && COST_STATUSES.includes(g.status) && g.quote_value
+// Data de referência do gasto: da aprovação da cotação em diante.
+function costDate(item) {
+  return (
+    item.completed_at ||
+    item.oc_approval_confirmed_at ||
+    item.oc_issued_at ||
+    item.pwt_issued_at ||
+    item.quote_attached_at ||
+    item.created_date
+  );
+}
+
+export default function RepairCostPanel() {
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ['gdmItems'],
+    queryFn: () => base44.entities.GDMItem.list('-created_date', 500),
+  });
+
+  const repairItems = React.useMemo(
+    () =>
+      items.filter(
+        (i) =>
+          i.destination === 'repair' &&
+          COST_STATUSES.includes(i.status) &&
+          Number(i.quote_value) > 0,
+      ),
+    [items],
   );
 
-  const totalCost = repairGdms.reduce((sum, g) => sum + (g.quote_value || 0), 0);
+  const totalCost = repairItems.reduce((sum, i) => sum + (i.quote_value || 0), 0);
 
   // Per equipment
   const perEquipment = React.useMemo(() => {
     const map = {};
-    repairGdms.forEach((g) => {
-      const key = g.equipment_name || 'Não informado';
-      map[key] = (map[key] || 0) + (g.quote_value || 0);
+    repairItems.forEach((i) => {
+      const key = i.equipment_name || 'Não informado';
+      map[key] = (map[key] || 0) + (i.quote_value || 0);
     });
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [repairGdms]);
+  }, [repairItems]);
 
   const topEquipment = perEquipment.slice(0, 6);
 
@@ -53,35 +89,52 @@ export default function RepairCostPanel({ gdms = [] }) {
         value: 0,
       });
     }
-    repairGdms.forEach((g) => {
-      const ref = g.completed_at || g.ot_issued_at || g.oc_issued_at || g.maintenance_decided_at || g.sent_to_supplier_date || g.disembark_date;
+    repairItems.forEach((i) => {
+      const ref = costDate(i);
       if (!ref) return;
       const d = new Date(ref);
       if (isNaN(d.getTime())) return;
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
-      const m = months.find((x) => x.key === key);
-      if (m) m.value += g.quote_value || 0;
+      const m = months.find((x) => x.key === `${d.getFullYear()}-${d.getMonth()}`);
+      if (m) m.value += i.quote_value || 0;
     });
-    return months.map((m) => ({ name: m.name, value: m.value }));
-  }, [repairGdms]);
+    return months;
+  }, [repairItems]);
 
-  // Period totals (current quarter / year)
+  // Period totals (month / quarter / year)
   const now = new Date();
   const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
   const yearStart = new Date(now.getFullYear(), 0, 1);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const sumSince = (start) =>
-  repairGdms
-    .filter((g) => {
-      const ref = g.completed_at || g.ot_issued_at || g.oc_issued_at || g.maintenance_decided_at || g.sent_to_supplier_date || g.disembark_date;
-      return ref && new Date(ref) >= start;
-    })
-      .reduce((s, g) => s + (g.quote_value || 0), 0);
+    repairItems
+      .filter((i) => {
+        const ref = costDate(i);
+        return ref && new Date(ref) >= start;
+      })
+      .reduce((s, i) => s + (i.quote_value || 0), 0);
 
   const monthCost = sumSince(monthStart);
   const quarterCost = sumSince(quarterStart);
   const yearCost = sumSince(yearStart);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="border-0 shadow-sm">
+              <CardContent className="p-5 space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-8 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Skeleton className="h-72" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -94,7 +147,7 @@ export default function RepairCostPanel({ gdms = [] }) {
               Total gasto com reparos
             </div>
             <p className="mt-2 text-2xl font-bold text-slate-900">{currency(totalCost)}</p>
-            <p className="text-xs text-slate-400 mt-1">{repairGdms.length} reparos considerados</p>
+            <p className="text-xs text-slate-400 mt-1">{repairItems.length} reparos considerados</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">

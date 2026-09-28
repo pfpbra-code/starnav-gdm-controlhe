@@ -75,12 +75,19 @@ function BreakdownList({ title, rows, limit = 6 }) {
 }
 
 /**
- * ECONOMIA OBTIDA EM NEGOCIAÇÕES
- * Regra: para toda GDM/processo de compra com solicitação de desconto,
- * Economia = Valor Inicial Cotado − Último Valor Negociado.
+ * ECONOMIA OBTIDA EM NEGOCIAÇÕES — calculada por item individual (GDMItem é
+ * a fonte de verdade: cada item registra as cotações do seu ciclo com o
+ * fornecedor vigente em quotes_history).
+ * Regra: para todo item que teve desconto solicitado ou proposta renegociada,
+ * Economia = Primeira cotação do ciclo atual − Valor negociado vigente.
  */
 export default function NegotiationSavings({ gdms = [] }) {
-  const { data: equipment = [] } = useQuery({
+  const { data: items = [], isLoading: loadingItems } = useQuery({
+    queryKey: ['gdmItems'],
+    queryFn: () => base44.entities.GDMItem.list('-created_date', 500),
+  });
+
+  const { data: equipment = [], isLoading: loadingEquipment } = useQuery({
     queryKey: ['equipmentList'],
     queryFn: () => base44.entities.Equipment.list(),
   });
@@ -90,39 +97,54 @@ export default function NegotiationSavings({ gdms = [] }) {
     equipment.forEach((e) => {
       categoryById[e.id] = e.category || 'other';
     });
+    const gdmNumberById = {};
+    gdms.forEach((g) => {
+      gdmNumberById[g.id] = g.gdm_number;
+    });
 
     const rows = [];
-    gdms.forEach((g) => {
-      const history = Array.isArray(g.quotes_history) ? g.quotes_history : [];
+    items.forEach((item) => {
+      if (!['repair', 'certification'].includes(item.destination)) return;
+      const history = Array.isArray(item.quotes_history) ? item.quotes_history : [];
+      // Cotações do ciclo atual (fornecedor vigente do item).
+      const cycleQuotes = history.filter(
+        (q) => q.supplier_id === item.supplier_id && q.quote_value != null,
+      );
+      if (!cycleQuotes.length) return;
+
+      // Houve negociação quando o ciclo teve desconto solicitado, proposta
+      // renegociada ou mais de uma proposta do mesmo fornecedor.
       const hadDiscount =
-        g.maintenance_decision === 'discount_requested' ||
-        (typeof g.discount_percentage === 'number' && g.discount_percentage > 0) ||
-        history.some(
-          (h) =>
-            h.reason === 'discount_requested' ||
-            (typeof h.discount_percentage === 'number' && h.discount_percentage > 0),
+        cycleQuotes.length > 1 ||
+        (typeof item.discount_percentage === 'number' && item.discount_percentage > 0) ||
+        cycleQuotes.some(
+          (q) => q.outcome === 'discount_requested' || q.outcome === 'renegotiated',
         );
       if (!hadDiscount) return;
 
-      const initial = history.length > 0 ? history[0].quote_value : null;
-      const final = g.quote_value;
+      const initial = cycleQuotes[0].quote_value;
+      const final =
+        item.quote_value != null
+          ? item.quote_value
+          : cycleQuotes[cycleQuotes.length - 1].quote_value;
       if (!initial || !final || final >= initial) return;
 
       rows.push({
-        id: g.id,
-        gdm_number: g.gdm_number,
-        vessel: g.vessel_name || '—',
-        supplier: g.supplier_name || '—',
-        category: CATEGORY_LABELS[categoryById[g.equipment_id]] || CATEGORY_LABELS.other,
+        id: item.id,
+        gdm_number: gdmNumberById[item.gdm_id] || '—',
+        vessel: item.vessel_name || '—',
+        supplier: item.supplier_name || '—',
+        equipment: item.equipment_name || '—',
+        category: CATEGORY_LABELS[categoryById[item.equipment_id]] || CATEGORY_LABELS.other,
         initial,
         final,
         economy: initial - final,
         discountPct: ((initial - final) / initial) * 100,
-        date: g.maintenance_decided_at || g.updated_date || g.created_date,
+        date: cycleQuotes[cycleQuotes.length - 1].registered_at || item.updated_date,
       });
     });
     return rows;
-  }, [gdms, equipment]);
+  }, [items, equipment, gdms]);
 
   const totalEconomy = negotiations.reduce((s, n) => s + n.economy, 0);
   const avgPct = negotiations.length
@@ -155,6 +177,23 @@ export default function NegotiationSavings({ gdms = [] }) {
 
   const ranking = [...negotiations].sort((a, b) => b.economy - a.economy).slice(0, 5);
 
+  if (loadingItems || loadingEquipment) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="border-0 shadow-sm">
+              <CardContent className="p-4 space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-8 w-24" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -163,8 +202,8 @@ export default function NegotiationSavings({ gdms = [] }) {
           Economia Obtida em Negociações
         </h2>
         <p className="text-sm text-slate-500">
-          Valor inicial cotado menos o último valor negociado, em GDMs com solicitação de
-          desconto.
+          Por item: valor inicial cotado no ciclo do fornecedor menos o último valor
+          negociado, em cotações com desconto solicitado ou proposta renegociada.
         </p>
       </div>
 
@@ -281,7 +320,8 @@ export default function NegotiationSavings({ gdms = [] }) {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50">
-                      <TableHead>GDM</TableHead>
+                      <TableHead>GDM / Item</TableHead>
+                      <TableHead>Equipamento</TableHead>
                       <TableHead>Embarcação</TableHead>
                       <TableHead>Fornecedor</TableHead>
                       <TableHead>Categoria</TableHead>
@@ -295,6 +335,7 @@ export default function NegotiationSavings({ gdms = [] }) {
                     {ranking.map((n) => (
                       <TableRow key={n.id} className="hover:bg-slate-50">
                         <TableCell className="font-medium">{n.gdm_number}</TableCell>
+                        <TableCell>{n.equipment}</TableCell>
                         <TableCell>{n.vessel}</TableCell>
                         <TableCell>{n.supplier}</TableCell>
                         <TableCell>{n.category}</TableCell>
