@@ -34,6 +34,53 @@
       "type": "string",
       "description": "E-mail do usu\u00e1rio respons\u00e1vel pela embarca\u00e7\u00e3o"
     },
+    "sector_responsibles": {
+      "type": "object",
+      "description": "Respons\u00e1veis por setor vinculados \u00e0 embarca\u00e7\u00e3o: chave = setor (services, almoxarifado, maintenance, planejamento, operations), valor = lista de e-mails dos usu\u00e1rios respons\u00e1veis",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "E-mails dos respons\u00e1veis de Servi\u00e7os"
+        },
+        "almoxarifado": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "E-mails dos respons\u00e1veis do Almoxarifado"
+        },
+        "maintenance": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "E-mails dos respons\u00e1veis de Manuten\u00e7\u00e3o"
+        },
+        "planejamento": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "E-mails dos respons\u00e1veis de Planejamento"
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "E-mails dos respons\u00e1veis de Opera\u00e7\u00f5es"
+        }
+      }
+    },
     "status": {
       "type": "string",
       "enum": [

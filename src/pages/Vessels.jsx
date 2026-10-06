@@ -32,6 +32,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Ship, Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
+import VesselSectorResponsibles from '@/components/vessels/VesselSectorResponsibles';
 
 export default function Vessels() {
   const queryClient = useQueryClient();
@@ -45,6 +46,7 @@ export default function Vessels() {
     type: '',
     coordinator_id: '',
     responsible_user_id: '',
+    sector_responsibles: {},
     status: 'active',
     login_password: ''
   });
@@ -73,6 +75,12 @@ export default function Vessels() {
       const users = await base44.entities.User.list();
       return users.filter(u => u.role === 'vessel_user');
     },
+    enabled: user?.role === 'admin',
+  });
+
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['allUsers'],
+    queryFn: () => base44.entities.User.list(),
     enabled: user?.role === 'admin',
   });
 
@@ -114,6 +122,7 @@ export default function Vessels() {
       code: '',
       type: '',
       coordinator_id: '',
+      sector_responsibles: {},
       status: 'active',
       login_password: ''
     });
@@ -127,6 +136,7 @@ export default function Vessels() {
       type: vessel.type || '',
       coordinator_id: vessel.coordinator_id || '',
       responsible_user_id: vessel.responsible_user_id || '',
+      sector_responsibles: vessel.sector_responsibles || {},
       status: vessel.status || 'active',
       login_password: vessel.login_password || ''
     });
@@ -319,7 +329,7 @@ export default function Vessels() {
 
       {/* Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>{editingVessel ? 'Editar Embarcação' : 'Nova Embarcação'}</DialogTitle>
             <DialogDescription>
@@ -327,7 +337,7 @@ export default function Vessels() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[55vh] overflow-y-auto pr-2">
               <div className="space-y-2">
                 <Label>Nome *</Label>
                 <Input
@@ -415,6 +425,16 @@ export default function Vessels() {
                   campo "Senha de Acesso" e o vínculo concede acesso individual à embarcação.
                 </p>
               </div>
+              <VesselSectorResponsibles
+                users={allUsers}
+                value={formData.sector_responsibles}
+                onChange={(sector, emails) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sector_responsibles: { ...prev.sector_responsibles, [sector]: emails },
+                  }))
+                }
+              />
               <div className="space-y-2">
                 <Label>Foto da Embarcação</Label>
                 <Input

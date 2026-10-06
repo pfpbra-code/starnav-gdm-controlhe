@@ -169,17 +169,30 @@ export default function CreateGDM() {
       queryClient.invalidateQueries({ queryKey: ['gdms'] });
       toast.success('GDM criada com sucesso!');
 
-      // Notify the coordinator assigned to the vessel
+      // Notify the coordinator and the vessel's sector responsibles
       try {
         const vessel = vessels.find((v) => v.id === createdGdm.vessel_id);
+        const users = await base44.entities.User.list();
+        let coordinatorEmail = null;
         if (vessel?.coordinator_id) {
-          const users = await base44.entities.User.list();
           const coordinator = users.find((u) => u.id === vessel.coordinator_id);
-          if (coordinator?.email) {
+          coordinatorEmail = coordinator?.email || null;
+          if (coordinatorEmail) {
             await base44.integrations.Core.SendEmail({
-              to: coordinator.email,
+              to: coordinatorEmail,
               subject: `Nova GDM criada — ${createdGdm.gdm_number}`,
               body: `Uma nova Guia de Desembarque de Material foi criada e aguarda sua aprovação.\n\nGDM: ${createdGdm.gdm_number}\nEquipamento: ${createdGdm.equipment_name || 'Não informado'}\nEmbarcação: ${createdGdm.vessel_name || 'Não informada'}\n\nAcesse a plataforma para revisar e aprovar a GDM.`,
+            });
+          }
+        }
+        // Responsáveis por setor vinculados à embarcação
+        const sectorEmails = Object.values(vessel?.sector_responsibles || {}).flat();
+        for (const email of sectorEmails) {
+          if (email && email !== coordinatorEmail) {
+            await base44.integrations.Core.SendEmail({
+              to: email,
+              subject: `Nova GDM criada — ${createdGdm.gdm_number}`,
+              body: `Uma nova Guia de Desembarque de Material foi criada para a embarcação em que você atua como responsável de setor.\n\nGDM: ${createdGdm.gdm_number}\nEquipamento: ${createdGdm.equipment_name || 'Não informado'}\nEmbarcação: ${createdGdm.vessel_name || 'Não informada'}\n\nAcesse a plataforma para acompanhar a GDM.`,
             });
           }
         }
