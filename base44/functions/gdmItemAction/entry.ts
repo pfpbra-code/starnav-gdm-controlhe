@@ -158,9 +158,11 @@ export default async function (req: Request): Promise<Response> {
       if (!can('confirm_disposal') && !can('confirm_receipt')) {
         throw new Error('Sem permissão para confirmar descarte');
       }
+      // O status do item é a fonte da verdade: o registro de autorização
+      // (discard_authorized) pode não existir em itens de simulação/fluxos
+      // antigos, sem prejuízo à etapa atual de confirmação.
       if (
         item.destination !== 'discard' ||
-        !item.discard_authorized ||
         item.discard_confirmed ||
         prev !== 'awaiting_discard_confirmation'
       ) {
