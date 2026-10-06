@@ -654,9 +654,112 @@ export default async function (req: Request): Promise<Response> {
           new Date(now).getTime() + Number(item.warranty_days) * 86400000,
         ).toISOString();
       }
-      extra.completed_at = now;
-      extra.completed_by = user.email;
-      next = 'completed';
+      // Calibração/Certificação (Operações): o recebimento do retorno NÃO finaliza
+      // o item — o certificado e a validade da certificação são obrigatórios.
+      if (item.destination === 'certification') {
+        next = 'awaiting_certificate';
+      } else {
+        extra.completed_at = now;
+        extra.completed_by = user.email;
+        next = 'completed';
+      }
+    } else if (action === 'register_certificate') {
+      // Operações registra o certificado e a validade da certificação do item.
+      // O certificado fica permanentemente vinculado ao item (histórico por SN).
+      if (item.destination !== 'certification') {
+        throw new Error('Este item não é de calibração/certificação');
+      }
+      if (!can('approve_operations_quote')) {
+        throw new Error('Sem permissão para registrar certificados');
+      }
+      if (!['awaiting_certificate', 'awaiting_validity_registration'].includes(prev)) {
+        throw new Error('Item não está aguardando o registro do certificado');
+      }
+      const certificateNumber = String(body.certificate_number || '').trim();
+      const certificateDate = body.certificate_date || null;
+      const certifyingCompany = String(body.certifying_company || '').trim();
+      const pdfUrl = body.pdf_url || null;
+      const imageUrl = body.image_url || null;
+      const validityDate = body.validity_date || null;
+      const validityMonths = Number(body.validity_months);
+      const hasValidity =
+        !!validityDate || (Number.isFinite(validityMonths) && validityMonths > 0);
+
+      if (prev === 'awaiting_certificate') {
+        if (!certificateNumber) throw new Error('Informe o número do certificado');
+        if (!certificateDate) throw new Error('Informe a data do certificado');
+        if (!certifyingCompany) throw new Error('Informe a empresa certificadora');
+        if (!pdfUrl) throw new Error('Anexe o certificado em PDF');
+      } else if (!hasValidity) {
+        throw new Error('Informe a validade da certificação (data de vencimento ou meses de validade)');
+      }
+
+      // Certificado já salvo (etapa de validade): base para calcular o vencimento.
+      let latest: any = null;
+      if (prev === 'awaiting_validity_registration') {
+        const certs = await base44.entities.Certification.filter({ item_id: item.id });
+        latest = (certs || [])
+          .slice()
+          .sort((a: any, b: any) => new Date(b.created_date) - new Date(a.created_date))[0];
+        if (!latest) {
+          throw new Error('Certificado não encontrado — registre o certificado novamente');
+        }
+      }
+
+      // Vencimento calculado: data informada OU emissão + meses de validade.
+      let expiresAt: string | null = null;
+      if (hasValidity) {
+        if (validityDate) {
+          expiresAt = new Date(`${validityDate}T23:59:59`).toISOString();
+        } else {
+          const base = new Date(`${certificateDate || latest?.certificate_date}T12:00:00`);
+          base.setMonth(base.getMonth() + validityMonths);
+          base.setHours(23, 59, 59, 0);
+          expiresAt = base.toISOString();
+        }
+      }
+
+      if (prev === 'awaiting_certificate') {
+        await base44.entities.Certification.create({
+          item_id: item.id,
+          gdm_id: item.gdm_id,
+          vessel_id: item.vessel_id || null,
+          vessel_name: item.vessel_name || null,
+          equipment_id: item.equipment_id || null,
+          equipment_code: item.equipment_code || null,
+          equipment_name: item.equipment_name || null,
+          serial_number: item.serial_number || null,
+          type: 'certification',
+          certificate_number: certificateNumber,
+          certificate_date: certificateDate,
+          certifying_company: certifyingCompany,
+          document_url: pdfUrl,
+          image_url: imageUrl,
+          validity_input: validityDate ? 'date' : hasValidity ? 'months' : null,
+          validity_date: validityDate,
+          validity_months: hasValidity && !validityDate ? validityMonths : null,
+          expires_at: expiresAt,
+          observations: observation || null,
+          registered_by: user.email,
+          registered_at: now,
+        });
+      } else {
+        // Etapa de validade: atualiza o certificado salvo sem a validade.
+        await base44.entities.Certification.update(latest.id, {
+          validity_input: validityDate ? 'date' : 'months',
+          validity_date: validityDate,
+          validity_months: validityDate ? null : validityMonths,
+          expires_at: expiresAt,
+        });
+      }
+
+      if (hasValidity) {
+        next = 'completed';
+        extra.completed_at = now;
+        extra.completed_by = user.email;
+      } else {
+        next = 'awaiting_validity_registration';
+      }
     } else if (action === 'update_warranty') {
       // Serviços altera a garantia informada na cotação — a mudança é sempre
       // registrada no histórico imutável do item (data, hora e usuário).

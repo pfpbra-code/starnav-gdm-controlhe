@@ -207,6 +207,10 @@ export default function ItemPublic() {
           </CardContent>
         </Card>
 
+        {item.destination === 'certification' &&
+          Array.isArray(data.certifications) &&
+          data.certifications.length > 0 && <CertificationCard certs={data.certifications} />}
+
         {(item.notes || gdm?.description) && (
           <Card className="border-0 shadow-sm">
             <CardHeader>
@@ -277,6 +281,95 @@ export default function ItemPublic() {
         </p>
       </main>
     </div>
+  );
+}
+
+function CertificationCard({ certs }) {
+  const current = certs[0] || null;
+  const daysLeft = current?.expires_at
+    ? Math.ceil((new Date(current.expires_at) - new Date()) / 86400000)
+    : null;
+  const statusLabel =
+    daysLeft == null
+      ? 'Validade não informada'
+      : daysLeft < 0
+        ? 'Certificação vencida'
+        : daysLeft <= 30
+          ? `Vence em ${daysLeft} dia(s)`
+          : 'Certificação vigente';
+  const statusClass =
+    daysLeft == null
+      ? 'bg-slate-100 text-slate-700'
+      : daysLeft < 0
+        ? 'bg-red-100 text-red-700'
+        : daysLeft <= 30
+          ? 'bg-amber-100 text-amber-800'
+          : 'bg-green-100 text-green-800';
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-lg">Certificação</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {current && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusClass}`}>
+                {statusLabel}
+              </span>
+              <span className="text-xs text-slate-400">
+                Certificado {current.certificate_number || '—'} ·{' '}
+                {current.certifying_company || '—'}
+              </span>
+            </div>
+            <DateLine label="Data da certificação" value={fmtDate(current.certificate_date)} />
+            <DateLine label="Vencimento da certificação" value={fmtDate(current.expires_at)} />
+            <div className="flex items-center gap-4 pt-1">
+              {current.document_url && (
+                <a
+                  href={current.document_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-600 hover:underline text-sm"
+                >
+                  Ver certificado (PDF)
+                </a>
+              )}
+              {current.image_url && (
+                <a
+                  href={current.image_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-600 hover:underline text-sm"
+                >
+                  Ver certificado (imagem)
+                </a>
+              )}
+            </div>
+          </>
+        )}
+        {certs.length > 1 && (
+          <div className="pt-2 border-t border-slate-100">
+            <p className="text-xs font-semibold text-slate-500 uppercase mb-2">
+              Histórico das certificações
+            </p>
+            <ol className="space-y-1.5">
+              {certs.map((c, i) => (
+                <li key={c.id || i} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="text-slate-600">
+                    {c.certificate_number || 'Sem número'} · {c.certifying_company || '—'}
+                  </span>
+                  <span className="text-slate-400">
+                    {fmtDate(c.certificate_date)} → {fmtDate(c.expires_at)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

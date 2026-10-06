@@ -1,0 +1,173 @@
+{
+  "name": "Certification",
+  "type": "object",
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "ID do item da GDM vinculado ao certificado"
+    },
+    "gdm_id": {
+      "type": "string",
+      "description": "ID da GDM"
+    },
+    "vessel_id": {
+      "type": "string",
+      "description": "ID da embarca\u00e7\u00e3o (denormalizado para escopo de acesso)"
+    },
+    "vessel_name": {
+      "type": "string",
+      "description": "Nome da embarca\u00e7\u00e3o (denormalizado)"
+    },
+    "equipment_id": {
+      "type": "string",
+      "description": "ID do equipamento"
+    },
+    "equipment_code": {
+      "type": "string",
+      "description": "C\u00f3digo do equipamento"
+    },
+    "equipment_name": {
+      "type": "string",
+      "description": "Nome do equipamento"
+    },
+    "serial_number": {
+      "type": "string",
+      "description": "N\u00famero de s\u00e9rie (SN) do equipamento certificado"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "certification",
+        "calibration"
+      ],
+      "description": "Tipo: certifica\u00e7\u00e3o ou calibra\u00e7\u00e3o"
+    },
+    "certificate_number": {
+      "type": "string",
+      "description": "N\u00famero do certificado"
+    },
+    "certificate_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de emiss\u00e3o do certificado"
+    },
+    "certifying_company": {
+      "type": "string",
+      "description": "Empresa certificadora"
+    },
+    "document_url": {
+      "type": "string",
+      "description": "URL do certificado em PDF (anexo permanente do item)"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL do certificado em imagem (anexo permanente do item)"
+    },
+    "validity_input": {
+      "type": "string",
+      "enum": [
+        "date",
+        "months"
+      ],
+      "description": "Forma de informar a validade: data de vencimento direta ou quantidade de meses"
+    },
+    "validity_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de vencimento informada diretamente"
+    },
+    "validity_months": {
+      "type": "number",
+      "description": "Quantidade de meses de validade (vencimento calculado automaticamente)"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Vencimento da certifica\u00e7\u00e3o, calculado automaticamente a partir da emiss\u00e3o + meses ou da data informada"
+    },
+    "observations": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es do certificado"
+    },
+    "alerts_sent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Marcos de alerta de vencimento j\u00e1 notificados (90, 60, 30, 15, 0, expired) \u2014 cada marco \u00e9 notificado uma \u00fanica vez"
+    },
+    "registered_by": {
+      "type": "string",
+      "description": "Email de quem registrou o certificado"
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora do registro do certificado"
+    }
+  },
+  "required": [
+    "item_id",
+    "serial_number",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "coordinator"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "services"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maintenance"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "almoxarifado"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "operations"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "operations"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

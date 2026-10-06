@@ -73,6 +73,8 @@
         "awaiting_return",
         "awaiting_supplier_return",
         "return_confirmed",
+        "awaiting_certificate",
+        "awaiting_validity_registration",
         "pending_maintenance_authorization",
         "repair_approved",
         "awaiting_pwt",
@@ -86,7 +88,7 @@
         "completed"
       ],
       "default": "pending_coordinator",
-      "description": "Situa\u00e7\u00e3o do item (fluxo pr\u00f3prio por destino, com confirma\u00e7\u00e3o de desembarque e ciclo completo de fornecedor, PWT e OC)"
+      "description": "Situa\u00e7\u00e3o do item (fluxo pr\u00f3prio por destino, com confirma\u00e7\u00e3o de desembarque, ciclo completo de fornecedor, PWT e OC; itens de calibra\u00e7\u00e3o/certifica\u00e7\u00e3o s\u00f3 finalizam ap\u00f3s o certificado e a validade registrados pela Opera\u00e7\u00f5es)"
     },
     "supplier_id": {
       "type": "string",

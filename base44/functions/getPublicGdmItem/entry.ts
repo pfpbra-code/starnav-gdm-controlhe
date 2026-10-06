@@ -48,6 +48,20 @@ export default async function (req: Request): Promise<Response> {
       history = [];
     }
 
+    // Certificações do equipamento (destino Calibração/Certificação): consulta
+    // pública do certificado atual e do histórico por SN — sem necessidade de login.
+    let certifications: any[] = [];
+    if (item.destination === 'certification' && item.serial_number) {
+      try {
+        certifications = await base44.asServiceRole.entities.Certification.filter(
+          { serial_number: item.serial_number },
+          '-created_date',
+        );
+      } catch {
+        certifications = [];
+      }
+    }
+
     return Response.json({
       item: {
         id: item.id,
@@ -91,6 +105,16 @@ export default async function (req: Request): Promise<Response> {
         new_status: h.new_status,
         observation: h.observation,
         created_date: h.created_date,
+      })),
+      certifications: (certifications || []).map((c) => ({
+        id: c.id,
+        certificate_number: c.certificate_number,
+        certificate_date: c.certificate_date,
+        certifying_company: c.certifying_company,
+        expires_at: c.expires_at,
+        document_url: c.document_url || null,
+        image_url: c.image_url || null,
+        registered_at: c.registered_at,
       })),
     });
   } catch (error) {

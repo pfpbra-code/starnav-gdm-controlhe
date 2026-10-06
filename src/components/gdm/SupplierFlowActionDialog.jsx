@@ -566,8 +566,9 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
                 onChange={setLaudoUrl}
               />
               <p className="text-xs text-slate-500">
-                Ambos os anexos são obrigatórios: a confirmação do recebimento finaliza o fluxo do
-                item com data e responsável registrados.
+                Ambos os anexos são obrigatórios: a confirmação do recebimento finaliza o fluxo
+                do item com data e responsável registrados. Itens de calibração/certificação
+                seguem para Operações anexar o certificado e a validade antes da finalização.
               </p>
             </>
           )}

@@ -27,6 +27,8 @@ export const ITEM_STATUS_LABELS = {
   awaiting_return: "Aguardando Retorno do Equipamento",
   awaiting_supplier_return: "Aguardando Retorno do Fornecedor",
   return_confirmed: "Retorno Confirmado",
+  awaiting_certificate: "Aguardando Certificado (Operações)",
+  awaiting_validity_registration: "Aguardando Cadastro da Validade",
   pending_maintenance_authorization: "Aguardando Aprovação da Manutenção",
   repair_approved: "Reparo Aprovado",
   awaiting_pwt: "Aguardando PWT (Planejamento)",
@@ -55,6 +57,8 @@ export const ITEM_STATUS_COLORS = {
   awaiting_return: "bg-blue-100 text-blue-800",
   awaiting_supplier_return: "bg-purple-100 text-purple-800",
   return_confirmed: "bg-teal-100 text-teal-800",
+  awaiting_certificate: "bg-orange-100 text-orange-800",
+  awaiting_validity_registration: "bg-amber-100 text-amber-800",
   pending_maintenance_authorization: "bg-orange-100 text-orange-800",
   repair_approved: "bg-emerald-100 text-emerald-800",
   awaiting_pwt: "bg-cyan-100 text-cyan-800",
@@ -92,6 +96,7 @@ export const ITEM_ACTION_LABELS = {
   confirm_oc_approved: "OC Aprovada e Enviada ao Fornecedor (Serviços)",
   register_return_dispatch: "Saída para Entrega Registrada (Serviços)",
   confirm_return_receipt: "Recebimento do Retorno Confirmado (Almoxarifado)",
+  register_certificate: "Certificado Registrado (Operações)",
   update_warranty: "Garantia Alterada (Serviços)",
   complete: "Item Finalizado",
   cancel: "Item Cancelado",
@@ -250,6 +255,15 @@ export function availableItemActions(item, can, user) {
     if (s === "in_treatment" && can("confirm_return")) {
       actions.push({ action: "complete", label: "Finalizar item" });
     }
+
+    // Certificado da calibração/certificação: anexo e validade (Operações).
+    if (
+      d === "certification" &&
+      ["awaiting_certificate", "awaiting_validity_registration"].includes(s) &&
+      can("approve_operations_quote")
+    ) {
+      actions.push({ action: "register_certificate", label: "Registrar certificado" });
+    }
   }
 
   return actions;
@@ -298,6 +312,9 @@ export function itemResponsible(item) {
       return item.destination === "certification" ? "Serviços" : "Planejamento";
     case "in_treatment":
       return item.supplier_name || "Fornecedor";
+    case "awaiting_certificate":
+    case "awaiting_validity_registration":
+      return "Operações";
     case "discard_approved":
     case "completed":
       return "Processo finalizado";
@@ -363,6 +380,7 @@ const FLOW_BY_DESTINATION = {
     { status: "awaiting_oc_issuance", label: "Emissão da OC (Serviços)" },
     { status: "awaiting_oc_approval", label: "Aprovação e Envio da OC (Serviços)" },
     { status: "awaiting_return", label: "Aguardando Retorno do Fornecedor" },
+    { status: "awaiting_certificate", label: "Certificado e Validade (Operações)" },
     { status: "completed", label: "Finalizado" },
   ],
   stock_return: [
@@ -465,6 +483,10 @@ export function nextActionText(item) {
       return "Este item está aguardando autorização do Gestor de Manutenção.";
     case "awaiting_discard_confirmation":
       return "O descarte foi autorizado pelo Gestor. Confirme quando o descarte físico for realizado.";
+    case "awaiting_certificate":
+      return "Equipamento recebido da certificação. Operações deve anexar o certificado (PDF e/ou imagem), número, data e empresa certificadora.";
+    case "awaiting_validity_registration":
+      return "Certificado anexado. Operações deve cadastrar a validade da certificação (data de vencimento ou meses de validade) para finalizar o item.";
     case "in_treatment":
       return "Este item está em tratativa no fornecedor.";
     case "discard_approved":
@@ -519,6 +541,9 @@ export function itemResponsibleGroup(item) {
       return "services";
     case "in_treatment":
       return item.destination === "certification" ? "operations" : "services";
+    case "awaiting_certificate":
+    case "awaiting_validity_registration":
+      return "operations";
     default:
       return "other";
   }
