@@ -9,17 +9,17 @@ import ServicesKpis from '@/components/gdm/ServicesKpis';
 const CATEGORIES = [
   {
     key: 'supplier',
-    label: 'Seleção de Fornecedor (após recebimento do Almoxarifado)',
+    label: 'Definir Fornecedor (após recebimento do Almoxarifado)',
     match: (i) => ['awaiting_supplier_definition', 'pending_services', 'return_confirmed'].includes(i.status),
   },
   {
     key: 'quote',
-    label: 'Aguardando Cotação do Fornecedor',
+    label: 'Anexar Proposta (aguardando cotação do fornecedor)',
     match: (i) => i.status === 'sent_to_supplier',
   },
   {
     key: 'negotiation',
-    label: 'Negociação de Desconto',
+    label: 'Inserir Nova Proposta (negociação de desconto)',
     match: (i) => i.status === 'discount_negotiation',
   },
   {
@@ -54,6 +54,7 @@ export default function ServicesBoard() {
           emptyMessage="Nenhuma pendência para o setor de Serviços"
           categories={CATEGORIES}
           showDeadlineAlerts
+          showCategoryFilter
           headerExtra={<ServicesKpis />}
         />
       </TabsContent>

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/hooks/usePermissions';
 import { scopeGdms } from '@/lib/permissions';
@@ -24,9 +25,11 @@ export default function PendingBoard({
   categories,
   showDeadlineAlerts = false,
   headerExtra = null,
+  showCategoryFilter = false,
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [myActionOnly, setMyActionOnly] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('all');
   const queryClient = useQueryClient();
   const { user, hasPermission } = usePermissions();
 
@@ -62,7 +65,7 @@ export default function PendingBoard({
     return map;
   }, [gdms]);
 
-  const categorized = useMemo(() => {
+  const allCategorized = useMemo(() => {
     const scoped = scopeGdms(user, gdms);
     const gdmIds = new Set(scoped.map((g) => g.id));
     let pool = items.filter((i) => gdmIds.has(i.gdm_id));
@@ -82,10 +85,17 @@ export default function PendingBoard({
           (gdmById[i.gdm_id]?.vessel_name || '').toLowerCase().includes(term),
       );
     }
-    return categories
-      .map((c) => ({ ...c, list: pool.filter(c.match) }))
-      .filter((c) => c.list.length > 0);
+    return categories.map((c) => ({ ...c, list: pool.filter(c.match) }));
   }, [items, gdms, user, searchTerm, categories, gdmById, myActionOnly, hasPermission]);
+
+  // Etapas visíveis: todas as pendentes, ou apenas a etapa selecionada no filtro.
+  const visibleCategories = useMemo(
+    () =>
+      activeCategory === 'all'
+        ? allCategorized.filter((c) => c.list.length > 0)
+        : allCategorized.filter((c) => c.key === activeCategory),
+    [allCategorized, activeCategory],
+  );
 
   // Itens com ação disponível para o usuário logado (sem filtro de busca).
   const myActionCount = useMemo(() => {
@@ -110,7 +120,7 @@ export default function PendingBoard({
       .sort((a, b) => a.state === 'overdue' ? -1 : 1);
   }, [items, gdms, user, showDeadlineAlerts]);
 
-  const totalPending = categorized.reduce((s, c) => s + c.list.length, 0);
+  const totalPending = visibleCategories.reduce((s, c) => s + c.list.length, 0);
 
   if (isLoading) {
     return (
@@ -132,7 +142,7 @@ export default function PendingBoard({
           <p className="text-slate-500 mt-1">{description}</p>
         </div>
         <div className="text-sm text-slate-500">
-          {categorized.length} pendências · {totalPending} itens
+          {visibleCategories.length} pendências · {totalPending} itens
         </div>
       </div>
 
@@ -191,6 +201,21 @@ export default function PendingBoard({
               className="pl-9"
             />
           </div>
+          {showCategoryFilter && (
+            <Select value={activeCategory} onValueChange={setActiveCategory}>
+              <SelectTrigger className="w-full md:w-80">
+                <SelectValue placeholder="Filtrar por etapa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as etapas</SelectItem>
+                {allCategorized.map((c) => (
+                  <SelectItem key={c.key} value={c.key}>
+                    {c.label} ({c.list.length})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <button
             type="button"
             onClick={() => setMyActionOnly((v) => !v)}
@@ -216,7 +241,7 @@ export default function PendingBoard({
       </Card>
 
       {/* Pendências por categoria */}
-      {categorized.map((cat) => (
+      {visibleCategories.map((cat) => (
         <Card key={cat.key} className="border-0 shadow-sm">
           <CardContent className="p-0">
             <div className="flex items-center justify-between gap-2 p-4 pb-2">
@@ -236,11 +261,16 @@ export default function PendingBoard({
                 />
               ))}
             </div>
+            {cat.list.length === 0 && (
+              <p className="px-4 pb-4 pt-1 text-sm text-slate-500 border-t border-slate-100">
+                Nenhum item nesta etapa.
+              </p>
+            )}
           </CardContent>
         </Card>
       ))}
 
-      {categorized.length === 0 && (
+      {visibleCategories.length === 0 && (
         <Card className="border-0 shadow-sm">
           <CardContent className="py-12 text-center">
             <Package className="h-12 w-12 mx-auto text-slate-300 mb-4" />
