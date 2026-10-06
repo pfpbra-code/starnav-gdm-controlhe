@@ -62,6 +62,7 @@ export default function Equipment() {
     location: '',
     manufacturer: '',
     model: '',
+    acquisition_value: '',
     status: 'active'
   });
 
@@ -129,6 +130,7 @@ export default function Equipment() {
       location: equip.location || '',
       manufacturer: equip.manufacturer || '',
       model: equip.model || '',
+      acquisition_value: equip.acquisition_value ?? '',
       status: equip.status || 'active'
     });
     setShowDialog(true);
@@ -136,10 +138,17 @@ export default function Equipment() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const data = {
+      ...formData,
+      acquisition_value:
+        formData.acquisition_value === '' || formData.acquisition_value == null
+          ? null
+          : Number(formData.acquisition_value),
+    };
     if (editingEquipment) {
-      updateMutation.mutate({ id: editingEquipment.id, data: formData });
+      updateMutation.mutate({ id: editingEquipment.id, data });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(data);
     }
   };
 
@@ -364,6 +373,17 @@ export default function Equipment() {
                     value={formData.model}
                     onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
                     placeholder="Modelo"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor de Aquisição (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.acquisition_value}
+                    onChange={(e) => setFormData(prev => ({ ...prev, acquisition_value: e.target.value }))}
+                    placeholder="Valor de um equipamento novo"
                   />
                 </div>
               </div>

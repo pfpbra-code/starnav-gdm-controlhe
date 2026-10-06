@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SectorGDMBoard from '@/components/gdm/SectorGDMBoard';
 import MaintenanceAnalysis from '@/pages/MaintenanceAnalysis';
+import ReliabilityDashboard from '@/components/reliability/ReliabilityDashboard';
 
 /**
  * Setor de Manutenção: itens com destino Reparo, Retorno ao Estoque ou Descarte
@@ -14,6 +15,7 @@ export default function Maintenance() {
       <TabsList>
         <TabsTrigger value="items">Itens do Setor</TabsTrigger>
         <TabsTrigger value="quotes">Análise de Cotações</TabsTrigger>
+        <TabsTrigger value="reliability">Confiabilidade</TabsTrigger>
       </TabsList>
       <TabsContent value="items">
         <SectorGDMBoard
@@ -25,6 +27,9 @@ export default function Maintenance() {
       </TabsContent>
       <TabsContent value="quotes">
         <MaintenanceAnalysis embedded />
+      </TabsContent>
+      <TabsContent value="reliability">
+        <ReliabilityDashboard />
       </TabsContent>
     </Tabs>
   );
