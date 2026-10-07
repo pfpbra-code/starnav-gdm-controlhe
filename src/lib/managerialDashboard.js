@@ -5,6 +5,7 @@
  * itens sem vínculo são agrupados como "Não cadastrado" em vez de ignorados.
  */
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { ITEM_STATUS_LABELS } from '@/lib/gdmItems';
 import { DESTINATION_LABELS } from '@/lib/gdmOverview';
 
@@ -155,7 +156,7 @@ export function monthlySeries(items = [], count = 12, now = new Date()) {
   for (let i = count - 1; i >= 0; i--) {
     const s = addMonths(startOfMonth(now), -i);
     buckets.push({
-      label: format(s, 'MMM/yy'),
+      label: format(s, 'MMM/yy', { locale: ptBR }),
       start: s,
       end: addMonths(s, 1),
       value: 0,

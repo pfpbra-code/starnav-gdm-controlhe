@@ -53,7 +53,7 @@ export default function GDMPdfButton({ gdm, variant = 'ghost', size = 'sm', labe
       doc.text('STARNAV SERVIÇOS MARÍTIMOS', margin, 10);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('Controle de Materiais Desembarcados — Controle de Materiais Desembarcados', margin, 16);
+      doc.text('Controle de Materiais Desembarcados', margin, 16);
       doc.setFontSize(8);
       doc.text(`Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageW - margin, 16, { align: 'right' });
       y = 30;
