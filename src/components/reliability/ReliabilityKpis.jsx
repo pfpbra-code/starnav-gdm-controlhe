@@ -2,6 +2,8 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Activity, Wrench, Timer, Gauge, CircleDollarSign, AlertTriangle } from "lucide-react";
 import { formatCurrency, formatDays } from "@/lib/equipmentReliability";
+import InfoTooltip from "@/components/ui/InfoTooltip";
+import { RELIABILITY_TOOLTIPS } from "@/lib/kpiTooltips";
 
 const ICONS = {
   monitored: Activity,
@@ -36,7 +38,10 @@ export default function ReliabilityKpis({ summary, alertsCount }) {
               <p className="text-xl font-bold text-slate-900 truncate" title={String(value)}>
                 {value}
               </p>
-              <p className="text-xs text-slate-500 leading-tight">{label}</p>
+              <p className="text-xs text-slate-500 leading-tight flex items-center gap-1">
+                {label}
+                <InfoTooltip content={RELIABILITY_TOOLTIPS[key]} />
+              </p>
             </CardContent>
           </Card>
         );

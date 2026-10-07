@@ -24,6 +24,8 @@ import {
 } from 'recharts';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import InfoTooltip from '@/components/ui/InfoTooltip';
+import { NEGOTIATION_TOOLTIPS } from '@/lib/kpiTooltips';
 
 const CATEGORY_LABELS = {
   navigation: 'Navegação',
@@ -216,7 +218,7 @@ export default function NegotiationSavings({ gdms = [] }) {
               </div>
               <div className="min-w-0">
                 <p className="text-lg font-bold text-emerald-900 truncate">{fmtBRL(totalEconomy)}</p>
-                <p className="text-xs text-emerald-700">Economia Total Acumulada</p>
+                <p className="text-xs text-emerald-700 flex items-center gap-1">Economia Total Acumulada<InfoTooltip content={NEGOTIATION_TOOLTIPS.total} /></p>
               </div>
             </div>
           </CardContent>
@@ -229,7 +231,7 @@ export default function NegotiationSavings({ gdms = [] }) {
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-900">{negotiations.length}</p>
-                <p className="text-xs text-slate-500">Negociações Realizadas</p>
+                <p className="text-xs text-slate-500 flex items-center gap-1">Negociações Realizadas<InfoTooltip content={NEGOTIATION_TOOLTIPS.negociacoes} /></p>
               </div>
             </div>
           </CardContent>
@@ -242,7 +244,7 @@ export default function NegotiationSavings({ gdms = [] }) {
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-900">{avgPct.toFixed(1)}%</p>
-                <p className="text-xs text-slate-500">Desconto Médio (Serviços)</p>
+                <p className="text-xs text-slate-500 flex items-center gap-1">Desconto Médio (Serviços)<InfoTooltip content={NEGOTIATION_TOOLTIPS.descontoMedio} /></p>
               </div>
             </div>
           </CardContent>
@@ -257,7 +259,7 @@ export default function NegotiationSavings({ gdms = [] }) {
                 <p className="text-lg font-bold text-slate-900 truncate">
                   {fmtBRL(ranking[0]?.economy)}
                 </p>
-                <p className="text-xs text-slate-500">Maior Desconto Obtido</p>
+                <p className="text-xs text-slate-500 flex items-center gap-1">Maior Desconto Obtido<InfoTooltip content={NEGOTIATION_TOOLTIPS.maiorDesconto} /></p>
               </div>
             </div>
           </CardContent>

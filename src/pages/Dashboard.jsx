@@ -45,6 +45,7 @@ import { SECTOR_DESTINATIONS } from '@/lib/permissions';
 import { groupItemsByGdm, computeGeneralStatus } from '@/lib/gdmOverview';
 import { Wrench, Cog } from 'lucide-react';
 import ManagerialDashboard from '@/components/dashboard/managerial/ManagerialDashboard';
+import { DASHBOARD_TOOLTIPS } from '@/lib/kpiTooltips';
 
 const statusColors = {
   pending: '#f59e0b',
@@ -204,25 +205,27 @@ export default function Dashboard() {
         <TabsContent value="operational" className="space-y-8">
           {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatsCard title="Total de GDMs" value={stats.total} icon={FileText} color="sky" />
-            <StatsCard title="Abertas / Pendentes" value={stats.open} icon={Clock} color="amber" />
-            <StatsCard title="Aprovadas" value={stats.approved} icon={CheckCircle} color="green" />
-            <StatsCard title="Finalizadas" value={stats.finalized} icon={CheckCircle} color="indigo" />
+            <StatsCard title="Total de GDMs" value={stats.total} icon={FileText} color="sky" tooltip={DASHBOARD_TOOLTIPS.totalGdms} />
+            <StatsCard title="Abertas / Pendentes" value={stats.open} icon={Clock} color="amber" tooltip={DASHBOARD_TOOLTIPS.abertas} />
+            <StatsCard title="Aprovadas" value={stats.approved} icon={CheckCircle} color="green" tooltip={DASHBOARD_TOOLTIPS.aprovadas} />
+            <StatsCard title="Finalizadas" value={stats.finalized} icon={CheckCircle} color="indigo" tooltip={DASHBOARD_TOOLTIPS.finalizadas} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatsCard title="Reprovadas" value={stats.rejected} icon={XCircle} color="red" />
-            <StatsCard title="Em Andamento" value={stats.inProgress} icon={AlertTriangle} color="purple" />
+            <StatsCard title="Reprovadas" value={stats.rejected} icon={XCircle} color="red" tooltip={DASHBOARD_TOOLTIPS.reprovadas} />
+            <StatsCard title="Em Andamento" value={stats.inProgress} icon={AlertTriangle} color="purple" tooltip={DASHBOARD_TOOLTIPS.emAndamento} />
             <StatsCard
               title="Tempo Médio de Aprovação"
               value={`${stats.avgDays.toFixed(1)} dias`}
               icon={Gauge}
               color="sky"
+              tooltip={DASHBOARD_TOOLTIPS.tempoMedio}
             />
             <StatsCard
               title="GDMs no Mês"
               value={monthlyData[monthlyData.length - 1]?.created || 0}
               icon={FileText}
               color="amber"
+              tooltip={DASHBOARD_TOOLTIPS.gdmsMes}
             />
           </div>
 
@@ -230,19 +233,19 @@ export default function Dashboard() {
           {(canViewMaintenance || canViewOperations) && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {canViewMaintenance && (
-                <StatsCard title="Itens em Manutenção" value={sectorStats.maintenance} icon={Wrench} color="amber" />
+                <StatsCard title="Itens em Manutenção" value={sectorStats.maintenance} icon={Wrench} color="amber" tooltip={DASHBOARD_TOOLTIPS.itensManutencao} />
               )}
               {canViewOperations && (
-                <StatsCard title="Itens em Operações" value={sectorStats.operations} icon={Cog} color="indigo" />
+                <StatsCard title="Itens em Operações" value={sectorStats.operations} icon={Cog} color="indigo" tooltip={DASHBOARD_TOOLTIPS.itensOperacoes} />
               )}
               {canViewMaintenance && (
-                <StatsCard title="Equipamentos em Reparo" value={sectorStats.inRepair} icon={Wrench} color="sky" />
+                <StatsCard title="Equipamentos em Reparo" value={sectorStats.inRepair} icon={Wrench} color="sky" tooltip={DASHBOARD_TOOLTIPS.emReparo} />
               )}
               {canViewOperations && (
-                <StatsCard title="Equipamentos em Calibração" value={sectorStats.inCalibration} icon={Cog} color="purple" />
+                <StatsCard title="Equipamentos em Calibração" value={sectorStats.inCalibration} icon={Cog} color="purple" tooltip={DASHBOARD_TOOLTIPS.emCalibracao} />
               )}
-              <StatsCard title="Cotações Pendentes" value={sectorStats.pendingQuotes} icon={AlertTriangle} color="red" />
-              <StatsCard title="Aguardando Retorno do Fornecedor" value={sectorStats.awaitingReturn} icon={Truck} color="green" />
+              <StatsCard title="Cotações Pendentes" value={sectorStats.pendingQuotes} icon={AlertTriangle} color="red" tooltip={DASHBOARD_TOOLTIPS.cotacoesPendentes} />
+              <StatsCard title="Aguardando Retorno do Fornecedor" value={sectorStats.awaitingReturn} icon={Truck} color="green" tooltip={DASHBOARD_TOOLTIPS.aguardandoRetorno} />
             </div>
           )}
 

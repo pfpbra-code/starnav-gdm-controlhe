@@ -1,6 +1,8 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { BadgeCheck, ShieldX, ShieldAlert, RefreshCw, Award, Percent } from 'lucide-react';
+import InfoTooltip from '@/components/ui/InfoTooltip';
+import { CERTIFICATION_TOOLTIPS } from '@/lib/kpiTooltips';
 
 const kpiCards = [
   { key: 'monitored', label: 'Equipamentos Monitorados', icon: Award, tone: 'text-sky-600 bg-sky-50' },
@@ -24,7 +26,10 @@ export default function CertificationKpis({ kpis }) {
               <Icon className="h-5 w-5" />
             </div>
             <p className="text-2xl font-bold text-slate-900 mt-2">{kpis?.[key] ?? 0}</p>
-            <p className="text-xs text-slate-500">{label}</p>
+            <p className="text-xs text-slate-500 flex items-center gap-1">
+              {label}
+              <InfoTooltip content={CERTIFICATION_TOOLTIPS[key]} />
+            </p>
           </CardContent>
         </Card>
       ))}
@@ -34,8 +39,9 @@ export default function CertificationKpis({ kpis }) {
             <Percent className="h-5 w-5" />
           </div>
           <p className="text-2xl font-bold text-white mt-2">{compliance}</p>
-          <p className="text-xs text-slate-300">
+          <p className="text-xs text-slate-300 flex items-center gap-1">
             Conformidade da frota (certificações dentro da validade)
+            <InfoTooltip content={CERTIFICATION_TOOLTIPS.compliance} />
           </p>
         </CardContent>
       </Card>

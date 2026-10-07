@@ -2,8 +2,9 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import InfoTooltip from '@/components/ui/InfoTooltip';
 
-export default function StatsCard({ title, value, icon: Icon, trend, trendValue, color = "sky" }) {
+export default function StatsCard({ title, value, icon: Icon, trend, trendValue, color = "sky", tooltip }) {
   const colorClasses = {
     sky: "bg-sky-50 text-sky-600",
     green: "bg-green-50 text-green-600",
@@ -18,7 +19,7 @@ export default function StatsCard({ title, value, icon: Icon, trend, trendValue,
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-500">{title}</p>
+            <p className="text-sm font-medium text-slate-500 flex items-center gap-1.5">{title}{tooltip && <InfoTooltip content={tooltip} />}</p>
             <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
             {trend && (
               <div className="mt-2 flex items-center gap-1">

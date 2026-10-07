@@ -1,6 +1,8 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowUpRight, ArrowDownRight, Minus, CalendarRange, FileStack } from 'lucide-react';
+import InfoTooltip from '@/components/ui/InfoTooltip';
+import { MANAGERIAL_TOOLTIPS } from '@/lib/kpiTooltips';
 
 function VariationBadge({ variation }) {
   const up = variation > 0;
@@ -20,11 +22,14 @@ function VariationBadge({ variation }) {
   );
 }
 
-function PeriodCard({ title, current, previous, variation }) {
+function PeriodCard({ title, tooltip, current, previous, variation }) {
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="p-6">
-        <p className="text-sm text-slate-500">{title}</p>
+        <p className="text-sm text-slate-500 flex items-center gap-1.5">
+          {title}
+          <InfoTooltip content={tooltip} />
+        </p>
         <div className="mt-2 flex items-end justify-between gap-3">
           <p className="text-3xl font-bold text-slate-900">{current}</p>
           <VariationBadge variation={variation} />
@@ -46,6 +51,7 @@ export default function ManagerialKpis({ general }) {
             <p className="text-sm text-slate-500 flex items-center gap-1.5">
               <CalendarRange className="h-4 w-4 text-sky-600" />
               Itens no período
+              <InfoTooltip content={MANAGERIAL_TOOLTIPS.periodo} />
             </p>
             <p className="text-xs text-slate-400 mt-0.5">{general.label}</p>
             <div className="mt-2 flex items-end justify-between gap-3">
@@ -62,6 +68,7 @@ export default function ManagerialKpis({ general }) {
             <p className="text-sm text-slate-500 flex items-center gap-1.5">
               <FileStack className="h-4 w-4 text-amber-600" />
               Média mensal no período
+              <InfoTooltip content={MANAGERIAL_TOOLTIPS.mediaMensal} />
             </p>
             <p className="text-3xl font-bold text-slate-900 mt-2">{general.monthlyAvg.toFixed(1)}</p>
             <p className="text-xs text-slate-500 mt-2">itens por mês</p>
@@ -73,9 +80,9 @@ export default function ManagerialKpis({ general }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <PeriodCard title="Itens no mês atual" {...general.month} />
-      <PeriodCard title="Itens no trimestre atual" {...general.quarter} />
-      <PeriodCard title="Itens no ano atual" {...general.year} />
+      <PeriodCard title="Itens no mês atual" tooltip={MANAGERIAL_TOOLTIPS.mes} {...general.month} />
+      <PeriodCard title="Itens no trimestre atual" tooltip={MANAGERIAL_TOOLTIPS.trimestre} {...general.quarter} />
+      <PeriodCard title="Itens no ano atual" tooltip={MANAGERIAL_TOOLTIPS.ano} {...general.year} />
     </div>
   );
 }

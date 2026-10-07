@@ -15,6 +15,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DollarSign, Wrench, TrendingUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import InfoTooltip from '@/components/ui/InfoTooltip';
+import { REPAIR_COST_TOOLTIPS } from '@/lib/kpiTooltips';
 
 const currency = (v) =>
   (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
@@ -145,6 +147,7 @@ export default function RepairCostPanel() {
             <div className="flex items-center gap-2 text-slate-500 text-sm">
               <DollarSign className="h-4 w-4 text-emerald-600" />
               Total gasto com reparos
+              <InfoTooltip content={REPAIR_COST_TOOLTIPS.total} />
             </div>
             <p className="mt-2 text-2xl font-bold text-slate-900">{currency(totalCost)}</p>
             <p className="text-xs text-slate-400 mt-1">{repairItems.length} reparos considerados</p>
@@ -155,6 +158,7 @@ export default function RepairCostPanel() {
             <div className="flex items-center gap-2 text-slate-500 text-sm">
               <Wrench className="h-4 w-4 text-sky-600" />
               Gasto no mês
+              <InfoTooltip content={REPAIR_COST_TOOLTIPS.mes} />
             </div>
             <p className="mt-2 text-2xl font-bold text-slate-900">{currency(monthCost)}</p>
             <p className="text-xs text-slate-400 mt-1">{format(now, 'MMMM', { locale: ptBR })}</p>
@@ -165,6 +169,7 @@ export default function RepairCostPanel() {
             <div className="flex items-center gap-2 text-slate-500 text-sm">
               <Wrench className="h-4 w-4 text-indigo-600" />
               Gasto no trimestre
+              <InfoTooltip content={REPAIR_COST_TOOLTIPS.trimestre} />
             </div>
             <p className="mt-2 text-2xl font-bold text-slate-900">{currency(quarterCost)}</p>
             <p className="text-xs text-slate-400 mt-1">Trimestre corrente</p>
@@ -175,6 +180,7 @@ export default function RepairCostPanel() {
             <div className="flex items-center gap-2 text-slate-500 text-sm">
               <Wrench className="h-4 w-4 text-purple-600" />
               Gasto no ano
+              <InfoTooltip content={REPAIR_COST_TOOLTIPS.ano} />
             </div>
             <p className="mt-2 text-2xl font-bold text-slate-900">{currency(yearCost)}</p>
             <p className="text-xs text-slate-400 mt-1">{now.getFullYear()}</p>
