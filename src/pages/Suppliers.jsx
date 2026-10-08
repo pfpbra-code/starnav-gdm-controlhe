@@ -6,6 +6,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { buildSupplierStats, formatBRL } from '@/lib/supplierControl';
 import SupplierControlKpis from '@/components/suppliers/SupplierControlKpis';
 import SupplierDialog from '@/components/suppliers/SupplierDialog';
+import SupplierImportDialog from '@/components/suppliers/SupplierImportDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Plus, Building2, Edit, Trash2, Lock } from 'lucide-react';
+import { Search, Plus, Building2, Edit, Trash2, Lock, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 /**
@@ -35,6 +36,7 @@ export default function Suppliers() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
@@ -139,6 +141,15 @@ export default function Suppliers() {
           </Badge>
           {canManage && (
             <Button
+              variant="outline"
+              onClick={() => setImportOpen(true)}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Importar Planilha
+            </Button>
+          )}
+          {canManage && (
+            <Button
               className="bg-sky-600 hover:bg-sky-700"
               onClick={() => {
                 setEditing(null);
@@ -203,7 +214,8 @@ export default function Suppliers() {
                           {row.supplier.trading_name || row.supplier.company_name}
                         </p>
                         <p className="text-xs text-slate-500">
-                          CNPJ {row.supplier.cnpj} • {row.supplier.email}
+                          CNPJ {row.supplier.cnpj}
+                          {row.supplier.email ? ` • ${row.supplier.email}` : ''}
                         </p>
                       </div>
                     </div>
@@ -280,6 +292,12 @@ export default function Suppliers() {
           </Table>
         </div>
       </Card>
+
+      <SupplierImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        suppliers={suppliers}
+      />
 
       <SupplierDialog
         open={dialogOpen}

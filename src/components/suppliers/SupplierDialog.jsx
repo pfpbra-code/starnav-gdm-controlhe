@@ -68,8 +68,8 @@ export default function SupplierDialog({ open, onOpenChange, supplier, onSubmit,
                 <Input value={form.cnpj} onChange={set('cnpj')} required />
               </div>
               <div className="space-y-2">
-                <Label>Email *</Label>
-                <Input type="email" value={form.email} onChange={set('email')} required />
+                <Label>Email</Label>
+                <Input type="email" value={form.email} onChange={set('email')} />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -26,14 +26,15 @@
       "description": "Nome do contato principal"
     },
     "address": {
-      "type": "string"
+      "type": "string",
+      "description": "Endere\u00e7o completo (logradouro, cidade, estado, CEP)"
     },
     "categories": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Categorias de servi\u00e7o"
+      "description": "Categorias de servi\u00e7o (Reparo, Manuten\u00e7\u00e3o, Certifica\u00e7\u00e3o, Calibra\u00e7\u00e3o etc.)"
     },
     "status": {
       "type": "string",
@@ -46,8 +47,7 @@
   },
   "required": [
     "company_name",
-    "cnpj",
-    "email"
+    "cnpj"
   ],
   "rls": {
     "create": {
