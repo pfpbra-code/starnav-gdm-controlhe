@@ -21,7 +21,8 @@
           "operations",
           "almoxarifado",
           "planejamento",
-          "services"
+          "services",
+          "coordinator"
         ]
       },
       "description": "Setores vinculados ao usu\u00e1rio em Configura\u00e7\u00f5es > Respons\u00e1veis por Setor (fonte \u00fanica das permiss\u00f5es b\u00e1sicas)"

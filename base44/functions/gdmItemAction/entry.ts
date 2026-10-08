@@ -89,6 +89,7 @@ export default async function (req: Request): Promise<Response> {
           throw new Error('Sem permissão para alterar o destino do item');
         }
         extra.destination = destination;
+        extra.previous_destination = item.destination;
       }
     } else if (action === 'reject') {
       if (!can('reject_gdm')) throw new Error('Sem permissão para reprovar');

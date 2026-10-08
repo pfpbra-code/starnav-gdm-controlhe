@@ -17,6 +17,7 @@ export const SECTORS = [
   { key: 'almoxarifado', label: 'Almoxarifado' },
   { key: 'planejamento', label: 'Planejamento' },
   { key: 'services', label: 'Serviços' },
+  { key: 'coordinator', label: 'Coordenação' },
 ];
 
 export const SECTOR_KEYS = SECTORS.map((s) => s.key);
@@ -226,6 +227,19 @@ export const SECTOR_BASE_PERMISSIONS = {
   // Serviços: todas as funcionalidades operacionais da plataforma, exceto as
   // funções exclusivas do Administrador.
   services: ALL_PERMISSION_IDS.filter((id) => !ADMIN_ONLY.includes(id)),
+  // Coordenação: revisão das Guias de Desembarque após a criação — visualizar
+  // todas as GDMs, validar e alterar o destino dos itens com justificativa
+  // (auditado), e consultar os Relatórios de Descarte. Demais módulos e
+  // dashboards só via autorização individual do ADM.
+  coordinator: [
+    "view_dashboard",
+    "view_gdm",
+    "view_all_gdms",
+    "approve_gdm",
+    "change_gdm_destination",
+    "view_disposal_reports",
+    "generate_disposal_report",
+  ],
 };
 
 // Permissões do login próprio das embarcações (perfil mantido à parte).

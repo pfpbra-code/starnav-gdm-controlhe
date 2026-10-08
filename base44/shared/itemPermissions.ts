@@ -71,6 +71,12 @@ export const SECTOR_BASE: Record<string, string[]> = {
     'view_equipment', 'view_analytics',
   ],
   services: ALL_IDS.filter((id) => !ADMIN_ONLY.includes(id)),
+  // Coordenação: revisão das Guias de Desembarque — aprovar tratativa,
+  // alterar destino dos itens (auditado) e relatórios de descarte.
+  coordinator: [
+    'view_dashboard', 'view_gdm', 'view_all_gdms', 'approve_gdm',
+    'change_gdm_destination', 'view_disposal_reports', 'generate_disposal_report',
+  ],
 };
 
 // Login próprio das embarcações (perfil mantido à parte).
