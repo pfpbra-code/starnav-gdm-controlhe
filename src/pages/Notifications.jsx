@@ -108,7 +108,7 @@ export default function Notifications() {
             {unreadNotifications.length} não lidas • {notifications.length} total
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {unreadNotifications.length > 0 && (
             <Button
               variant="outline"

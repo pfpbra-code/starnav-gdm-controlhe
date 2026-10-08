@@ -489,7 +489,7 @@ export default function Users() {
               {editFormData.role === 'coordinator' && (
                 <div className="space-y-2">
                   <Label>Embarcações Atribuídas</Label>
-                  <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-32 overflow-y-auto">
                     {vessels.map((vessel) => (
                       <label key={vessel.id} className="flex items-center gap-2 cursor-pointer">
                         <input

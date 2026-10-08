@@ -34,7 +34,7 @@ export default function UserActivityLog({ user, open, onOpenChange }) {
 
         <div className="space-y-4 py-4">
           {/* Summary Stats */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-3 bg-slate-50 rounded-lg">
               <p className="text-sm text-slate-500">Total de Logins</p>
               <p className="text-2xl font-bold">{loginHistory.length}</p>

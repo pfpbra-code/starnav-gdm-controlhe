@@ -65,7 +65,7 @@ export default function NotificationBell({ user }) {
         <div className="border-b p-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Notificações</h3>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {unreadCount > 0 && (
                 <Button
                   variant="ghost"

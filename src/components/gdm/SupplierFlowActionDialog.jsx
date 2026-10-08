@@ -245,7 +245,7 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
           {action === 'attach_quote' && (
             <>
               <AttachmentField label="Cotação" value={quoteUrl} onChange={setQuoteUrl} />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Valor do reparo (R$) *</Label>
                   <Input
@@ -266,7 +266,7 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Garantia oferecida pelo fornecedor (dias) *</Label>
                   <Input

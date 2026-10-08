@@ -259,7 +259,7 @@ export default function GDMList() {
             Visão centralizada — {filteredGDMs.length} GDMs e {stats.totalItems} itens
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {canExport && (
             <Button variant="outline" onClick={exportCsv}>
               <Download className="h-4 w-4 mr-2" />
@@ -480,7 +480,7 @@ export default function GDMList() {
             <p className="text-sm text-slate-500">
               Página {safePage + 1} de {totalPages} — {filteredGDMs.length} GDMs
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"

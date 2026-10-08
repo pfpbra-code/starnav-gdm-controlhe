@@ -62,7 +62,7 @@ export default function UserPermissions({ user, open, onOpenChange, onSave, isSa
                   {perms.filter(p => permissions.includes(p.id)).length}/{perms.length}
                 </Badge>
               </h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {perms.map((perm) => (
                   <div key={perm.id} className="flex items-center space-x-2">
                     <Checkbox

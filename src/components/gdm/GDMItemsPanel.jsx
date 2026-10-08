@@ -342,7 +342,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                   <div className="space-y-4 pt-3">
                     <div>
                       <h4 className="text-sm font-semibold mb-2">Informações do item</h4>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                         <Field label="Equipamento" value={item.equipment_name} />
                         <Field label="Código" value={item.equipment_code} />
                         <Field label="Quantidade" value={item.quantity} />
@@ -407,7 +407,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                                 warranty.end ? format(warranty.end, 'dd/MM/yyyy HH:mm') : '—'
                               }
                             />
-                            <div className="col-span-2">
+                            <div className="sm:col-span-2">
                               <span className="text-slate-500 text-xs block mb-1">
                                 Situação
                               </span>
@@ -416,7 +416,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                           </>
                         )}
                         {item.shipping_proof_url && (
-                          <div className="col-span-2">
+                          <div className="sm:col-span-2">
                             <span className="text-slate-500 text-xs">NF assinada</span>
                             <a
                               href={item.shipping_proof_url}
@@ -429,7 +429,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                           </div>
                         )}
                         {item.shipping_photo_url && (
-                          <div className="col-span-2">
+                          <div className="sm:col-span-2">
                             <span className="text-slate-500 text-xs">Foto do envio</span>
                             <a
                               href={item.shipping_photo_url}

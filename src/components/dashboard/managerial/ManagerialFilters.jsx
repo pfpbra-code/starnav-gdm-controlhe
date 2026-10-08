@@ -80,7 +80,7 @@ export default function ManagerialFilters({ filters, setFilters, options }) {
           <FilterSelect label="Fabricante" icon={Building2} value={filters.manufacturer} options={options.manufacturers} onChange={set('manufacturer')} />
           <FilterSelect label="Fornecedor" icon={Package} value={filters.supplier} options={options.suppliers} onChange={set('supplier')} />
           <FilterSelect label="Equipamento" icon={Boxes} value={filters.equipment} options={options.equipment} onChange={set('equipment')} />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <FilterSelect label="Status" icon={Gauge} value={filters.status} options={options.statuses} onChange={set('status')} />
             <Button
               variant="outline"

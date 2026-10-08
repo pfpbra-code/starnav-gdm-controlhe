@@ -377,7 +377,7 @@ export default function Dashboard() {
           <div>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-slate-900">GDMs Recentes</h2>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 {hasPermission('create_gdm') && (
                   <Link to={createPageUrl('CreateGDM')}>
                     <Button className="bg-sky-600 hover:bg-sky-700">

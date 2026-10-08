@@ -166,7 +166,7 @@ export default function ImportData() {
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-wrap gap-3 pt-2">
             <Button
               className="flex-1 bg-sky-600 hover:bg-sky-700"
               onClick={handleImport}

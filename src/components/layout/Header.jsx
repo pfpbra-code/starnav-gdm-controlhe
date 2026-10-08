@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, User } from 'lucide-react';
+import { Menu, Search, User } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -22,7 +22,7 @@ const roleLabels = {
   vessel_user: "Embarcação",
 };
 
-export default function Header({ user, pageTitle }) {
+export default function Header({ user, pageTitle, onMenuClick }) {
   const initials = user?.full_name
     ?.split(' ')
     .map(n => n[0])
@@ -35,12 +35,23 @@ export default function Header({ user, pageTitle }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-6">
-      <div className="flex items-center gap-4">
-        <h2 className="text-xl font-semibold text-slate-900">{pageTitle}</h2>
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b bg-white px-4 md:px-6">
+      <div className="flex min-w-0 items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="-ml-2 md:hidden"
+          onClick={onMenuClick}
+          aria-label="Abrir menu"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <h2 className="truncate text-lg font-semibold text-slate-900 md:text-xl">
+          {pageTitle}
+        </h2>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex shrink-0 items-center gap-2 md:gap-4">
         <div className="relative hidden md:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input

@@ -386,7 +386,7 @@ export default function DisposalReports() {
           </p>
         </div>
         {canExport && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={exportCsv}>
               <Download className="h-4 w-4 mr-2" />
               Exportar CSV

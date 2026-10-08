@@ -35,7 +35,8 @@ const pageTitles = {
 
 export default function Layout({ children, currentPageName }) {
   const [collapsed, setCollapsed] = useState(false);
-  
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   const { data: user, isLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
@@ -59,15 +60,21 @@ export default function Layout({ children, currentPageName }) {
         collapsed={collapsed} 
         setCollapsed={setCollapsed}
         currentPage={currentPageName}
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
       />
       
       <div className={cn(
         "transition-all duration-300",
-        collapsed ? "ml-16" : "ml-64"
+        collapsed ? "md:ml-16" : "md:ml-64"
       )}>
-        <Header user={user} pageTitle={pageTitles[currentPageName] || currentPageName} />
+        <Header 
+          user={user} 
+          pageTitle={pageTitles[currentPageName] || currentPageName}
+          onMenuClick={() => setMobileOpen(true)}
+        />
         
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           {children}
         </main>
       </div>
