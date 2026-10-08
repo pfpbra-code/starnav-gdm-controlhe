@@ -119,32 +119,12 @@
         },
         {
           "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
             "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "coordinator"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "services"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "maintenance"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "almoxarifado"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "operations"
           }
         }
       ]
@@ -154,12 +134,12 @@
       "$or": [
         {
           "user_condition": {
-            "role": "admin"
+            "role": "user"
           }
         },
         {
           "user_condition": {
-            "role": "operations"
+            "role": "admin"
           }
         }
       ]
