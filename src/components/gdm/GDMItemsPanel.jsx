@@ -428,6 +428,19 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                             </a>
                           </div>
                         )}
+                        {item.shipping_photo_url && (
+                          <div className="col-span-2">
+                            <span className="text-slate-500 text-xs">Foto do envio</span>
+                            <a
+                              href={item.shipping_photo_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-sky-600 hover:underline text-sm font-medium"
+                            >
+                              Visualizar foto do envio
+                            </a>
+                          </div>
+                        )}
                         {item.expected_disembark_date && (
                           <Field label="Nova data prevista de desembarque" value={item.expected_disembark_date} />
                         )}

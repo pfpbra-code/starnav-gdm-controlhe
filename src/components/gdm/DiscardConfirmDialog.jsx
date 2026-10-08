@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Paperclip, FileImage, FileText, X, Upload } from 'lucide-react';
+import { Loader2, Paperclip, FileImage, FileText, X, Upload, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ITEM_DESTINATION_LABELS } from '@/lib/gdmItems';
@@ -24,6 +24,7 @@ import {
   uploadDisposalFiles,
   DISPOSAL_ATTACHMENT_TYPE_LABELS,
 } from '@/lib/discardEvidence';
+import { compressImage } from '@/lib/gdmPhotos';
 
 /**
  * Confirmação final do descarte (Almoxarifado): exige data, responsável e
@@ -37,6 +38,7 @@ export default function DiscardConfirmDialog({ pending, onClose }) {
   const [observation, setObservation] = useState('');
   const [files, setFiles] = useState([]);
   const [fileError, setFileError] = useState('');
+  const cameraInputRef = useRef(null);
 
   const item = pending?.item;
 
@@ -64,6 +66,19 @@ export default function DiscardConfirmDialog({ pending, onClose }) {
     });
     setFiles((prev) => [...prev, ...valid]);
     setFileError(errors.join(' · '));
+  };
+
+  const handleCameraCapture = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      addFiles([compressed]);
+    } catch (error) {
+      console.error(error);
+      setFileError('Não foi possível processar a foto tirada');
+    }
   };
 
   const confirmMutation = useMutation({
@@ -146,22 +161,37 @@ export default function DiscardConfirmDialog({ pending, onClose }) {
               Formatos: JPG, JPEG, PNG, WEBP e PDF — até {DISPOSAL_MAX_FILE_SIZE / (1024 * 1024)} MB por arquivo.
               Sem anexo, a justificativa abaixo passa a ser obrigatória.
             </p>
-            <label>
-              <span className="flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 cursor-pointer">
-                <Paperclip className="h-4 w-4" />
-                Selecionar arquivos
-              </span>
-              <Input
-                type="file"
-                multiple
-                accept={DISPOSAL_ACCEPT_ATTRIBUTE}
-                className="hidden"
-                onChange={(e) => {
-                  addFiles(e.target.files);
-                  e.target.value = '';
-                }}
-              />
-            </label>
+            <div className="flex flex-wrap gap-2">
+              <label>
+                <span className="flex items-center justify-center gap-2 rounded-md border border-sky-600 bg-sky-600 px-3 py-2 text-sm text-white hover:bg-sky-700 cursor-pointer">
+                  <Camera className="h-4 w-4" />
+                  Tirar Foto
+                </span>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleCameraCapture}
+                />
+              </label>
+              <label>
+                <span className="flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 cursor-pointer">
+                  <Paperclip className="h-4 w-4" />
+                  Selecionar arquivos
+                </span>
+                <Input
+                  type="file"
+                  multiple
+                  accept={DISPOSAL_ACCEPT_ATTRIBUTE}
+                  className="hidden"
+                  onChange={(e) => {
+                    addFiles(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
 
             {fileError && <p className="text-xs text-red-600">{fileError}</p>}
 

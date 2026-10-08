@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import AttachmentField from './AttachmentField';
+import PhotoUrlField from './PhotoUrlField';
 import { Loader2, CheckCircle2, Percent, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ITEM_DESTINATION_LABELS, ITEM_STATUS_LABELS } from '@/lib/gdmItems';
@@ -39,6 +40,7 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   const [supplierId, setSupplierId] = useState('');
   const [expectedShipDate, setExpectedShipDate] = useState('');
   const [nfUrl, setNfUrl] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
   const [quoteUrl, setQuoteUrl] = useState('');
   const [quoteValue, setQuoteValue] = useState('');
   const [quoteDeadline, setQuoteDeadline] = useState('');
@@ -60,6 +62,7 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     setSupplierId('');
     setExpectedShipDate('');
     setNfUrl('');
+    setPhotoUrl('');
     setQuoteUrl('');
     setQuoteValue('');
     setQuoteDeadline('');
@@ -111,6 +114,7 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
       payload.expected_ship_date = expectedShipDate;
     } else if (action === 'attach_shipping_proof') {
       payload.nf_url = nfUrl;
+      payload.photo_url = photoUrl;
     } else if (action === 'attach_quote' || action === 'renegotiate_quote') {
       payload.quote_value = Number(quoteValue);
       if (quoteUrl) payload.quote_document_url = quoteUrl;
@@ -144,7 +148,7 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   const disabled =
     actionMutation.isPending ||
     (needsSupplier && (!supplierId || !expectedShipDate)) ||
-    (action === 'attach_shipping_proof' && !nfUrl) ||
+    (action === 'attach_shipping_proof' && (!nfUrl || !photoUrl)) ||
     (action === 'attach_quote' && (!quoteUrl || !quoteValue || !quoteDeadline || !warrantyDays)) ||
     (action === 'renegotiate_quote' && !quoteValue) ||
     (action === 'update_warranty' && (!warrantyDays || Number(warrantyDays) <= 0)) ||
@@ -229,9 +233,11 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
           {action === 'attach_shipping_proof' && (
             <>
               <AttachmentField label="NF assinada" value={nfUrl} onChange={setNfUrl} />
+              <PhotoUrlField label="Foto do envio" value={photoUrl} onChange={setPhotoUrl} />
               <p className="text-xs text-slate-500">
-                A NF assinada é obrigatória: sem ela o item não pode ser marcado como enviado ao
-                fornecedor.
+                Ambos os anexos são obrigatórios: sem a NF assinada e a foto do envio o item não
+                pode ser marcado como enviado ao fornecedor. A foto pode ser tirada pela câmera
+                do celular ou escolhida da galeria.
               </p>
             </>
           )}
