@@ -7,6 +7,9 @@ import { buildSupplierStats, formatBRL } from '@/lib/supplierControl';
 import SupplierControlKpis from '@/components/suppliers/SupplierControlKpis';
 import SupplierDialog from '@/components/suppliers/SupplierDialog';
 import SupplierImportDialog from '@/components/suppliers/SupplierImportDialog';
+import SupplierRanking from '@/components/suppliers/SupplierRanking';
+import SupplierLogo from '@/components/suppliers/SupplierLogo';
+import { SUPPLIER_CATEGORIES, appendCategoriesHistory } from '@/lib/supplierCategories';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,18 +29,6 @@ import { cn } from '@/lib/utils';
 
 // Lote de exibição da rolagem infinita
 const PAGE_SIZE = 20;
-// Especialidades disponíveis para filtro
-const FILTER_CATEGORIES = [
-  'Reparo',
-  'Certificação',
-  'Calibração',
-  'Elétrica',
-  'Mecânica',
-  'Instrumentação',
-  'Motores',
-  'Radiadores',
-  'Automação',
-];
 
 /**
  * Fornecedores — centro interno de controle e rastreabilidade.
@@ -47,11 +38,11 @@ const FILTER_CATEGORIES = [
 export default function Suppliers() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, user } = usePermissions();
   const canManage = hasPermission('manage_suppliers');
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -95,10 +86,15 @@ export default function Suppliers() {
   );
 
   const saveMutation = useMutation({
-    mutationFn: (data) =>
-      editing
-        ? base44.entities.Supplier.update(editing.id, data)
-        : base44.entities.Supplier.create(data),
+    mutationFn: (data) => {
+      const payload = { ...data };
+      if (editing) {
+        const history = appendCategoriesHistory(editing, payload.categories, user?.email);
+        if (history) payload.categories_history = history;
+        return base44.entities.Supplier.update(editing.id, payload);
+      }
+      return base44.entities.Supplier.create(payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       toast.success(editing ? 'Fornecedor atualizado!' : 'Fornecedor cadastrado!');
@@ -135,24 +131,29 @@ export default function Suppliers() {
           (s.categories || []).join(' ').toLowerCase().includes(term) ||
           s.contact_name?.toLowerCase().includes(term);
         const matchesCategory =
-          selectedCategory === 'all' ||
-          (selectedCategory === 'Outros'
-            ? (s.categories || []).length === 0 ||
-              FILTER_CATEGORIES.every((c) => !(s.categories || []).includes(c))
-            : (s.categories || []).includes(selectedCategory));
+          selectedCategories.length === 0 ||
+          selectedCategories.every((c) =>
+            c === 'none'
+              ? (s.categories || []).length === 0
+              : (s.categories || []).includes(c)
+          );
         return matchesSearch && matchesCategory;
       })
       .sort((a, b) => {
+        // Classificação operacional: quem tem mais equipamentos em posse vem primeiro
+        if ((b.inPossession || 0) !== (a.inPossession || 0)) {
+          return (b.inPossession || 0) - (a.inPossession || 0);
+        }
         const an = (a.supplier.trading_name || a.supplier.company_name || '').toLowerCase();
         const bn = (b.supplier.trading_name || b.supplier.company_name || '').toLowerCase();
         return an.localeCompare(bn, 'pt-BR');
       });
-  }, [stats, searchTerm, selectedCategory]);
+  }, [stats, searchTerm, selectedCategories]);
 
   // Nova consulta -> volta a exibir apenas o primeiro lote
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [searchTerm, selectedCategory]);
+  }, [searchTerm, selectedCategories]);
 
   // Rolagem infinita: ao aproximar do fim da lista, exibe mais 20 registros
   useEffect(() => {
@@ -171,7 +172,7 @@ export default function Suppliers() {
   }, [filteredStats.length, visibleCount]);
 
   const visibleStats = filteredStats.slice(0, visibleCount);
-  const hasActiveFilter = !!searchTerm.trim() || selectedCategory !== 'all';
+  const hasActiveFilter = !!searchTerm.trim() || selectedCategories.length > 0;
 
   if (isLoading) {
     return (
@@ -229,6 +230,9 @@ export default function Suppliers() {
       {/* Indicadores internos */}
       <SupplierControlKpis stats={stats} />
 
+      {/* Ranking gerencial */}
+      <SupplierRanking stats={stats} />
+
       {/* Busca */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
@@ -241,23 +245,43 @@ export default function Suppliers() {
               className="pl-9"
             />
           </div>
-          <div className="flex flex-wrap gap-2 mt-3">
-            {['all', ...FILTER_CATEGORIES, 'Outros'].map((c) => (
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            {[...SUPPLIER_CATEGORIES, 'none'].map((c) => {
+              const active = selectedCategories.includes(c);
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() =>
+                    setSelectedCategories((prev) =>
+                      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
+                    )
+                  }
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                    active
+                      ? 'bg-sky-600 text-white border-sky-600'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-sky-400 hover:text-sky-700'
+                  )}
+                >
+                  {c === 'none' ? 'Sem classificação' : c}
+                </button>
+              );
+            })}
+            {selectedCategories.length > 0 && (
               <button
-                key={c}
                 type="button"
-                onClick={() => setSelectedCategory(c)}
-                className={cn(
-                  'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                  selectedCategory === c
-                    ? 'bg-sky-600 text-white border-sky-600'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-sky-400 hover:text-sky-700'
-                )}
+                onClick={() => setSelectedCategories([])}
+                className="text-xs text-slate-500 underline underline-offset-2 ml-1"
               >
-                {c === 'all' ? 'Todas as especialidades' : c}
+                Limpar filtros
               </button>
-            ))}
+            )}
           </div>
+          <p className="text-xs text-slate-400 mt-2">
+            Marque um ou mais ramos para filtrar fornecedores que atendem a todas as
+            especialidades selecionadas.
+          </p>
         </CardContent>
       </Card>
 
@@ -297,10 +321,12 @@ export default function Suppliers() {
                 >
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-sky-50 flex items-center justify-center">
-                        <Building2 className="h-4 w-4 text-sky-600" />
-                      </div>
-                      <div>
+                      <SupplierLogo
+                        uri={row.supplier.photo_uri}
+                        imgClassName="h-9 w-9 rounded-lg"
+                        fallbackClassName="h-9 w-9 rounded-lg"
+                      />
+                      <div className="min-w-0">
                         <p className="font-medium">
                           {row.supplier.trading_name || row.supplier.company_name}
                         </p>
@@ -308,6 +334,19 @@ export default function Suppliers() {
                           CNPJ {row.supplier.cnpj}
                           {row.supplier.email ? ` • ${row.supplier.email}` : ''}
                         </p>
+                        {(row.supplier.categories || []).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {row.supplier.categories.map((c) => (
+                              <Badge
+                                key={c}
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 bg-sky-50 text-sky-700 border-sky-200"
+                              >
+                                {c}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </TableCell>

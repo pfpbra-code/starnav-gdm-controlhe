@@ -22,35 +22,17 @@ export const SUPPLIER_IMPORT_SCHEMA = {
   },
 };
 
-// Regras de categorização por palavra-chave do ramo de atividade (ordem: específico -> genérico)
+// Regras de categorização por palavra-chave do ramo de atividade.
+// Saída restrita aos ramos padronizados (SUPPLIER_CATEGORIES):
+// ramos não reconhecidos ficam sem classificação para revisão manual.
 const CATEGORY_RULES = [
-  ['Reparos Navais', ['REPARO NAVAL']],
-  ['Compressores', ['COMPRESSOR', 'BITZER', 'SAUER']],
-  ['Equipamentos Náuticos', ['NAUTIC']],
-  ['Bombas', ['BOMBAS']],
-  ['Guindastes', ['GUINDASTE']],
-  ['Trocadores de Calor', ['TROCADOR DE CALO', 'TROCADORES DE CALO']],
-  ['Radiadores', ['RADIADOR']],
   ['Caldeiraria', ['CALDEIRARIA']],
-  ['Marcenaria', ['MARCENARIA']],
-  ['Sistemas de Alarme', ['ALARME']],
-  ['Instrumentação', ['INSTRUMENTA']],
-  ['Automação', ['AUTOMACAO']],
-  ['Eletrônica', ['ELETRONI']],
-  ['Elétrica', ['ELETRIC']],
-  ['Hidráulica', ['HIDRA']],
-  ['Certificação', ['CERTIFICA']],
+  ['Refrigeração', ['REFRIG', 'AR CONDICIONADO', 'COMPRESSOR', 'BITZER', 'SAUER']],
+  ['Radiadores', ['RADIADOR']],
   ['Calibração', ['CALIBRA']],
+  ['Automação', ['AUTOMACAO']],
+  ['Elétrica', ['ELETRIC', 'ELETRONI']],
   ['Motores', ['MOTOR']],
-  ['Comunicação', ['COMUNICACAO']],
-  ['Mecânica', ['MECANIC']],
-  ['Aluguel de Máquinas', ['ALUGUEL']],
-  ['Fabricação', ['FABRICA']],
-  ['Comércio', ['COMERCIO']],
-  ['Reparo', ['REPAR', 'REPARAC', 'RECUPERACAO']],
-  ['Manutenção', ['MANUTENCAO', 'MANUTENCA', 'MANUTEN', 'EQUIPAMWNTO']],
-  ['Serviços', ['SERVIC', 'SERVICIO']],
-  ['Equipamentos', ['EQUIPAMENTO', 'EQUIPAM']],
 ];
 
 const clean = (v) => (v == null ? '' : String(v).trim());

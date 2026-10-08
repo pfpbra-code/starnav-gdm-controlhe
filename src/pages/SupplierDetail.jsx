@@ -6,6 +6,8 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { buildSupplierStats, formatBRL } from '@/lib/supplierControl';
 import SupplierEquipmentTable from '@/components/suppliers/SupplierEquipmentTable';
 import SupplierDialog from '@/components/suppliers/SupplierDialog';
+import SupplierLogo from '@/components/suppliers/SupplierLogo';
+import { appendCategoriesHistory } from '@/lib/supplierCategories';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +20,7 @@ import { ArrowLeft, Building2, Mail, Phone, MapPin, User, Edit, CheckCircle } fr
  */
 export default function SupplierDetail() {
   const queryClient = useQueryClient();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, user } = usePermissions();
   const canManage = hasPermission('manage_suppliers');
   const [editOpen, setEditOpen] = useState(false);
 
@@ -73,7 +75,10 @@ export default function SupplierDetail() {
 
   const updateMutation = {
     mutate: async (data) => {
-      await base44.entities.Supplier.update(supplier.id, data);
+      const payload = { ...data };
+      const history = appendCategoriesHistory(supplier, payload.categories, user?.email);
+      if (history) payload.categories_history = history;
+      await base44.entities.Supplier.update(supplier.id, payload);
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setEditOpen(false);
     },
@@ -104,6 +109,7 @@ export default function SupplierDetail() {
   }
 
   const completedItems = items.filter((i) => i.status === 'completed');
+  const certificationCount = items.filter((i) => i.destination === 'certification').length;
 
   return (
     <div className="space-y-6">
@@ -115,6 +121,11 @@ export default function SupplierDetail() {
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
+          <SupplierLogo
+            uri={supplier.photo_uri}
+            imgClassName="h-12 w-12 rounded-xl border border-slate-200"
+            fallbackClassName="h-12 w-12 rounded-xl"
+          />
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
               {supplier.trading_name || supplier.company_name}
@@ -140,10 +151,12 @@ export default function SupplierDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <p className="flex items-center gap-2 text-slate-600">
-              <Mail className="h-4 w-4 text-slate-400" />
-              {supplier.email}
-            </p>
+            {supplier.email && (
+              <p className="flex items-center gap-2 text-slate-600">
+                <Mail className="h-4 w-4 text-slate-400" />
+                {supplier.email}
+              </p>
+            )}
             {supplier.phone && (
               <p className="flex items-center gap-2 text-slate-600">
                 <Phone className="h-4 w-4 text-slate-400" />
@@ -163,6 +176,23 @@ export default function SupplierDetail() {
               </p>
             )}
             <p className="text-slate-600">CNPJ: {supplier.cnpj}</p>
+            {(supplier.categories || []).length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {supplier.categories.map((c) => (
+                  <Badge
+                    key={c}
+                    variant="outline"
+                    className="bg-sky-50 text-sky-700 border-sky-200"
+                  >
+                    {c}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-orange-600">
+                Ramos de atividade ainda não classificados.
+              </p>
+            )}
             <Badge
               className={
                 supplier.status === 'active'
@@ -205,6 +235,22 @@ export default function SupplierDetail() {
               <p className="text-2xl font-bold text-slate-900">
                 {formatBRL(stat?.totalValue)}
               </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Aguardando cotação</p>
+              <p className="text-2xl font-bold text-amber-600">{stat?.awaitingQuote ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Em reparo</p>
+              <p className="text-2xl font-bold text-blue-600">{stat?.inRepair ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Aguardando retorno</p>
+              <p className="text-2xl font-bold text-orange-600">{stat?.awaitingReturn ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Certificações</p>
+              <p className="text-2xl font-bold text-sky-600">{certificationCount}</p>
             </div>
             {completedItems.length > 0 && (
               <div className="col-span-2 md:col-span-4">

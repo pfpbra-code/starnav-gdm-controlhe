@@ -32,9 +32,47 @@
     "categories": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "enum": [
+          "Caldeiraria",
+          "Refrigera\u00e7\u00e3o",
+          "Motores",
+          "El\u00e9trica",
+          "Automa\u00e7\u00e3o",
+          "Calibra\u00e7\u00e3o",
+          "Radiadores"
+        ]
       },
-      "description": "Categorias de servi\u00e7o (Reparo, Manuten\u00e7\u00e3o, Certifica\u00e7\u00e3o, Calibra\u00e7\u00e3o etc.)"
+      "description": "Ramos de atividade (m\u00faltipla escolha): Caldeiraria, Refrigera\u00e7\u00e3o, Motores, El\u00e9trica, Automa\u00e7\u00e3o, Calibra\u00e7\u00e3o, Radiadores"
+    },
+    "categories_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ramos de atividade definidos na altera\u00e7\u00e3o"
+          },
+          "changed_by": {
+            "type": "string",
+            "description": "Email do administrador que alterou os ramos"
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data/hora da altera\u00e7\u00e3o"
+          }
+        }
+      },
+      "description": "Hist\u00f3rico de altera\u00e7\u00f5es dos ramos de atividade (auditoria)"
+    },
+    "photo_uri": {
+      "type": "string",
+      "description": "Caminho da foto/logomarca no armazenamento privado (JPG, PNG ou WEBP), exibida via URL assinada"
     },
     "status": {
       "type": "string",
