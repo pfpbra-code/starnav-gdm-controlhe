@@ -110,6 +110,12 @@ export default function CreateGDM() {
     return vessels;
   }, [vessels, user]);
 
+  // Fotos gerais da GDM: agregação somente leitura das evidências de cada item.
+  const allItemPhotos = React.useMemo(
+    () => items.flatMap((it) => (it.photos || []).map((ph) => ({ photo: ph, item: it }))),
+    [items],
+  );
+
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const vessel = vessels.find(v => v.id === data.vessel_id);
@@ -122,8 +128,9 @@ export default function CreateGDM() {
 
       const gdmData = {
         ...data,
-        // Compatibilidade: o cabeçalho da GDM mantém as URLs das fotos gerais.
-        photos: (data.photos || []).map((p) => (typeof p === 'string' ? p : p.url)),
+        // Compatibilidade: o cabeçalho da GDM mantém as URLs das fotos gerais,
+        // agregadas automaticamente das evidências de cada item.
+        photos: items.flatMap((it) => (it.photos || []).map((p) => p.url)),
         gdm_number: gdmNumber,
         vessel_name: vessel?.name || '',
         vessel_code: vessel?.code || '',
@@ -474,10 +481,23 @@ export default function CreateGDM() {
                 Fotos gerais da GDM
               </Label>
               <div className="border-2 border-dashed border-slate-200 rounded-xl p-4">
-                <PhotoCaptureField
-                  value={formData.photos}
-                  onChange={(photos) => setFormData((prev) => ({ ...prev, photos }))}
-                />
+                {allItemPhotos.length > 0 ? (
+                  <div className="flex flex-wrap gap-3">
+                    {allItemPhotos.map(({ photo, item }, index) => (
+                      <img
+                        key={`${item.key}-${index}`}
+                        src={photo.url}
+                        alt={item.equipment_name}
+                        title={`${item.equipment_name}${item.serial_number ? ` (SN ${item.serial_number})` : ''}`}
+                        className="h-20 w-20 rounded-md border border-slate-200 object-cover"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">
+                    As fotos anexadas aos itens aparecerão aqui automaticamente.
+                  </p>
+                )}
               </div>
             </div>
 
