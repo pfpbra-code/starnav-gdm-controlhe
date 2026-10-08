@@ -509,32 +509,17 @@
         },
         {
           "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "coordinator"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "services"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "maintenance"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "almoxarifado"
+            "role": "user"
           }
         },
         {
           "user_condition": {
             "role": "vessel_user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
           }
         }
       ]
@@ -548,46 +533,18 @@
           "data.vessel_id": "{{user.data.vessel_id}}"
         },
         {
-          "data.supplier_id": "{{user.data.supplier_id}}"
-        },
-        {
           "data.vessel_id": {
             "$in": "{{user.data.assigned_vessels}}"
           }
         },
         {
           "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
             "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "coordinator"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "services"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "maintenance"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "almoxarifado"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "planejamento"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "operations"
           }
         }
       ]
@@ -601,41 +558,13 @@
           "data.vessel_id": "{{user.data.vessel_id}}"
         },
         {
-          "data.supplier_id": "{{user.data.supplier_id}}"
+          "user_condition": {
+            "role": "user"
+          }
         },
         {
           "user_condition": {
             "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "coordinator"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "services"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "maintenance"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "almoxarifado"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "planejamento"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "operations"
           }
         }
       ]
@@ -648,16 +577,6 @@
         {
           "user_condition": {
             "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "coordinator"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "services"
           }
         }
       ]
