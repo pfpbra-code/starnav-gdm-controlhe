@@ -224,14 +224,47 @@ export default function CreateGDM() {
           }
         }
         // Responsáveis por setor vinculados à embarcação
+        const emailed = new Set([coordinatorEmail].filter(Boolean));
         const sectorEmails = Object.values(vessel?.sector_responsibles || {}).flat();
         for (const email of sectorEmails) {
-          if (email && email !== coordinatorEmail) {
+          if (email && !emailed.has(email)) {
+            emailed.add(email);
             await base44.integrations.Core.SendEmail({
               to: email,
               subject: `Nova GDM criada — ${createdGdm.gdm_number}`,
               body: `Uma nova Guia de Desembarque de Material foi criada para a embarcação em que você atua como responsável de setor.\n\nGDM: ${createdGdm.gdm_number}\nEquipamento: ${createdGdm.equipment_name || 'Não informado'}\nEmbarcação: ${createdGdm.vessel_name || 'Não informada'}\n\nAcesse a plataforma para acompanhar a GDM.`,
             });
+          }
+        }
+        // Setor de Coordenação: nova GDM aguarda validação dos destinos e
+        // aprovação do Coordenador (e-mail + notificação interna no sino).
+        const coordinationUsers = users.filter(
+          (u) => (u.sectors || []).includes('coordinator') && u.email,
+        );
+        for (const coordUser of coordinationUsers) {
+          if (!emailed.has(coordUser.email)) {
+            emailed.add(coordUser.email);
+            await base44.integrations.Core.SendEmail({
+              to: coordUser.email,
+              subject: `Nova GDM aguardando Coordenação — ${createdGdm.gdm_number}`,
+              body: `Uma nova Guia de Desembarque de Material foi criada e aguarda a validação da Coordenação.\n\nGDM: ${createdGdm.gdm_number}\nEquipamento: ${createdGdm.equipment_name || 'Não informado'}\nEmbarcação: ${createdGdm.vessel_name || 'Não informada'}\n\nAcesse a plataforma para revisar o destino dos itens e aprovar a GDM.`,
+            });
+          }
+          try {
+            await base44.entities.Notification.create({
+              user_id: coordUser.id,
+              user_email: coordUser.email,
+              type: 'gdm_pending',
+              title: `Nova GDM aguardando Coordenação — ${createdGdm.gdm_number}`,
+              message: `GDM ${createdGdm.gdm_number} da embarcação ${createdGdm.vessel_name || '—'} aguarda validação dos destinos e aprovação do Coordenador.`,
+              link: '/GDMList',
+              link_text: 'Ver GDMs',
+              priority: 'high',
+              related_entity_type: 'GDM',
+              related_entity_id: createdGdm.id,
+            });
+          } catch (notifError) {
+            console.error('Falha ao criar notificação da Coordenação:', notifError);
           }
         }
       } catch (emailError) {

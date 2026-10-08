@@ -45,6 +45,7 @@ import { SECTOR_DESTINATIONS } from '@/lib/permissions';
 import { groupItemsByGdm, computeGeneralStatus } from '@/lib/gdmOverview';
 import { Wrench, Cog } from 'lucide-react';
 import ManagerialDashboard from '@/components/dashboard/managerial/ManagerialDashboard';
+import CoordinationPendingCard from '@/components/dashboard/CoordinationPendingCard';
 import { DASHBOARD_TOOLTIPS } from '@/lib/kpiTooltips';
 
 const statusColors = {
@@ -228,6 +229,9 @@ export default function Dashboard() {
               tooltip={DASHBOARD_TOOLTIPS.gdmsMes}
             />
           </div>
+
+          {/* Aguardando Coordenação: GDMs, itens e tempo médio de espera */}
+          <CoordinationPendingCard items={items} gdmViews={gdmViews} />
 
           {/* Indicadores por setor */}
           {(canViewMaintenance || canViewOperations) && (

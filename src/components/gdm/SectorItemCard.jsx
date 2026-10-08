@@ -13,6 +13,8 @@ import {
 } from '@/lib/gdmItems';
 import ItemActionRouter from './ItemActionRouter';
 import ItemHistoryTimeline from './ItemHistoryTimeline';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 /**
  * Card de item dos painéis setoriais (Manutenção / Operações).
@@ -39,6 +41,9 @@ export default function SectorItemCard({ item, gdm, hasPermission, user }) {
           </p>
           <p className="text-xs text-slate-500">
             Serial: {item.serial_number || '—'} · Qtd: {item.quantity || 1}
+            {item.created_date && (
+              <> · Criado em {format(new Date(item.created_date), 'dd/MM/yyyy', { locale: ptBR })}</>
+            )}
           </p>
         </div>
         <span

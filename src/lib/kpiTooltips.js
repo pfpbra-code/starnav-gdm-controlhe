@@ -20,6 +20,11 @@ export const DASHBOARD_TOOLTIPS = {
     origem: ORIGEM_ITENS,
     periodicidade: TEMPO_REAL,
   },
+  aguardandoCoordenacao: {
+    conceito: "GDMs e itens aguardando validação do destino e aprovação pelo setor de Coordenação, com o tempo médio de espera desde a criação do item.",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
   aprovadas: {
     conceito: "Itens com cotação aprovada pela Manutenção, aguardando emissão de PWT/OC ou retorno do fornecedor.",
     origem: ORIGEM_ITENS,

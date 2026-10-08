@@ -811,6 +811,46 @@ export default async function (req: Request): Promise<Response> {
       data: Object.keys(extra).length ? extra : null,
     });
 
+    // Fluxo de Coordenação: quando o Coordenador conclui a análise, o próximo
+    // setor responsável (Almoxarifado) é notificado; se o destino do item foi
+    // alterado, os demais usuários do setor de Coordenação também são avisados.
+    if (action === 'approve') {
+      try {
+        const users = await base44.asServiceRole.entities.User.list();
+        const sectorsOf = (u: any) => (Array.isArray(u.sectors) ? u.sectors : (u.data?.sectors || []));
+        const itemLabel = `${item.equipment_name || 'Item'}${item.serial_number ? ` (SN ${item.serial_number})` : ''} da GDM ${item.gdm_id}`;
+        const createNotif = (u: any, title: string, message: string) =>
+          base44.asServiceRole.entities.Notification.create({
+            user_id: u.id,
+            user_email: u.email,
+            type: 'gdm_approved',
+            title,
+            message,
+            link: '/GDMList',
+            link_text: 'Ver GDMs',
+            priority: 'high',
+            related_entity_type: 'GDMItem',
+            related_entity_id: item.id,
+          });
+        if (extra.destination) {
+          const msg = `O destino do item ${itemLabel} foi alterado de ${extra.previous_destination || '—'} para ${extra.destination} pela Coordenação (${user.email}). Justificativa: ${observation || 'não informada'}.`;
+          await Promise.all(
+            users
+              .filter((u: any) => sectorsOf(u).includes('coordinator') && u.email !== user.email)
+              .map((u: any) => createNotif(u, 'Destino de item alterado pela Coordenação', msg)),
+          );
+        }
+        const msgNext = `A Coordenação concluiu a análise do item ${itemLabel}. O material aguarda recebimento do Almoxarifado.`;
+        await Promise.all(
+          users
+            .filter((u: any) => sectorsOf(u).includes('almoxarifado'))
+            .map((u: any) => createNotif(u, 'Item aprovado pela Coordenação', msgNext)),
+        );
+      } catch {
+        // Falha na notificação não invalida a ação do item
+      }
+    }
+
     // Sincroniza o status da GDM com a situação consolidada dos itens
     try {
       const siblings = await base44.entities.GDMItem.filter({ gdm_id: item.gdm_id });

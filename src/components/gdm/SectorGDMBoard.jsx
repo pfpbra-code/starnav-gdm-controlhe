@@ -31,6 +31,7 @@ const RESPONSIBLE_FILTERS = [
   { key: 'almoxarifado', label: 'Aguardando Almoxarifado' },
   { key: 'services', label: 'Aguardando Serviços' },
   { key: 'planejamento', label: 'Aguardando Planejamento' },
+  { key: 'coordinator', label: 'Aguardando Coordenador' },
   { key: 'completed', label: 'Concluídos' },
 ];
 
@@ -75,10 +76,15 @@ export default function SectorGDMBoard({ sector, title, description, emptyMessag
     };
   }, [queryClient]);
 
-  const { groups, totalItems, myActionCount } = useMemo(() => {
+  const { groups, totalItems, myActionCount, coordinatorCount } = useMemo(() => {
     const itemsByGdm = {};
+    // O filtro "Aguardando Coordenador" cobre todos os destinos: itens
+    // aguardando validação de destino e aprovação da Coordenação.
+    const inBoard = (i) =>
+      destinations.includes(i.destination) ||
+      (respFilter === 'coordinator' && i.status === 'pending_coordinator');
     items
-      .filter((i) => destinations.includes(i.destination))
+      .filter(inBoard)
       .forEach((i) => {
         (itemsByGdm[i.gdm_id] = itemsByGdm[i.gdm_id] || []).push(i);
       });
@@ -134,6 +140,7 @@ export default function SectorGDMBoard({ sector, title, description, emptyMessag
           destinations.includes(i.destination) &&
           availableItemActions(i, hasPermission, user).length > 0,
       ).length,
+      coordinatorCount: items.filter((i) => i.status === 'pending_coordinator').length,
     };
   }, [gdms, items, destinations, user, searchTerm, respFilter, hasPermission]);
 
@@ -193,7 +200,11 @@ export default function SectorGDMBoard({ sector, title, description, emptyMessag
                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                {f.key === 'mine' && myActionCount > 0 ? `${f.label} (${myActionCount})` : f.label}
+                {f.key === 'mine' && myActionCount > 0
+                  ? `${f.label} (${myActionCount})`
+                  : f.key === 'coordinator' && coordinatorCount > 0
+                    ? `${f.label} (${coordinatorCount})`
+                    : f.label}
               </button>
             ))}
           </div>

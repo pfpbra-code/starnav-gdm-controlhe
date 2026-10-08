@@ -510,6 +510,9 @@ export function itemResponsibleGroup(item) {
   if (!item) return "other";
   if (["completed", "discard_approved"].includes(item.status)) return "completed";
   switch (item.status) {
+    case "pending_coordinator":
+      // Itens aguardando validação do destino / aprovação do Coordenador.
+      return "coordinator";
     case "pending_almoxarifado":
     case "awaiting_discard_confirmation":
       return "almoxarifado";
