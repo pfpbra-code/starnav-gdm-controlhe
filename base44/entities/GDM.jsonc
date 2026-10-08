@@ -337,27 +337,17 @@
         },
         {
           "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "coordinator"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "services"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "maintenance"
+            "role": "user"
           }
         },
         {
           "user_condition": {
             "role": "vessel_user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
           }
         }
       ]
@@ -372,22 +362,12 @@
         },
         {
           "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
             "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "coordinator"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "services"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "maintenance"
           }
         }
       ]
@@ -402,22 +382,12 @@
         },
         {
           "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
             "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "coordinator"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "services"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "maintenance"
           }
         }
       ]
