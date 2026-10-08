@@ -62,7 +62,43 @@ export default async function (req: Request): Promise<Response> {
       }
     }
 
+    // Evidências fotográficas: fotos do item e histórico completo do
+    // equipamento por SN (desembarque, reparos, certificações, inspeções).
+    let itemPhotos: any[] = [];
+    let snPhotos: any[] = [];
+    try {
+      itemPhotos = await base44.asServiceRole.entities.GDMPhoto.filter(
+        { gdm_item_id: item.id },
+        'taken_at',
+      );
+    } catch {
+      itemPhotos = [];
+    }
+    if (item.serial_number) {
+      try {
+        snPhotos = await base44.asServiceRole.entities.GDMPhoto.filter(
+          { serial_number: item.serial_number },
+          '-taken_at',
+        );
+      } catch {
+        snPhotos = [];
+      }
+    }
+    const mapPhoto = (p: any) => ({
+      id: p.id,
+      gdm_id: p.gdm_id,
+      gdm_item_id: p.gdm_item_id,
+      equipment_name: p.equipment_name,
+      url: p.url,
+      caption: p.caption || null,
+      category: p.category,
+      taken_at: p.taken_at,
+      registered_by: p.registered_by || null,
+    });
+
     return Response.json({
+      photos: (itemPhotos || []).map(mapPhoto),
+      photo_history: (snPhotos || []).map(mapPhoto),
       item: {
         id: item.id,
         gdm_id: item.gdm_id,

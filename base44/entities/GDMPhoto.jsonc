@@ -1,0 +1,186 @@
+{
+  "name": "GDMPhoto",
+  "type": "object",
+  "properties": {
+    "gdm_id": {
+      "type": "string",
+      "description": "ID da GDM vinculada"
+    },
+    "gdm_item_id": {
+      "type": "string",
+      "description": "ID do item da GDM ao qual a foto est\u00e1 permanentemente vinculada"
+    },
+    "vessel_id": {
+      "type": "string",
+      "description": "ID da embarca\u00e7\u00e3o (denormalizado para escopo de acesso)"
+    },
+    "vessel_name": {
+      "type": "string",
+      "description": "Nome da embarca\u00e7\u00e3o (denormalizado)"
+    },
+    "equipment_id": {
+      "type": "string",
+      "description": "ID do equipamento"
+    },
+    "equipment_name": {
+      "type": "string",
+      "description": "Nome do equipamento"
+    },
+    "serial_number": {
+      "type": "string",
+      "description": "N\u00famero de s\u00e9rie (SN) do equipamento, chave do hist\u00f3rico fotogr\u00e1fico"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "disembark_condition",
+        "nameplate",
+        "serial_number",
+        "damage",
+        "packaging",
+        "maintenance",
+        "certification",
+        "calibration",
+        "post_repair",
+        "other"
+      ],
+      "default": "disembark_condition",
+      "description": "Tipo de evid\u00eancia registrada: condi\u00e7\u00e3o no desembarque, placa de identifica\u00e7\u00e3o, SN, danos, embalagem, manuten\u00e7\u00e3o, certifica\u00e7\u00e3o, calibra\u00e7\u00e3o, ap\u00f3s reparo ou outro"
+    },
+    "url": {
+      "type": "string",
+      "description": "URL p\u00fablica do arquivo de imagem"
+    },
+    "caption": {
+      "type": "string",
+      "description": "Legenda da foto"
+    },
+    "taken_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora da captura da foto"
+    },
+    "registered_by": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio respons\u00e1vel pelo registro"
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora do registro no sistema"
+    }
+  },
+  "required": [
+    "gdm_id",
+    "url"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "coordinator"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "services"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maintenance"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "almoxarifado"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "operations"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "planejamento"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vessel_user"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.vessel_id": "{{user.data.vessel_id}}"
+        },
+        {
+          "data.vessel_id": {
+            "$in": "{{user.data.assigned_vessels}}"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "coordinator"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "services"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maintenance"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "almoxarifado"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "planejamento"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "operations"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
