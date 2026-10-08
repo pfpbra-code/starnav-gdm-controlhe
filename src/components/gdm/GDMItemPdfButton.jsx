@@ -13,6 +13,7 @@ import {
   nextActionText,
 } from '@/lib/gdmItems';
 import { itemQrImageUrl, itemPublicUrl } from './GDMItemQrCode';
+import { drawPhotoEvidence } from '@/lib/pdfImage';
 
 const loadImageAsDataURL = (url, fmt = 'jpeg', quality = 0.82) =>
   new Promise((resolve, reject) => {
@@ -52,6 +53,11 @@ export default function GDMItemPdfButton({
       const history = await base44.entities.GDMItemHistory.filter(
         { item_id: item.id },
         'created_date',
+      ).catch(() => []);
+
+      const photos = await base44.entities.GDMPhoto.filter(
+        { gdm_item_id: item.id },
+        'taken_at',
       ).catch(() => []);
 
       const doc = new jsPDF();
@@ -212,6 +218,13 @@ export default function GDMItemPdfButton({
           doc.text(line, margin + 2, y);
           y += 4.5;
         });
+        y += 4;
+      }
+
+      // Evidências fotográficas do item
+      if (photos.length) {
+        section(`EVIDÊNCIAS FOTOGRÁFICAS (${photos.length} imagens)`);
+        y = await drawPhotoEvidence(doc, photos, { y, margin, pageW, pageH });
         y += 4;
       }
 

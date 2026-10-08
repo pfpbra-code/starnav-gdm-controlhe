@@ -21,8 +21,6 @@ import {
   Ship,
   Calendar,
   Hash,
-  Upload,
-  X,
   Loader2,
   CheckCircle,
   Camera
@@ -30,6 +28,7 @@ import {
 import { toast } from 'sonner';
 import { buildHistoryEntry, nextGdmNumberForVessel } from '@/lib/gdmWorkflow';
 import EquipmentAutocomplete from '@/components/gdm/EquipmentAutocomplete';
+import PhotoCaptureField from '@/components/gdm/PhotoCaptureField';
 import { ITEM_DESTINATION_OPTIONS, ITEM_DESTINATION_LABELS } from '@/lib/gdmItems';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2 } from 'lucide-react';
@@ -37,7 +36,6 @@ import { Plus, Trash2 } from 'lucide-react';
 export default function CreateGDM() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     vessel_id: '',
     disembark_date: format(new Date(), 'yyyy-MM-dd'),
@@ -55,6 +53,7 @@ export default function CreateGDM() {
     serial_number: '',
     os_number: '',
     destination: 'repair',
+    photos: [],
   });
   const [applyDestinationToAll, setApplyDestinationToAll] = useState(false);
 
@@ -82,6 +81,7 @@ export default function CreateGDM() {
       serial_number: '',
       os_number: '',
       destination: prev.destination,
+      photos: [],
     }));
   };
 
@@ -122,6 +122,8 @@ export default function CreateGDM() {
 
       const gdmData = {
         ...data,
+        // Compatibilidade: o cabeçalho da GDM mantém as URLs das fotos gerais.
+        photos: (data.photos || []).map((p) => (typeof p === 'string' ? p : p.url)),
         gdm_number: gdmNumber,
         vessel_name: vessel?.name || '',
         vessel_code: vessel?.code || '',
@@ -146,8 +148,12 @@ export default function CreateGDM() {
 
       const created = await base44.entities.GDM.create(gdmData);
 
-      await base44.entities.GDMItem.bulkCreate(
-        items.map((it, index) => ({
+      // Itens criados individualmente para vincular as evidências fotográficas
+      // permanentemente a cada item da GDM.
+      const createdItems = [];
+      for (let index = 0; index < items.length; index++) {
+        const it = items[index];
+        const createdItem = await base44.entities.GDMItem.create({
           gdm_id: created.id,
           vessel_id: created.vessel_id,
           vessel_name: created.vessel_name,
@@ -160,8 +166,37 @@ export default function CreateGDM() {
           os_number: it.os_number || null,
           destination: it.destination,
           status: 'pending_coordinator',
-        }))
-      );
+        });
+        createdItems.push(createdItem);
+      }
+
+      // Evidências fotográficas por item: registro permanente com data de
+      // captura, legenda, categoria e responsável.
+      const now = new Date().toISOString();
+      const photoRecords = [];
+      createdItems.forEach((createdItem, index) => {
+        const it = items[index];
+        (it.photos || []).forEach((ph) => {
+          photoRecords.push({
+            gdm_id: created.id,
+            gdm_item_id: createdItem.id,
+            vessel_id: created.vessel_id,
+            vessel_name: created.vessel_name,
+            equipment_id: createdItem.equipment_id || null,
+            equipment_name: createdItem.equipment_name,
+            serial_number: createdItem.serial_number || null,
+            category: ph.category || 'disembark_condition',
+            url: ph.url,
+            caption: ph.caption || null,
+            taken_at: ph.taken_at || now,
+            registered_by: user?.email || null,
+            registered_at: now,
+          });
+        });
+      });
+      if (photoRecords.length > 0) {
+        await base44.entities.GDMPhoto.bulkCreate(photoRecords);
+      }
 
       return created;
     },
@@ -207,38 +242,6 @@ export default function CreateGDM() {
       console.error(error);
     }
   });
-
-  const handlePhotoUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
-    setUploading(true);
-    try {
-      const uploadPromises = files.map(async (file) => {
-        const result = await base44.integrations.Core.UploadFile({ file });
-        return result.file_url;
-      });
-
-      const uploadedUrls = await Promise.all(uploadPromises);
-      setFormData(prev => ({
-        ...prev,
-        photos: [...prev.photos, ...uploadedUrls]
-      }));
-      toast.success(`${files.length} foto(s) enviada(s)`);
-    } catch (error) {
-      toast.error('Erro ao enviar fotos');
-      console.error(error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const removePhoto = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index)
-    }));
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -374,6 +377,14 @@ export default function CreateGDM() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label className="text-sm">Evidências fotográficas do item</Label>
+                <PhotoCaptureField
+                  value={itemDraft.photos}
+                  onChange={(photos) => setItemDraft((prev) => ({ ...prev, photos }))}
+                />
+              </div>
+
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <label className="flex items-center gap-2 text-sm text-slate-600">
                   <input
@@ -417,6 +428,11 @@ export default function CreateGDM() {
                             {it.equipment_code && (
                               <span className="text-slate-400"> ({it.equipment_code})</span>
                             )}
+                            {it.photos && it.photos.length > 0 && (
+                              <span className="block text-xs text-sky-600">
+                                {it.photos.length} foto(s)
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell>{it.quantity}</TableCell>
                           <TableCell>{it.serial_number || '—'}</TableCell>
@@ -455,51 +471,13 @@ export default function CreateGDM() {
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Camera className="h-4 w-4 text-slate-500" />
-                Fotos
+                Fotos gerais da GDM
               </Label>
-              <div className="border-2 border-dashed border-slate-200 rounded-xl p-6">
-                {formData.photos.length > 0 && (
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    {formData.photos.map((url, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={url}
-                          alt={`Foto ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(index)}
-                          className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="text-center">
-                  <input
-                    type="file"
-                    id="photos"
-                    multiple
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                  <label
-                    htmlFor="photos"
-                    className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
-                  >
-                    {uploading ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Upload className="h-5 w-5" />
-                    )}
-                    {uploading ? 'Enviando...' : 'Adicionar fotos'}
-                  </label>
-                </div>
+              <div className="border-2 border-dashed border-slate-200 rounded-xl p-4">
+                <PhotoCaptureField
+                  value={formData.photos}
+                  onChange={(photos) => setFormData((prev) => ({ ...prev, photos }))}
+                />
               </div>
             </div>
 

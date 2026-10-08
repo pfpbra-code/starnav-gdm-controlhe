@@ -5,6 +5,8 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import PhotoEvidenceGrid from '@/components/gdm/PhotoEvidenceGrid';
 import {
   Package,
   Ship,
@@ -77,6 +79,10 @@ export default function ItemPublic() {
 
   const { item, gdm, history } = data;
   const steps = itemFlow(item);
+  const itemPhotos = Array.isArray(data.photos) ? data.photos : [];
+  const photoHistory = Array.isArray(data.photo_history)
+    ? data.photo_history.filter((p) => p.gdm_item_id !== item.id)
+    : [];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -128,152 +134,191 @@ export default function ItemPublic() {
           </p>
         </div>
 
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Dados do equipamento</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <InfoRow icon={Package} label="Código" value={item.equipment_code} />
-            <InfoRow icon={Hash} label="Número de série" value={item.serial_number} />
-            <InfoRow icon={ClipboardList} label="OS" value={item.os_number} />
-            <InfoRow icon={Package} label="Quantidade" value={item.quantity} />
-            <InfoRow icon={Ship} label="Embarcação" value={gdm?.vessel_name} />
-            <InfoRow icon={FileText} label="Fornecedor" value={item.supplier_name} />
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="consulta" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="consulta">Consultar</TabsTrigger>
+            <TabsTrigger value="evidencias">Evidências Fotográficas</TabsTrigger>
+          </TabsList>
 
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Andamento do processo</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ol className="space-y-1">
-              {steps.map((s) => (
-                <li key={s.status} className="flex items-center gap-2 text-sm">
-                  {s.state === 'done' ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  ) : s.state === 'current' ? (
-                    <Dot className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                  ) : (
-                    <Circle className="h-4 w-4 text-slate-300 flex-shrink-0" />
-                  )}
-                  <span
-                    className={
-                      s.state === 'current'
-                        ? 'font-semibold text-slate-900'
-                        : s.state === 'done'
-                          ? 'text-slate-600'
-                          : 'text-slate-400'
-                    }
-                  >
-                    {s.label}
-                  </span>
-                </li>
-              ))}
-            </ol>
-            <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">
-              {nextActionText(item)}
-            </p>
-          </CardContent>
-        </Card>
+          <TabsContent value="consulta" className="space-y-6">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Dados do equipamento</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <InfoRow icon={Package} label="Código" value={item.equipment_code} />
+                <InfoRow icon={Hash} label="Número de série" value={item.serial_number} />
+                <InfoRow icon={ClipboardList} label="OS" value={item.os_number} />
+                <InfoRow icon={Package} label="Quantidade" value={item.quantity} />
+                <InfoRow icon={Ship} label="Embarcação" value={gdm?.vessel_name} />
+                <InfoRow icon={FileText} label="Fornecedor" value={item.supplier_name} />
+              </CardContent>
+            </Card>
 
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Datas e controles</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <DateLine label="Desembarque" value={fmtDate(gdm?.disembark_date)} />
-            <DateLine label="Recebido no almoxarifado" value={fmtDateTime(item.stock_received_at)} />
-            <DateLine label="Envio ao fornecedor" value={fmtDate(gdm?.sent_to_supplier_date)} />
-            <DateLine label="Retorno previsto" value={fmtDate(gdm?.expected_return_date)} />
-            <DateLine label="Retorno do equipamento" value={fmtDate(gdm?.return_date)} />
-            {item.destination === 'stock_return' && (
-              <>
-                <DateLine label="Devolução ao estoque" value={fmtDateTime(item.stock_return_at)} />
-                <DateLine label="Número da devolução" value={item.stock_return_number || '-'} />
-              </>
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Andamento do processo</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <ol className="space-y-1">
+                  {steps.map((s) => (
+                    <li key={s.status} className="flex items-center gap-2 text-sm">
+                      {s.state === 'done' ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      ) : s.state === 'current' ? (
+                        <Dot className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-slate-300 flex-shrink-0" />
+                      )}
+                      <span
+                        className={
+                          s.state === 'current'
+                            ? 'font-semibold text-slate-900'
+                            : s.state === 'done'
+                              ? 'text-slate-600'
+                              : 'text-slate-400'
+                        }
+                      >
+                        {s.label}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">
+                  {nextActionText(item)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Datas e controles</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <DateLine label="Desembarque" value={fmtDate(gdm?.disembark_date)} />
+                <DateLine label="Recebido no almoxarifado" value={fmtDateTime(item.stock_received_at)} />
+                <DateLine label="Envio ao fornecedor" value={fmtDate(gdm?.sent_to_supplier_date)} />
+                <DateLine label="Retorno previsto" value={fmtDate(gdm?.expected_return_date)} />
+                <DateLine label="Retorno do equipamento" value={fmtDate(gdm?.return_date)} />
+                {item.destination === 'stock_return' && (
+                  <>
+                    <DateLine label="Devolução ao estoque" value={fmtDateTime(item.stock_return_at)} />
+                    <DateLine label="Número da devolução" value={item.stock_return_number || '-'} />
+                  </>
+                )}
+                {item.destination === 'discard' && (
+                  <>
+                    <DateLine label="Descarte autorizado" value={fmtDateTime(item.discard_authorized_at)} />
+                    <DateLine label="Descarte confirmado" value={fmtDateTime(item.discard_confirmed_at)} />
+                  </>
+                )}
+                <DateLine label="Finalizado em" value={fmtDateTime(item.completed_at)} />
+                <DateLine
+                  label="PWT / OC / OT"
+                  value={[gdm?.pwt_number, gdm?.oc_number, gdm?.ot_number].filter(Boolean).join(' / ') || '-'}
+                />
+              </CardContent>
+            </Card>
+
+            {item.destination === 'certification' &&
+              Array.isArray(data.certifications) &&
+              data.certifications.length > 0 && <CertificationCard certs={data.certifications} />}
+
+            {(item.notes || gdm?.description) && (
+              <Card className="border-0 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg">Descrição</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-slate-700">
+                  {item.notes && <p>{item.notes}</p>}
+                  {gdm?.description && <p className="text-slate-500">{gdm.description}</p>}
+                </CardContent>
+              </Card>
             )}
-            {item.destination === 'discard' && (
-              <>
-                <DateLine label="Descarte autorizado" value={fmtDateTime(item.discard_authorized_at)} />
-                <DateLine label="Descarte confirmado" value={fmtDateTime(item.discard_confirmed_at)} />
-              </>
+
+            {Array.isArray(gdm?.photos) && gdm.photos.length > 0 && (
+              <Card className="border-0 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg">Registro fotográfico</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {gdm.photos.map((p, i) => (
+                    <a key={i} href={p} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={p}
+                        alt={`Foto ${i + 1} do material`}
+                        loading="lazy"
+                        className="rounded-lg border border-slate-200 object-cover w-full h-28"
+                      />
+                    </a>
+                  ))}
+                </CardContent>
+              </Card>
             )}
-            <DateLine label="Finalizado em" value={fmtDateTime(item.completed_at)} />
-            <DateLine
-              label="PWT / OC / OT"
-              value={[gdm?.pwt_number, gdm?.oc_number, gdm?.ot_number].filter(Boolean).join(' / ') || '-'}
-            />
-          </CardContent>
-        </Card>
 
-        {item.destination === 'certification' &&
-          Array.isArray(data.certifications) &&
-          data.certifications.length > 0 && <CertificationCard certs={data.certifications} />}
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Histórico do equipamento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {history && history.length > 0 ? (
+                  <ol className="relative border-l border-slate-200 ml-3 space-y-4">
+                    {history.map((h) => (
+                      <li key={h.id} className="ml-4">
+                        <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-sky-500 border-2 border-white" />
+                        <p className="text-sm font-medium text-slate-800">
+                          {ITEM_ACTION_LABELS[h.action] || h.action}
+                        </p>
+                        <p className="text-xs text-slate-400">{fmtDateTime(h.created_date)}</p>
+                        {(h.previous_status || h.new_status) && (
+                          <p className="text-xs text-slate-500">
+                            {ITEM_STATUS_LABELS[h.previous_status] || '—'} →{' '}
+                            {ITEM_STATUS_LABELS[h.new_status] || '—'}
+                          </p>
+                        )}
+                        {h.observation && (
+                          <p className="text-sm text-slate-600 mt-1">{h.observation}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-sm text-slate-400">Sem movimentações registradas.</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {(item.notes || gdm?.description) && (
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Descrição</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-slate-700">
-              {item.notes && <p>{item.notes}</p>}
-              {gdm?.description && <p className="text-slate-500">{gdm.description}</p>}
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="evidencias" className="space-y-6">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Fotos deste item</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PhotoEvidenceGrid
+                  photos={itemPhotos}
+                  emptyText="Nenhuma evidência fotográfica registrada para este item."
+                />
+              </CardContent>
+            </Card>
 
-        {Array.isArray(gdm?.photos) && gdm.photos.length > 0 && (
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Registro fotográfico</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {gdm.photos.map((p, i) => (
-                <a key={i} href={p} target="_blank" rel="noopener noreferrer">
-                  <img
-                    src={p}
-                    alt={`Foto ${i + 1} do material`}
-                    loading="lazy"
-                    className="rounded-lg border border-slate-200 object-cover w-full h-28"
+            {item.serial_number && (
+              <Card className="border-0 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    Histórico fotográfico do equipamento (SN {item.serial_number})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PhotoEvidenceGrid
+                    photos={photoHistory}
+                    emptyText="Nenhuma foto de outros processos deste número de série."
                   />
-                </a>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Histórico do equipamento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {history && history.length > 0 ? (
-              <ol className="relative border-l border-slate-200 ml-3 space-y-4">
-                {history.map((h) => (
-                  <li key={h.id} className="ml-4">
-                    <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-sky-500 border-2 border-white" />
-                    <p className="text-sm font-medium text-slate-800">
-                      {ITEM_ACTION_LABELS[h.action] || h.action}
-                    </p>
-                    <p className="text-xs text-slate-400">{fmtDateTime(h.created_date)}</p>
-                    {(h.previous_status || h.new_status) && (
-                      <p className="text-xs text-slate-500">
-                        {ITEM_STATUS_LABELS[h.previous_status] || '—'} →{' '}
-                        {ITEM_STATUS_LABELS[h.new_status] || '—'}
-                      </p>
-                    )}
-                    {h.observation && (
-                      <p className="text-sm text-slate-600 mt-1">{h.observation}</p>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="text-sm text-slate-400">Sem movimentações registradas.</p>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+          </TabsContent>
+        </Tabs>
 
         <p className="text-center text-xs text-slate-400 pt-2">
           Informações públicas do equipamento. Dados sensíveis são restritos a usuários

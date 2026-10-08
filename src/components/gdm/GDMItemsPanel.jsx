@@ -38,6 +38,7 @@ import {
   OVERALL_LABELS,
 } from '@/lib/gdmItems';
 import GDMItemQrCode from './GDMItemQrCode';
+import ItemPhotoGallery from './ItemPhotoGallery';
 import GDMItemPdfButton from './GDMItemPdfButton';
 import DiscardReportButton from './DiscardReportButton';
 import ItemActionRouter from './ItemActionRouter';
@@ -453,9 +454,15 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                       <ItemFlow item={item} />
                     </div>
                   </div>
-                  <div className="pt-3">
-                    <h4 className="text-sm font-semibold mb-2">Histórico do item</h4>
-                    <ItemHistory itemId={item.id} />
+                  <div className="pt-3 space-y-4">
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Histórico do item</h4>
+                      <ItemHistory itemId={item.id} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Evidências fotográficas</h4>
+                      <ItemPhotoGallery itemId={item.id} />
+                    </div>
                   </div>
                 </div>
               )}

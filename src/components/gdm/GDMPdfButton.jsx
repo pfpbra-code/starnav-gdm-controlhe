@@ -8,6 +8,7 @@ import { ptBR } from 'date-fns/locale';
 import { STATUS_LABELS, ROLE_LABELS } from '@/lib/gdmWorkflow';
 import { computeGeneralStatus } from '@/lib/gdmOverview';
 import { ITEM_DESTINATION_LABELS } from '@/lib/gdmItems';
+import { drawPhotoEvidence } from '@/lib/pdfImage';
 
 const treatmentLabels = {
   repair: 'Reparo',
@@ -178,6 +179,39 @@ export default function GDMPdfButton({ gdm, variant = 'ghost', size = 'sm', labe
           y += 14;
         });
         y += 2;
+      }
+
+      // EVIDÊNCIAS FOTOGRÁFICAS (todos os itens da GDM)
+      const photoRecords = await base44.entities.GDMPhoto
+        .filter({ gdm_id: gdm.id }, 'taken_at')
+        .catch(() => []);
+      if (photoRecords.length) {
+        section(`EVIDÊNCIAS FOTOGRÁFICAS (${photoRecords.length} imagens)`);
+        const groups = [];
+        const byItem = {};
+        photoRecords.forEach((p) => {
+          const key = p.gdm_item_id || 'geral';
+          if (!byItem[key]) {
+            byItem[key] = [];
+            groups.push(key);
+          }
+          byItem[key].push(p);
+        });
+        for (const key of groups) {
+          const group = byItem[key];
+          const it = key !== 'geral' ? items.find((i) => i.id === key) : null;
+          ensure(10);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          doc.setTextColor(15, 23, 42);
+          const groupTitle = it
+            ? `Item ${String(it.item_number).padStart(2, '0')} — ${it.equipment_name || '-'}${it.serial_number ? ` (S/N: ${it.serial_number})` : ''} · ${group.length} foto(s)`
+            : `Fotos gerais · ${group.length} foto(s)`;
+          doc.text(groupTitle, margin + 2, y);
+          y += 5;
+          y = await drawPhotoEvidence(doc, group, { y, margin, pageW, pageH });
+          y += 3;
+        }
       }
 
       // HISTÓRICO DO PROCESSO (TRAIL)
