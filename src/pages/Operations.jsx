@@ -2,19 +2,25 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SectorGDMBoard from '@/components/gdm/SectorGDMBoard';
 import CertificationsDashboard from '@/components/certifications/CertificationsDashboard';
+import { usePermissions } from '@/hooks/usePermissions';
 
 /**
  * Setor de Operações: pendências de itens com destino Calibração/Certificação
- * e Gestão de Certificações (controle de validade, histórico por SN e
- * conformidade da frota). Acesso controlado pela permissão view_operations.
+ * e a Gestão de Certificações (controle de validade, histórico por SN e
+ * conformidade da frota), com autorização individual (view_certifications).
  */
 export default function Operations() {
+  const { hasPermission } = usePermissions();
+  const canViewCertifications = hasPermission('view_certifications');
+
   return (
     <div className="space-y-4">
       <Tabs defaultValue="pendencias">
         <TabsList>
           <TabsTrigger value="pendencias">Pendências</TabsTrigger>
-          <TabsTrigger value="certificacoes">Gestão de Certificações</TabsTrigger>
+          {canViewCertifications && (
+            <TabsTrigger value="certificacoes">Gestão de Certificações</TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="pendencias">
           <SectorGDMBoard
@@ -24,9 +30,11 @@ export default function Operations() {
             emptyMessage="Nenhum item de operações encontrado"
           />
         </TabsContent>
-        <TabsContent value="certificacoes">
-          <CertificationsDashboard />
-        </TabsContent>
+        {canViewCertifications && (
+          <TabsContent value="certificacoes">
+            <CertificationsDashboard />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

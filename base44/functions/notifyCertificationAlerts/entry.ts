@@ -31,7 +31,11 @@ export default async function (req: Request): Promise<Response> {
     }
 
     const users = await base44.asServiceRole.entities.User.list();
-    const targets = (users || []).filter((u: any) => u.role === 'operations' || u.role === 'admin');
+    const targets = (users || []).filter(
+      (u: any) =>
+        u.role === 'admin' ||
+        (Array.isArray(u.sectors) ? u.sectors : u.data?.sectors || []).includes('operations')
+    );
     if (targets.length === 0) {
       return Response.json({ notified: 0, message: 'Nenhum destinatário (Operações/Admin) para notificar' });
     }

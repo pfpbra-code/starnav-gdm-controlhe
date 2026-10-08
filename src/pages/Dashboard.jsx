@@ -83,13 +83,13 @@ export default function Dashboard() {
   const { data: vessels = [] } = useQuery({
     queryKey: ['vessels'],
     queryFn: () => base44.entities.Vessel.list(),
-    enabled: user?.role === 'admin' || user?.role === 'coordinator',
+    enabled: hasPermission('view_vessels'),
   });
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => base44.entities.Supplier.list(),
-    enabled: user?.role === 'admin' || user?.role === 'services',
+    enabled: hasPermission('view_suppliers'),
   });
 
   // KPIs reais — derivados dos itens (o status do cabeçalho da GDM é legado)
@@ -184,7 +184,7 @@ export default function Dashboard() {
     );
   }
 
-  const canViewManagerial = user?.role === 'admin' || hasPermission('view_analytics');
+  const canViewManagerial = hasPermission('view_dashboard_gerencial');
 
   return (
     <div className="space-y-8">
@@ -333,7 +333,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Stats */}
-          {(user?.role === 'admin' || user?.role === 'services') && (
+          {(hasPermission('view_vessels') || hasPermission('view_suppliers')) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="border-0 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">

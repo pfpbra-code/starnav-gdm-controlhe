@@ -65,7 +65,7 @@ export default function Vessels() {
     queryKey: ['coordinators'],
     queryFn: async () => {
       const users = await base44.entities.User.list();
-      return users.filter(u => u.role === 'coordinator');
+      return users.filter(u => u.role === 'user');
     },
   });
 

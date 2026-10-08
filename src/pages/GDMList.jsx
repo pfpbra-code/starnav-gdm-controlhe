@@ -266,7 +266,7 @@ export default function GDMList() {
               Exportar CSV
             </Button>
           )}
-          {(user?.role === 'admin' || user?.role === 'vessel_user') && (
+          {hasPermission(user, 'create_gdm') && (
             <Link to={createPageUrl('CreateGDM')}>
               <Button className="bg-sky-600 hover:bg-sky-700">
                 <Plus className="h-4 w-4 mr-2" />

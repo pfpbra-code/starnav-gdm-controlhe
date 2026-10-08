@@ -100,12 +100,8 @@ export default function CreateGDM() {
   // Filter vessels based on user role
   const availableVessels = React.useMemo(() => {
     const vesselId = user?.vessel_id ?? user?.data?.vessel_id;
-    const assigned = user?.assigned_vessels ?? user?.data?.assigned_vessels;
     if (user?.role === 'vessel_user' && vesselId) {
       return vessels.filter(v => v.id === vesselId);
-    }
-    if (user?.role === 'coordinator' && assigned) {
-      return vessels.filter(v => assigned.includes(v.id));
     }
     return vessels;
   }, [vessels, user]);

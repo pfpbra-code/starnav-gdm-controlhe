@@ -17,11 +17,15 @@ export default function VesselSectorResponsibles({ users, value = {}, onChange }
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {VESSEL_SECTORS.map(({ key, label, role }) => (
+        {VESSEL_SECTORS.map(({ key, label }) => (
           <div key={key} className="space-y-2">
             <Label className="text-sm font-medium">{label}</Label>
             <SectorResponsiblePicker
-              users={users.filter((u) => u.role === role)}
+              users={users.filter(
+                (u) =>
+                  (u.role || 'user') === 'user' &&
+                  (Array.isArray(u.sectors) ? u.sectors : u.data?.sectors || []).includes(key)
+              )}
               selected={value[key] || []}
               onChange={(emails) => onChange(key, emails)}
             />

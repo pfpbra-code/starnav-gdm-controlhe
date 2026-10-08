@@ -3,73 +3,60 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UserCog, Loader2, Check } from 'lucide-react';
+import { Loader2, UserCog, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import SectorResponsiblePicker from '@/components/settings/SectorResponsiblePicker';
+import { SECTORS } from '@/lib/permissions';
 
-const SECTORS = [
-  { key: 'maintenance', label: 'Manutenção' },
-  { key: 'operations', label: 'Operações' },
-  { key: 'services', label: 'Serviços' },
-  { key: 'almoxarifado', label: 'Almoxarifado' },
-  { key: 'planejamento', label: 'Planejamento' },
-  { key: 'coordinator', label: 'Coordenação' },
-];
+const sameEmails = (a, b) => [...a].sort().join('|') === [...b].sort().join('|');
 
-const sameEmails = (a, b) =>
-  [...a].sort().join('|') === [...b].sort().join('|');
+const userSectorsOf = (u) => (Array.isArray(u.sectors) ? u.sectors : u.data?.sectors || []);
 
 /**
- * Configuração dos usuários responsáveis por cada setor do sistema (múltiplos por setor).
- * Exclusiva do ADM (a página de Configurações já é restrita a administradores).
+ * Responsáveis por Setor — área do ADM em Configurações.
+ * Víncula usuários aos setores da empresa (fonte única das permissões
+ * básicas: cada usuário pode pertencer a um ou mais setores).
  */
 export default function SectorResponsibles() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState({});
-
-  const { data: responsibles = [] } = useQuery({
-    queryKey: ['sectorResponsibles'],
-    queryFn: () => base44.entities.SectorResponsible.list(),
-  });
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
     queryFn: () => base44.entities.User.list(),
   });
 
+  // Candidatos: usuários internos (Administrador já tem acesso total).
+  const candidates = users.filter((u) => (u.role || 'user') === 'user');
+
   useEffect(() => {
     const map = {};
     SECTORS.forEach((s) => {
-      map[s.key] = responsibles
-        .filter((r) => r.sector === s.key && r.responsible_email)
-        .map((r) => r.responsible_email);
+      map[s.key] = candidates
+        .filter((u) => userSectorsOf(u).includes(s.key))
+        .map((u) => u.email);
     });
     setSelected(map);
-  }, [responsibles]);
+  }, [users]);
 
   const saveMutation = useMutation({
     mutationFn: async ({ sector, emails }) => {
-      const existing = responsibles.filter((r) => r.sector === sector);
-      const removed = existing.filter(
-        (r) => !emails.includes(r.responsible_email)
-      );
-      const addEmails = emails.filter(
-        (e) => !existing.some((r) => r.responsible_email === e)
-      );
-      await Promise.all([
-        ...removed.map((r) => base44.entities.SectorResponsible.delete(r.id)),
-        ...addEmails.map((email) => {
-          const user = users.find((u) => u.email === email);
-          return base44.entities.SectorResponsible.create({
-            sector,
-            responsible_email: email,
-            responsible_name: user?.full_name || null,
-          });
-        }),
-      ]);
+      const updates = [];
+      for (const u of candidates) {
+        const current = userSectorsOf(u);
+        const has = current.includes(sector);
+        const want = emails.includes(u.email);
+        if (has === want) continue;
+        const sectors = want
+          ? [...new Set([...current, sector])]
+          : current.filter((s) => s !== sector);
+        updates.push(base44.entities.User.update(u.id, { sectors }));
+      }
+      await Promise.all(updates);
     },
     onSuccess: (_data, { emails }) => {
-      queryClient.invalidateQueries({ queryKey: ['sectorResponsibles'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       toast.success(
         emails.length
           ? 'Responsáveis do setor atualizados!'
@@ -87,17 +74,19 @@ export default function SectorResponsibles() {
           Responsáveis por Setor
         </CardTitle>
         <CardDescription>
-          Define os usuários responsáveis por cada setor do sistema (Manutenção,
-          Operações, Serviços, Almoxarifado, Planejamento e Coordenação). É
-          possível cadastrar mais de um responsável por setor.
+          Vincule usuários aos setores da empresa (Manutenção, Operações,
+          Almoxarifado, Planejamento e Serviços). Cada usuário pode pertencer a
+          um ou mais setores — o vínculo concede automaticamente apenas os
+          acessos básicos do setor; acessos adicionais dependem de autorização
+          individual do ADM.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {SECTORS.map((sector) => {
           const currentEmails = selected[sector.key] || [];
-          const savedEmails = responsibles
-            .filter((r) => r.sector === sector.key && r.responsible_email)
-            .map((r) => r.responsible_email);
+          const savedEmails = candidates
+            .filter((u) => userSectorsOf(u).includes(sector.key))
+            .map((u) => u.email);
           const pendingChange = !sameEmails(currentEmails, savedEmails);
           return (
             <div
@@ -106,7 +95,7 @@ export default function SectorResponsibles() {
             >
               <p className="text-sm font-semibold text-slate-700">{sector.label}</p>
               <SectorResponsiblePicker
-                users={users}
+                users={candidates}
                 selected={currentEmails}
                 onChange={(emails) =>
                   setSelected((prev) => ({ ...prev, [sector.key]: emails }))

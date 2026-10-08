@@ -1,13 +1,34 @@
 /**
  * STARNAV CONTROL 2.0 — Camada central de permissões e escopo de dados.
  *
- * Princípio: PERFIL BASE -> PERMISSÕES INDIVIDUAIS -> ESCOPO DE DADOS -> AÇÕES.
- * O perfil (role) serve apenas como identificação e configuração inicial;
- * quem decide o que o usuário pode fazer é a lista de permissões dele.
+ * Modelo reestruturado: o usuário possui apenas dois perfis no editor
+ * (Administrador e Usuário; o login próprio das Embarcações é mantido à parte).
+ * O que o usuário pode fazer vem exclusivamente de:
+ *   1. Setores vinculados em Configurações > Responsáveis por Setor
+ *      (user.sectors) — permissões básicas automáticas do setor;
+ *   2. Autorizações individuais concedidas pelo ADM (user.permissions).
+ * Não existem permissões herdadas por cargo, departamento ou perfil.
  */
 
-// Catálogo extensível de permissões, agrupado por módulo.
+// Setores da empresa — fonte única de vínculo usuário/setor.
+export const SECTORS = [
+  { key: 'maintenance', label: 'Manutenção' },
+  { key: 'operations', label: 'Operações' },
+  { key: 'almoxarifado', label: 'Almoxarifado' },
+  { key: 'planejamento', label: 'Planejamento' },
+  { key: 'services', label: 'Serviços' },
+];
+
+export const SECTOR_KEYS = SECTORS.map((s) => s.key);
+
+// Catálogo de permissões, agrupado por módulo.
 export const AVAILABLE_PERMISSIONS = [
+  // Dashboards (autorização individual — cada um é liberado isoladamente)
+  { id: "view_dashboard", label: "Dashboard Operacional", category: "Dashboards" },
+  { id: "view_dashboard_gerencial", label: "Dashboard Gerencial", category: "Dashboards" },
+  { id: "view_reliability", label: "Dashboard de Confiabilidade (MTBF/MTTR)", category: "Dashboards" },
+  { id: "view_certifications", label: "Dashboard de Certificações", category: "Dashboards" },
+
   // GDM
   { id: "view_gdm", label: "Visualizar GDM", category: "GDM" },
   { id: "view_all_gdms", label: "Visualizar todas as Guias de Desembarque", category: "GDM" },
@@ -57,7 +78,6 @@ export const AVAILABLE_PERMISSIONS = [
   { id: "issue_pwt", label: "Emitir PWT", category: "Planejamento" },
 
   // Setores (Manutenção / Operações)
-  { id: "view_dashboard", label: "Visualizar Dashboard", category: "Setores" },
   { id: "view_maintenance", label: "Acessar Manutenção", category: "Setores" },
   { id: "view_operations", label: "Acessar Operações", category: "Setores" },
   { id: "view_maintenance_quotes", label: "Cotações — Manutenção", category: "Setores" },
@@ -85,7 +105,7 @@ export const AVAILABLE_PERMISSIONS = [
   { id: "view_equipment_ranking", label: "Ranking de Equipamentos", category: "Relatórios" },
   { id: "view_critical_equipment", label: "Equipamentos Críticos", category: "Relatórios" },
 
-  // Administração
+  // Administração (exclusivas do ADM)
   { id: "manage_users", label: "Gerenciar Usuários", category: "Administração" },
   { id: "edit_users", label: "Editar Usuários", category: "Administração" },
   { id: "suspend_users", label: "Suspender/Ativar Usuários", category: "Administração" },
@@ -109,102 +129,75 @@ export const PERMISSION_CATEGORIES = AVAILABLE_PERMISSIONS.reduce((acc, p) => {
 
 export const ROLE_LABELS = {
   admin: "Administrador",
-  coordinator: "Coordenador",
-  services: "Serviços",
-  maintenance: "Manutenção",
-  operations: "Operações",
-  almoxarifado: "Almoxarifado",
-  planejamento: "Planejamento",
   vessel_user: "Embarcação",
   user: "Usuário",
 };
 
+// Funções exclusivas do Administrador — nunca concedidas automaticamente por setor.
+const ADMIN_ONLY = [
+  "manage_users",
+  "edit_users",
+  "suspend_users",
+  "reset_user_access",
+  "manage_permissions",
+  "view_audit_logs",
+  "export_audit_logs",
+  "system_settings",
+  "import_equipment",
+  "import_spreadsheet",
+  // Escrita em cadastros e exclusões seguem restritas ao ADM (RLS).
+  "manage_vessels",
+  "manage_equipment",
+  "manage_suppliers",
+  "edit_vessel_photo",
+  "delete_gdm",
+];
+
 /**
- * Presets iniciais equivalentes ao comportamento atual do sistema.
- * São aplicados apenas quando o usuário ainda não possui permissões próprias,
- * para que ninguém perca acesso durante a migração.
+ * Permissões básicas automáticas de cada setor — concedidas ao vincular o
+ * usuário ao setor em Configurações > Responsáveis por Setor. Qualquer acesso
+ * adicional depende de autorização individual do ADM.
  */
-export const ROLE_PERMISSION_PRESETS = {
-  admin: ALL_PERMISSION_IDS,
-  coordinator: [
-    "view_dashboard",
-    "view_maintenance",
-    "view_operations",
-    "view_gdm",
-    "create_gdm",
-    "edit_gdm",
-    "approve_gdm",
-    "reject_gdm",
-    "generate_gdm_pdf",
-    "view_oc",
-    "view_ot",
-    "view_vessels",
-    "view_equipment",
-    "view_suppliers",
-    "view_reports",
-    "export_reports",
-    "view_cost_reports",
-    "view_analytics",
-    "view_critical_equipment",
-  ],
-  services: [
-    "view_dashboard",
-    "view_maintenance",
-    "view_operations",
-    "view_gdm",
-    "edit_gdm",
-    "change_gdm_destination",
-    "send_to_supplier",
-    "register_warranty",
-    "generate_gdm_pdf",
-    "manage_service_treatments",
-    "view_oc",
-    "create_oc",
-    "issue_oc",
-    "approve_oc",
-    "view_ot",
-    "create_ot",
-    "issue_ot",
-    "edit_ot",
-    "confirm_return",
-    "close_ot",
-    "view_vessels",
-    "view_equipment",
-    "view_suppliers",
-    "view_reports",
-    "export_reports",
-    "view_cost_reports",
-    "view_analytics",
-    "view_supplier_ranking",
-    "view_equipment_ranking",
-    "view_critical_equipment",
-  ],
+export const SECTOR_BASE_PERMISSIONS = {
+  // Manutenção: GDMs, dashboard operacional, descarte, aba Manutenção e todas
+  // as suas funções, análise de cotações e confiabilidade (MTBF/MTTR/SN).
   maintenance: [
     "view_dashboard",
     "view_gdm",
+    "view_all_gdms",
     "generate_gdm_pdf",
+    "view_disposal_reports",
+    "generate_disposal_report",
+    "view_maintenance",
+    "view_maintenance_quotes",
+    "approve_maintenance_quote",
     "quote_analysis",
     "request_discount",
     "request_new_quote",
     "approve_maintenance",
-    "view_oc",
-    "view_ot",
-    "view_equipment",
-    "view_suppliers",
-    "view_reports",
-    "view_cost_reports",
-    "view_analytics",
-    "view_supplier_ranking",
-    "view_equipment_ranking",
-    "view_critical_equipment",
+    "view_reliability",
+  ],
+  // Operações: GDMs, dashboard operacional, descarte, aba Operações e a
+  // gestão de certificações (validade, histórico e consultas).
+  operations: [
+    "view_dashboard",
+    "view_gdm",
+    "view_all_gdms",
+    "generate_gdm_pdf",
     "view_disposal_reports",
     "generate_disposal_report",
+    "view_operations",
+    "view_operations_quotes",
+    "view_certifications",
   ],
+  // Almoxarifado: criar GDM, GDMs, aba Almoxarifado, descarte, dashboards
+  // operacional e gerencial, controle de recebimento e movimentação.
   almoxarifado: [
     "view_dashboard",
-    "view_maintenance",
-    "view_operations",
+    "view_dashboard_gerencial",
     "view_gdm",
+    "view_all_gdms",
+    "create_gdm",
     "generate_gdm_pdf",
     "confirm_receipt",
     "report_not_received",
@@ -214,43 +207,29 @@ export const ROLE_PERMISSION_PRESETS = {
     "generate_disposal_report",
     "view_ot",
     "confirm_return",
-    "view_equipment",
   ],
+  // Planejamento: dashboard operacional, descarte, aba Manutenção (consulta),
+  // emissão de PWT, confiabilidade, consulta de equipamentos e indicadores.
+  // Análise/Aprovação de cotações e Dashboard Gerencial ficam bloqueados.
   planejamento: [
     "view_dashboard",
-    "view_maintenance",
-    "view_operations",
     "view_gdm",
     "generate_gdm_pdf",
-    "issue_pwt",
-    "view_oc",
-    "view_ot",
     "view_disposal_reports",
     "generate_disposal_report",
-    "view_reports",
-    "view_cost_reports",
-    "view_analytics",
-  ],
-  vessel_user: ["view_dashboard", "view_gdm", "create_gdm", "generate_gdm_pdf"],
-  user: ["view_dashboard", "view_gdm", "generate_gdm_pdf"],
-  operations: [
-    "view_dashboard",
-    "view_gdm",
-    "generate_gdm_pdf",
-    "view_operations",
-    "view_operations_quotes",
-    "approve_operations_quote",
+    "view_maintenance",
+    "issue_pwt",
+    "view_reliability",
     "view_equipment",
-    "view_suppliers",
-    "view_reports",
-    "view_cost_reports",
     "view_analytics",
   ],
+  // Serviços: todas as funcionalidades operacionais da plataforma, exceto as
+  // funções exclusivas do Administrador.
+  services: ALL_PERMISSION_IDS.filter((id) => !ADMIN_ONLY.includes(id)),
 };
 
-export function presetLabels(role) {
-  return (ROLE_PERMISSION_PRESETS[role] || []).map((id) => PERMISSION_LABELS[id] || id);
-}
+// Permissões do login próprio das embarcações (perfil mantido à parte).
+const VESSEL_PRESET = ["view_dashboard", "view_gdm", "create_gdm", "generate_gdm_pdf"];
 
 // Campos customizados do usuário podem estar no topo ou em user.data (Base44).
 function userField(user, key) {
@@ -258,42 +237,32 @@ function userField(user, key) {
   return user?.[key] !== undefined ? user[key] : custom[key];
 }
 
-/**
- * Permissões implícitas do perfil: garantem que usuários de um setor nunca
- * percam acesso ao próprio setor, mesmo quando possuem permissões
- * individuais definidas pelo ADM.
- */
-export const ROLE_IMPLIED_PERMISSIONS = {
-  maintenance: ["view_maintenance", "view_maintenance_quotes", "approve_maintenance_quote"],
-  operations: ["view_operations", "view_operations_quotes", "approve_operations_quote"],
-  coordinator: ["view_maintenance", "view_operations"],
-  services: ["view_maintenance", "view_operations"],
-  almoxarifado: ["view_maintenance", "view_operations"],
-  planejamento: ["view_maintenance", "view_operations"],
-};
-
-const DEFAULT_IMPLIED_PERMISSIONS = ["view_dashboard"];
-
-function mergeRoleImplied(role, permissions) {
-  const implied = ROLE_IMPLIED_PERMISSIONS[role] || [];
-  return Array.from(
-    new Set([...permissions, ...implied, ...DEFAULT_IMPLIED_PERMISSIONS]),
-  );
+/** Setores vinculados ao usuário (Configurações > Responsáveis por Setor). */
+export function userSectors(user) {
+  const sectors = userField(user, "sectors");
+  return Array.isArray(sectors) ? sectors.filter((s) => SECTOR_KEYS.includes(s)) : [];
 }
 
-/** Permissões efetivas do usuário (admin sempre tem tudo). */
+/** Permissões concedidas automaticamente pelos setores do usuário. */
+export function sectorBasePermissions(user) {
+  if (user?.role === "admin") return ALL_PERMISSION_IDS;
+  if (user?.role === "vessel_user") return [...VESSEL_PRESET];
+  return userSectors(user).flatMap((s) => SECTOR_BASE_PERMISSIONS[s] || []);
+}
+
+/**
+ * Permissões efetivas do usuário:
+ * setores (base automática) + autorizações individuais do ADM.
+ * O ADM tem acesso total; sem heranças por cargo, departamento ou perfil.
+ */
 export function effectivePermissions(user) {
   if (!user) return [];
   if (user.role === "admin") return ALL_PERMISSION_IDS;
+  if (user.role === "vessel_user") return [...VESSEL_PRESET];
   const own = Array.isArray(userField(user, "permissions"))
     ? userField(user, "permissions").filter(Boolean)
     : [];
-  const base =
-    own.length > 0 ? own : (ROLE_PERMISSION_PRESETS[user.role] || ROLE_PERMISSION_PRESETS.user);
-  const merged = mergeRoleImplied(user.role, base);
-  // Quem vê todas as Guias de Desembarque também precisa abrir os detalhes.
-  if (merged.includes("view_all_gdms")) merged.push("view_gdm");
-  return merged;
+  return Array.from(new Set([...sectorBasePermissions(user), ...own]));
 }
 
 export function hasPermission(user, permission) {
@@ -323,7 +292,6 @@ export function allowedVesselIds(user) {
   const vesselId = userField(user, "vessel_id");
   const assigned = userField(user, "assigned_vessels");
   if (user.role === "vessel_user") return vesselId ? [vesselId] : [];
-  if (user.role === "coordinator") return assigned || [];
   if (Array.isArray(assigned) && assigned.length > 0) {
     return assigned;
   }
@@ -343,11 +311,7 @@ export function scopeGdms(user, gdms = []) {
 }
 
 // ---------------------------------------------------------------------------
-// Módulos (usado pela sidebar e pelas rotas)
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Setores (Manutenção / Operações)
+// Setores (Manutenção / Operações) — escopo dos itens por destino
 // ---------------------------------------------------------------------------
 
 /** Destinos de item que pertencem a cada setor. */
@@ -367,6 +331,10 @@ export function itemSector(destination) {
 export function sectorViewPermission(sector) {
   return sector === "operations" ? "view_operations" : "view_maintenance";
 }
+
+// ---------------------------------------------------------------------------
+// Módulos (usado pela sidebar e pelas rotas)
+// ---------------------------------------------------------------------------
 
 /** Permissão mínima exigida por página. null = sempre liberado. */
 export const MODULE_PERMISSIONS = {

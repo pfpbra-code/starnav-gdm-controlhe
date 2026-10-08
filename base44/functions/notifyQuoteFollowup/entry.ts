@@ -27,9 +27,11 @@ export default async function (req: Request): Promise<Response> {
       if (!reference || now - new Date(reference).getTime() < THREE_DAYS_MS) continue;
 
       // Notifica apenas usuários ativos do setor de Serviços.
-      const servicesUsers =
-        (await base44.asServiceRole.entities.User.filter({ role: 'services' })) || [];
-      const activeUsers = servicesUsers.filter((u: any) => !u.status || u.status === 'active');
+      const allUsers = (await base44.asServiceRole.entities.User.list()) || [];
+      const activeUsers = allUsers.filter((u: any) => {
+        const sectors = Array.isArray(u.sectors) ? u.sectors : u.data?.sectors || [];
+        return sectors.includes('services') && (!u.status || u.status === 'active');
+      });
 
       for (const u of activeUsers) {
         await base44.asServiceRole.entities.Notification.create({

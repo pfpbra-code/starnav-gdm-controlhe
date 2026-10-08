@@ -6,19 +6,25 @@
       "type": "string",
       "enum": [
         "admin",
-        "coordinator",
-        "services",
-        "maintenance",
-        "operations",
-        "almoxarifado",
-        "planejamento",
-        "vessel_user",
-        "user"
+        "user",
+        "vessel_user"
       ],
-      "default": "user"
+      "default": "user",
+      "description": "Perfil: Administrador ou Usu\u00e1rio (o login pr\u00f3prio das Embarca\u00e7\u00f5es \u00e9 mantido \u00e0 parte)"
     },
-    "department": {
-      "type": "string"
+    "sectors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "maintenance",
+          "operations",
+          "almoxarifado",
+          "planejamento",
+          "services"
+        ]
+      },
+      "description": "Setores vinculados ao usu\u00e1rio em Configura\u00e7\u00f5es > Respons\u00e1veis por Setor (fonte \u00fanica das permiss\u00f5es b\u00e1sicas)"
     },
     "status": {
       "type": "string",
@@ -43,7 +49,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Permiss\u00f5es espec\u00edficas al\u00e9m do role"
+      "description": "Autoriza\u00e7\u00f5es individuais concedidas pelo ADM, al\u00e9m das permiss\u00f5es b\u00e1sicas dos setores"
     },
     "photo_url": {
       "type": "string",

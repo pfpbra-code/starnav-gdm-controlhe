@@ -37,25 +37,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import UserActivityLog from '@/components/users/UserActivityLog';
 import UserPermissions from '@/components/users/UserPermissions';
 
+import { SECTORS } from '@/lib/permissions';
+
 const roleLabels = {
   admin: "Administrador",
-  coordinator: "Coordenador",
-  services: "Serviços",
-  maintenance: "Manutenção",
-  operations: "Operações",
-  vessel_user: "Embarcação",
-  user: "Usuário"
+  user: "Usuário",
+  vessel_user: "Embarcação"
 };
 
 const roleColors = {
   admin: "bg-red-100 text-red-800",
-  coordinator: "bg-blue-100 text-blue-800",
-  services: "bg-green-100 text-green-800",
-  maintenance: "bg-amber-100 text-amber-800",
-  operations: "bg-orange-100 text-orange-800",
-  vessel_user: "bg-sky-100 text-sky-800",
-  user: "bg-gray-100 text-gray-800"
+  user: "bg-gray-100 text-gray-800",
+  vessel_user: "bg-sky-100 text-sky-800"
 };
+
+const SECTOR_LABELS = Object.fromEntries(SECTORS.map((s) => [s.key, s.label]));
+const userSectorsOf = (u) => (Array.isArray(u.sectors) ? u.sectors : u.data?.sectors || []);
 
 export default function Users() {
   const queryClient = useQueryClient();
@@ -70,7 +67,6 @@ export default function Users() {
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
   const [editFormData, setEditFormData] = useState({
     role: '',
-    department: '',
     status: 'active',
     assigned_vessels: []
   });
@@ -127,7 +123,6 @@ export default function Users() {
     setEditingUser(null);
     setEditFormData({
       role: '',
-      department: '',
       status: 'active',
       assigned_vessels: []
     });
@@ -137,7 +132,6 @@ export default function Users() {
     setEditingUser(user);
     setEditFormData({
       role: user.role || 'user',
-      department: user.department || '',
       status: user.status || 'active',
       assigned_vessels: user.assigned_vessels || [],
       vessel_id: user.vessel_id || ''
@@ -262,14 +256,14 @@ export default function Users() {
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead>Usuário</TableHead>
-              <TableHead>Perfil</TableHead>
-              <TableHead>Departamento</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Permissões</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
+          <TableRow className="bg-slate-50">
+          <TableHead>Usuário</TableHead>
+          <TableHead>Perfil</TableHead>
+          <TableHead>Setores</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Autorizações</TableHead>
+          <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
           </TableHeader>
           <TableBody>
             {filteredUsers.map((user) => {
@@ -301,9 +295,21 @@ export default function Users() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {user.department ? (
-                      <span className="capitalize">{user.department}</span>
-                    ) : '-'}
+                    {userSectorsOf(user).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {userSectorsOf(user).map((key) => (
+                          <Badge
+                            key={key}
+                            variant="outline"
+                            className="bg-sky-50 text-sky-700 border-sky-200 text-[10px]"
+                          >
+                            {SECTOR_LABELS[key] || key}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-sm">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={user.status || 'active'} />
@@ -408,11 +414,8 @@ export default function Users() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">Usuário</SelectItem>
-                  <SelectItem value="coordinator">Coordenador</SelectItem>
-                  <SelectItem value="services">Serviços</SelectItem>
-                  <SelectItem value="maintenance">Manutenção</SelectItem>
-                  <SelectItem value="operations">Operações</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="vessel_user">Embarcação</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -461,61 +464,14 @@ export default function Users() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(roleLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
+                    <SelectItem value="user">Usuário</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                    {editFormData.role === 'vessel_user' && (
+                      <SelectItem value="vessel_user">Embarcação</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-2">
-                <Label>Departamento</Label>
-                <Select
-                  value={editFormData.department}
-                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, department: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="services">Serviços</SelectItem>
-                    <SelectItem value="maintenance">Manutenção</SelectItem>
-                    <SelectItem value="coordination">Coordenação</SelectItem>
-                    <SelectItem value="admin">Administração</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {editFormData.role === 'coordinator' && (
-                <div className="space-y-2">
-                  <Label>Embarcações Atribuídas</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                    {vessels.map((vessel) => (
-                      <label key={vessel.id} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editFormData.assigned_vessels?.includes(vessel.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setEditFormData(prev => ({
-                                ...prev,
-                                assigned_vessels: [...(prev.assigned_vessels || []), vessel.id]
-                              }));
-                            } else {
-                              setEditFormData(prev => ({
-                                ...prev,
-                                assigned_vessels: prev.assigned_vessels?.filter(id => id !== vessel.id) || []
-                              }));
-                            }
-                          }}
-                          className="rounded"
-                        />
-                        <span className="text-sm">{vessel.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {editFormData.role === 'vessel_user' && (
                 <div className="space-y-2">

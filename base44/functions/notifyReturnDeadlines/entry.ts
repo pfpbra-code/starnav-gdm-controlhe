@@ -43,7 +43,10 @@ export default async function (req: Request): Promise<Response> {
 
     // Destinatários: usuários do setor de Serviços.
     const users = await base44.asServiceRole.entities.User.list();
-    const servicesUsers = (users || []).filter((u: any) => u.role === 'services');
+    const servicesUsers = (users || []).filter((u: any) => {
+      const sectors = Array.isArray(u.sectors) ? u.sectors : u.data?.sectors || [];
+      return sectors.includes('services');
+    });
     if (servicesUsers.length === 0) {
       return Response.json({ notified: 0, message: 'Nenhum usuário de Serviços para notificar' });
     }
