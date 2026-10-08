@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -20,8 +20,24 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Plus, Building2, Edit, Trash2, Lock, Upload } from 'lucide-react';
+import { Search, Plus, Building2, Edit, Trash2, Lock, Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+// Lote de exibição da rolagem infinita
+const PAGE_SIZE = 20;
+// Especialidades disponíveis para filtro
+const FILTER_CATEGORIES = [
+  'Reparo',
+  'Certificação',
+  'Calibração',
+  'Elétrica',
+  'Mecânica',
+  'Instrumentação',
+  'Motores',
+  'Radiadores',
+  'Automação',
+];
 
 /**
  * Fornecedores — centro interno de controle e rastreabilidade.
@@ -35,6 +51,9 @@ export default function Suppliers() {
   const canManage = hasPermission('manage_suppliers');
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -99,16 +118,60 @@ export default function Suppliers() {
     onError: () => toast.error('Erro ao remover fornecedor'),
   });
 
-  const filteredStats = stats.filter((row) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    const s = row.supplier;
-    return (
-      s.company_name?.toLowerCase().includes(term) ||
-      s.trading_name?.toLowerCase().includes(term) ||
-      s.cnpj?.includes(term)
+  // Filtro por pesquisa (nome, razão social, CNPJ, cidade, especialidade, contato)
+  // e por especialidade, com ordenação alfabética
+  const filteredStats = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+    const termDigits = term.replace(/\D/g, '');
+    return stats
+      .filter((row) => {
+        const s = row.supplier;
+        const matchesSearch =
+          !term ||
+          s.company_name?.toLowerCase().includes(term) ||
+          s.trading_name?.toLowerCase().includes(term) ||
+          (termDigits && (s.cnpj || '').replace(/\D/g, '').includes(termDigits)) ||
+          s.address?.toLowerCase().includes(term) ||
+          (s.categories || []).join(' ').toLowerCase().includes(term) ||
+          s.contact_name?.toLowerCase().includes(term);
+        const matchesCategory =
+          selectedCategory === 'all' ||
+          (selectedCategory === 'Outros'
+            ? (s.categories || []).length === 0 ||
+              FILTER_CATEGORIES.every((c) => !(s.categories || []).includes(c))
+            : (s.categories || []).includes(selectedCategory));
+        return matchesSearch && matchesCategory;
+      })
+      .sort((a, b) => {
+        const an = (a.supplier.trading_name || a.supplier.company_name || '').toLowerCase();
+        const bn = (b.supplier.trading_name || b.supplier.company_name || '').toLowerCase();
+        return an.localeCompare(bn, 'pt-BR');
+      });
+  }, [stats, searchTerm, selectedCategory]);
+
+  // Nova consulta -> volta a exibir apenas o primeiro lote
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchTerm, selectedCategory]);
+
+  // Rolagem infinita: ao aproximar do fim da lista, exibe mais 20 registros
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredStats.length));
+        }
+      },
+      { rootMargin: '200px' }
     );
-  });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [filteredStats.length, visibleCount]);
+
+  const visibleStats = filteredStats.slice(0, visibleCount);
+  const hasActiveFilter = !!searchTerm.trim() || selectedCategory !== 'all';
 
   if (isLoading) {
     return (
@@ -172,17 +235,45 @@ export default function Suppliers() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Buscar por razão social, nome fantasia ou CNPJ..."
+              placeholder="Buscar por nome, razão social, CNPJ, cidade ou especialidade..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
             />
+          </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {['all', ...FILTER_CATEGORIES, 'Outros'].map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setSelectedCategory(c)}
+                className={cn(
+                  'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                  selectedCategory === c
+                    ? 'bg-sky-600 text-white border-sky-600'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-sky-400 hover:text-sky-700'
+                )}
+              >
+                {c === 'all' ? 'Todas as especialidades' : c}
+              </button>
+            ))}
           </div>
         </CardContent>
       </Card>
 
       {/* Tabela de fornecedores */}
       <Card className="border-0 shadow-sm overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+          <p className="text-sm text-slate-600">
+            Mostrando{' '}
+            <span className="font-semibold text-slate-900">
+              {Math.min(visibleCount, filteredStats.length)}
+            </span>{' '}
+            de <span className="font-semibold text-slate-900">{filteredStats.length}</span>{' '}
+            {hasActiveFilter ? 'fornecedores encontrados na pesquisa' : 'fornecedores'}{' '}
+            <span className="text-slate-400">({suppliers.length} cadastrados)</span>
+          </p>
+        </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -198,7 +289,7 @@ export default function Suppliers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredStats.map((row) => (
+              {visibleStats.map((row) => (
                 <TableRow
                   key={row.supplier.id}
                   className="cursor-pointer hover:bg-slate-50"
@@ -290,6 +381,12 @@ export default function Suppliers() {
               )}
             </TableBody>
           </Table>
+          {visibleCount < filteredStats.length && (
+            <div ref={sentinelRef} className="flex items-center justify-center gap-2 py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-sky-600" />
+              <span className="text-sm text-slate-500">Carregando mais fornecedores...</span>
+            </div>
+          )}
         </div>
       </Card>
 
