@@ -197,6 +197,7 @@ export function buildSnRecords(items = [], equipmentList = [], gdms = [], now = 
         trend: { reductionPercent, shrinking },
         inRepairNow: events.some((c) => c.active),
         activeSupplier: events.find((c) => c.active)?.supplier || null,
+        activeGdmNumber: gdmById[events.find((c) => c.active)?.item?.gdm_id]?.gdm_number || null,
       };
     })
     .sort((a, b) => b.disembarkCount - a.disembarkCount || b.totalCost - a.totalCost);

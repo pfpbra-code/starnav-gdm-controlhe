@@ -69,7 +69,9 @@ export default function SnReliabilityTable({ records, onSelect }) {
                   {r.inRepairNow ? (
                     <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 gap-1">
                       <Minus className="h-3 w-3" />
-                      Em reparo{r.activeSupplier ? ` — ${r.activeSupplier}` : ""}
+                      Em reparo
+                      {r.activeGdmNumber ? ` — ${r.activeGdmNumber}` : ""}
+                      {r.activeSupplier ? ` (${r.activeSupplier})` : ""}
                     </Badge>
                   ) : (
                     <Badge className="bg-green-100 text-green-800 hover:bg-green-100">

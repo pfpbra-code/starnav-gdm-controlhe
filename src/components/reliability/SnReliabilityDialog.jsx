@@ -62,7 +62,9 @@ export default function SnReliabilityDialog({ record, gdmById, onClose }) {
             <span>{record.equipmentName}</span>
             {record.inRepairNow ? (
               <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                Em reparo{record.activeSupplier ? ` — ${record.activeSupplier}` : ""}
+                Em reparo
+                {record.activeGdmNumber ? ` — ${record.activeGdmNumber}` : ""}
+                {record.activeSupplier ? ` (${record.activeSupplier})` : ""}
               </Badge>
             ) : (
               <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Em operação</Badge>
