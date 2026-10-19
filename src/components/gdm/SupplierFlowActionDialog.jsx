@@ -24,6 +24,8 @@ import PhotoUrlField from './PhotoUrlField';
 import { Loader2, CheckCircle2, Percent, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ITEM_DESTINATION_LABELS, ITEM_STATUS_LABELS } from '@/lib/gdmItems';
+import { useSigner, createSignatureRecord } from '@/lib/signatures';
+import SignatureConfirmStep from '@/components/signature/SignatureConfirmStep';
 
 /**
  * Diálogo das ações do ciclo de fornecedor (fluxo por item):
@@ -57,6 +59,8 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   const [receiptNfUrl, setReceiptNfUrl] = useState('');
   const [laudoUrl, setLaudoUrl] = useState('');
   const [observation, setObservation] = useState('');
+  const { signatureUrl } = useSigner();
+  const [signatureChecked, setSignatureChecked] = useState(false);
 
   useEffect(() => {
     setSupplierId('');
@@ -79,6 +83,7 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     setReceiptNfUrl('');
     setLaudoUrl('');
     setObservation('');
+    setSignatureChecked(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending]);
 
@@ -90,8 +95,16 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   });
 
   const actionMutation = useMutation({
-    mutationFn: (payload) =>
-      base44.functions.invoke('gdmItemAction', payload).then((res) => res.data),
+    mutationFn: async (payload) => {
+      await createSignatureRecord({
+        action,
+        actionLabel: pending?.label,
+        item,
+        justification: observation,
+        details: payload,
+      });
+      return base44.functions.invoke('gdmItemAction', payload).then((res) => res.data);
+    },
     onSuccess: () => {
       toast.success('Ação registrada');
       queryClient.invalidateQueries({ queryKey: ['gdmItems'] });
@@ -147,6 +160,7 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
 
   const disabled =
     actionMutation.isPending ||
+    !signatureChecked ||
     (needsSupplier && (!supplierId || !expectedShipDate)) ||
     (action === 'attach_shipping_proof' && (!nfUrl || !photoUrl)) ||
     (action === 'attach_quote' && (!quoteUrl || !quoteValue || !quoteDeadline || !warrantyDays)) ||
@@ -608,6 +622,12 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
             </div>
           )}
         </div>
+
+        <SignatureConfirmStep
+          signatureUrl={signatureUrl}
+          checked={signatureChecked}
+          onChange={setSignatureChecked}
+        />
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

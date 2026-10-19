@@ -16,6 +16,20 @@ export default function ItemHistoryTimeline({ itemId }) {
     enabled: !!itemId,
   });
 
+  const { data: signatures = [] } = useQuery({
+    queryKey: ['itemSignatures', itemId],
+    queryFn: () => base44.entities.Signature.filter({ item_id: itemId }, '-signed_at'),
+    enabled: !!itemId,
+  });
+
+  const findSignature = (h) =>
+    signatures.find(
+      (s) =>
+        s.action === h.action &&
+        s.user_email === h.user_email &&
+        Math.abs(new Date(s.signed_at) - new Date(h.created_date)) < 3 * 60 * 1000
+    );
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -47,6 +61,22 @@ export default function ItemHistoryTimeline({ itemId }) {
           {h.observation && (
             <p className="text-[11px] text-slate-600 mt-0.5 italic">"{h.observation}"</p>
           )}
+          {(() => {
+            const sig = findSignature(h);
+            if (!sig) return null;
+            return (
+              <div className="mt-1.5 inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1">
+                <img
+                  src={sig.signature_url}
+                  alt={`Assinatura de ${sig.user_name || sig.user_email}`}
+                  className="h-8 object-contain object-left"
+                />
+                <span className="text-[10px] text-slate-400">
+                  Assinado eletronicamente por {sig.user_name || sig.user_email}
+                </span>
+              </div>
+            );
+          })()}
         </li>
       ))}
     </ol>

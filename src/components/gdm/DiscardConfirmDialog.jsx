@@ -25,6 +25,8 @@ import {
   DISPOSAL_ATTACHMENT_TYPE_LABELS,
 } from '@/lib/discardEvidence';
 import { compressImage } from '@/lib/gdmPhotos';
+import { useSigner, createSignatureRecord } from '@/lib/signatures';
+import SignatureConfirmStep from '@/components/signature/SignatureConfirmStep';
 
 /**
  * Confirmação final do descarte (Almoxarifado): exige data, responsável e
@@ -38,6 +40,8 @@ export default function DiscardConfirmDialog({ pending, onClose }) {
   const [observation, setObservation] = useState('');
   const [files, setFiles] = useState([]);
   const [fileError, setFileError] = useState('');
+  const { signatureUrl } = useSigner();
+  const [signatureChecked, setSignatureChecked] = useState(false);
   const cameraInputRef = useRef(null);
 
   const item = pending?.item;
@@ -53,6 +57,7 @@ export default function DiscardConfirmDialog({ pending, onClose }) {
     setObservation('');
     setFiles([]);
     setFileError('');
+    setSignatureChecked(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending]);
 
@@ -83,6 +88,12 @@ export default function DiscardConfirmDialog({ pending, onClose }) {
 
   const confirmMutation = useMutation({
     mutationFn: async () => {
+      await createSignatureRecord({
+        action: 'confirm_discard',
+        actionLabel: pending?.label || 'Confirmar descarte realizado',
+        item,
+        justification: observation,
+      });
       const uploaded = await uploadDisposalFiles(files, item, user);
       const res = await base44.functions
         .invoke('gdmItemAction', {
@@ -112,6 +123,7 @@ export default function DiscardConfirmDialog({ pending, onClose }) {
   const justificationRequired = !hasEvidence;
   const disabled =
     confirmMutation.isPending ||
+    !signatureChecked ||
     !discardDate ||
     !responsible.trim() ||
     (justificationRequired && !observation.trim());
@@ -249,6 +261,12 @@ export default function DiscardConfirmDialog({ pending, onClose }) {
             )}
           </div>
         </div>
+
+        <SignatureConfirmStep
+          signatureUrl={signatureUrl}
+          checked={signatureChecked}
+          onChange={setSignatureChecked}
+        />
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={confirmMutation.isPending}>

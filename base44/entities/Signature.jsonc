@@ -1,0 +1,101 @@
+{
+  "name": "Signature",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que assinou"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "E-mail do usu\u00e1rio que assinou"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que assinou"
+    },
+    "user_job_title": {
+      "type": "string",
+      "description": "Cargo/fun\u00e7\u00e3o do usu\u00e1rio no momento da assinatura"
+    },
+    "signature_url": {
+      "type": "string",
+      "description": "Imagem da assinatura eletr\u00f4nica do usu\u00e1rio no momento da a\u00e7\u00e3o"
+    },
+    "action": {
+      "type": "string",
+      "description": "Chave da a\u00e7\u00e3o assinada (approve, reject, confirm_discard, ...)"
+    },
+    "action_label": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o da a\u00e7\u00e3o assinada, exibida no hist\u00f3rico"
+    },
+    "gdm_id": {
+      "type": "string",
+      "description": "ID da GDM vinculada"
+    },
+    "gdm_number": {
+      "type": "string",
+      "description": "N\u00famero da GDM vinculada"
+    },
+    "item_id": {
+      "type": "string",
+      "description": "ID do item da GDM vinculado \u00e0 assinatura"
+    },
+    "item_number": {
+      "type": "number",
+      "description": "N\u00famero do item dentro da GDM"
+    },
+    "equipment_name": {
+      "type": "string",
+      "description": "Nome do equipamento do item assinado"
+    },
+    "serial_number": {
+      "type": "string",
+      "description": "N\u00famero de s\u00e9rie (SN) do item assinado"
+    },
+    "vessel_name": {
+      "type": "string",
+      "description": "Nome da embarca\u00e7\u00e3o do item assinado"
+    },
+    "justification": {
+      "type": "string",
+      "description": "Justificativa/motivo informado na assinatura, quando aplic\u00e1vel"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "Endere\u00e7o IP do usu\u00e1rio no momento da assinatura (quando dispon\u00edvel)"
+    },
+    "details": {
+      "type": "object",
+      "description": "Dados adicionais da a\u00e7\u00e3o assinada (valores, n\u00fameros de documentos, decis\u00f5es)"
+    },
+    "signed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e hora da assinatura eletr\u00f4nica"
+    }
+  },
+  "required": [
+    "user_id",
+    "action",
+    "action_label",
+    "signature_url"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

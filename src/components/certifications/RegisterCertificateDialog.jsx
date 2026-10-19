@@ -26,6 +26,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ITEM_STATUS_LABELS } from '@/lib/gdmItems';
 import { computeExpiryIso } from '@/lib/certifications';
+import { useSigner, createSignatureRecord } from '@/lib/signatures';
+import SignatureConfirmStep from '@/components/signature/SignatureConfirmStep';
 
 /**
  * Registro do certificado de calibração/certificação do item (Operações).
@@ -48,6 +50,8 @@ export default function RegisterCertificateDialog({ item, onClose }) {
   const [validityDate, setValidityDate] = useState('');
   const [validityMonths, setValidityMonths] = useState('');
   const [observations, setObservations] = useState('');
+  const { signatureUrl } = useSigner();
+  const [signatureChecked, setSignatureChecked] = useState(false);
 
   const { data: itemCerts = [] } = useQuery({
     queryKey: ['itemCertifications', item?.id],
@@ -67,8 +71,18 @@ export default function RegisterCertificateDialog({ item, onClose }) {
   }, [itemCerts, isValidityStep]);
 
   const actionMutation = useMutation({
-    mutationFn: (payload) =>
-      base44.functions.invoke('gdmItemAction', payload).then((res) => res.data),
+    mutationFn: async (payload) => {
+      await createSignatureRecord({
+        action: 'register_certificate',
+        actionLabel: isValidityStep
+          ? 'Cadastrar validade da certificação'
+          : 'Registrar certificado',
+        item,
+        justification: observations,
+        details: payload,
+      });
+      return base44.functions.invoke('gdmItemAction', payload).then((res) => res.data);
+    },
     onSuccess: (_data, variables) => {
       const completed = !!(variables.validity_date || variables.validity_months);
       toast.success(
@@ -232,6 +246,12 @@ export default function RegisterCertificateDialog({ item, onClose }) {
           </div>
         </div>
 
+        <SignatureConfirmStep
+          signatureUrl={signatureUrl}
+          checked={signatureChecked}
+          onChange={setSignatureChecked}
+        />
+
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={onClose}>
             Cancelar
@@ -239,13 +259,13 @@ export default function RegisterCertificateDialog({ item, onClose }) {
           {!isValidityStep && (
             <Button
               variant="outline"
-              disabled={!canSavePartial || actionMutation.isPending}
+              disabled={!signatureChecked || !canSavePartial || actionMutation.isPending}
               onClick={() => submit(false)}
             >
               Salvar sem validade
             </Button>
           )}
-          <Button disabled={!canComplete || actionMutation.isPending} onClick={() => submit(true)}>
+          <Button disabled={!signatureChecked || !canComplete || actionMutation.isPending} onClick={() => submit(true)}>
             {actionMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Registrar e concluir
           </Button>

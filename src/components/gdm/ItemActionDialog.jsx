@@ -23,6 +23,8 @@ import {
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ITEM_DESTINATION_LABELS, ITEM_DESTINATION_OPTIONS } from '@/lib/gdmItems';
+import { useSigner, createSignatureRecord } from '@/lib/signatures';
+import SignatureConfirmStep from '@/components/signature/SignatureConfirmStep';
 
 /**
  * Modal rápido de ação sobre um item — executa a mesma função gdmItemAction
@@ -36,6 +38,8 @@ export default function ItemActionDialog({ pending, onClose }) {
   const [supplierId, setSupplierId] = useState('');
   const [expectedDate, setExpectedDate] = useState('');
   const [destination, setDestination] = useState('');
+  const { signatureUrl } = useSigner();
+  const [signatureChecked, setSignatureChecked] = useState(false);
 
   const item = pending?.item;
   const action = pending?.action;
@@ -46,6 +50,7 @@ export default function ItemActionDialog({ pending, onClose }) {
     setSupplierId('');
     setExpectedDate('');
     setDestination(item?.destination || '');
+    setSignatureChecked(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending]);
 
@@ -64,8 +69,14 @@ export default function ItemActionDialog({ pending, onClose }) {
   });
 
   const actionMutation = useMutation({
-    mutationFn: () =>
-      base44.functions
+    mutationFn: async () => {
+      await createSignatureRecord({
+        action,
+        actionLabel: pending?.label,
+        item,
+        justification: observation,
+      });
+      return base44.functions
         .invoke('gdmItemAction', {
           item_id: item.id,
           action,
@@ -78,7 +89,8 @@ export default function ItemActionDialog({ pending, onClose }) {
             ? suppliers.find((s) => s.id === supplierId)?.company_name
             : undefined,
         })
-        .then((res) => res.data),
+        .then((res) => res.data);
+    },
     onSuccess: () => {
       toast.success('Ação registrada');
       queryClient.invalidateQueries({ queryKey: ['gdmItems'] });
@@ -92,6 +104,7 @@ export default function ItemActionDialog({ pending, onClose }) {
 
   const disabled =
     actionMutation.isPending ||
+    !signatureChecked ||
     (reasonRequired && !observation.trim()) ||
     (isApproval && !destination) ||
     (needsSupplier && !supplierId) ||
@@ -198,6 +211,12 @@ export default function ItemActionDialog({ pending, onClose }) {
             />
           </div>
         </div>
+
+        <SignatureConfirmStep
+          signatureUrl={signatureUrl}
+          checked={signatureChecked}
+          onChange={setSignatureChecked}
+        />
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

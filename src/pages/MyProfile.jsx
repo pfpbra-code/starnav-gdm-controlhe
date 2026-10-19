@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/hooks/usePermissions';
 import { ROLE_LABELS } from '@/lib/permissions';
 import ProfileEditForm from '@/components/profile/ProfileEditForm';
+import SignatureSection from '@/components/profile/SignatureSection';
 import { toast } from 'sonner';
 import { Ship, Bell, Mail, Briefcase, Phone, Camera, Loader2 } from 'lucide-react';
 
@@ -195,6 +196,8 @@ export default function MyProfile() {
           </CardContent>
         </Card>
       </div>
+
+      <SignatureSection user={user} />
     </div>
   );
 }
