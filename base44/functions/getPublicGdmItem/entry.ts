@@ -93,8 +93,7 @@ export default async function (req: Request): Promise<Response> {
       caption: p.caption || null,
       category: p.category,
       taken_at: p.taken_at,
-      registered_by: p.registered_by || null,
-    });
+      });
 
     return Response.json({
       photos: (itemPhotos || []).map(mapPhoto),

@@ -321,8 +321,18 @@ export default function RepairControlPanel() {
                 <TableBody>
                   {rows.map(({ item, gdm }) => {
                     const warranty = warrantyInfo(item);
+                    // Cotações do ciclo atual: fornecedor vigente E registradas
+                    // após a definição do fornecedor (evita misturar ciclos do
+                    // mesmo fornecedor — a economia sempre compara dentro do ciclo).
+                    const cycleStart = item.supplier_selected_at
+                      ? new Date(item.supplier_selected_at).getTime()
+                      : null;
                     const cycleQuotes = (item.quotes_history || []).filter(
-                      (q) => q.supplier_id === item.supplier_id,
+                      (q) =>
+                        q.supplier_id === item.supplier_id &&
+                        (!cycleStart ||
+                          !q.registered_at ||
+                          new Date(q.registered_at).getTime() >= cycleStart),
                     );
                     const initialValue = cycleQuotes.length
                       ? cycleQuotes[0].quote_value
@@ -377,7 +387,7 @@ export default function RepairControlPanel() {
                           </span>
                           <span className="block text-xs text-slate-500">
                             {item.discount_percentage
-                              ? `Desconto: ${item.discount_percentage}%`
+                              ? `Desconto solicitado: ${item.discount_percentage}%`
                               : 'Sem desconto'}
                           </span>
                           <span className="block text-xs font-medium text-slate-700">

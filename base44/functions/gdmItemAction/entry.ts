@@ -249,6 +249,9 @@ export default async function (req: Request): Promise<Response> {
       extra.sent_by = null;
       extra.quote_due_at = null;
       extra.quote_followup_notified_at = null;
+      // A guarda de alerta de prazo é por ciclo: sem a limpeza, o alerta de
+      // retorno nunca dispararia nos ciclos seguintes do mesmo item.
+      extra.return_deadline_notified_at = null;
       extra.quote_value = null;
       extra.quote_document_url = null;
       extra.quote_deadline = null;

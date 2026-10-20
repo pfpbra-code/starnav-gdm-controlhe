@@ -108,9 +108,18 @@ export default function NegotiationSavings({ gdms = [] }) {
     items.forEach((item) => {
       if (!['repair', 'certification'].includes(item.destination)) return;
       const history = Array.isArray(item.quotes_history) ? item.quotes_history : [];
-      // Cotações do ciclo atual (fornecedor vigente do item).
+      // Cotações do ciclo atual: fornecedor vigente E registradas após a
+      // definição do fornecedor — evita misturar ciclos do mesmo fornecedor.
+      const cycleStart = item.supplier_selected_at
+        ? new Date(item.supplier_selected_at).getTime()
+        : null;
       const cycleQuotes = history.filter(
-        (q) => q.supplier_id === item.supplier_id && q.quote_value != null,
+        (q) =>
+          q.supplier_id === item.supplier_id &&
+          q.quote_value != null &&
+          (!cycleStart ||
+            !q.registered_at ||
+            new Date(q.registered_at).getTime() >= cycleStart),
       );
       if (!cycleQuotes.length) return;
 
