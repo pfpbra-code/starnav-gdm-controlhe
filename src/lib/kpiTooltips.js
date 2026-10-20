@@ -89,6 +89,44 @@ export const DASHBOARD_TOOLTIPS = {
   },
 };
 
+/* ---------- Visão geral de GDMs (GDMOverviewKpis) ---------- */
+export const GDM_OVERVIEW_TOOLTIPS = {
+  totalGdms: {
+    conceito: "Quantidade total de GDMs registradas no sistema, do desembarque até a conclusão.",
+    origem: "Guias de Desembarque de Materiais (GDM), considerando os filtros aplicados.",
+    periodicidade: TEMPO_REAL,
+  },
+  totalItems: {
+    conceito: "Equipamentos desembarcados, contabilizados individualmente por item de GDM.",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
+  inMaintenance: {
+    conceito:
+      "GDMs com pelo menos um item em andamento no fluxo atendido pela Manutenção (reparo, descarte ou retorno ao estoque).",
+    objetivo: "Medir o volume de guias sob responsabilidade do setor de Manutenção.",
+    origem: "Itens das GDMs e seus destinos (reparo, descarte e retorno ao estoque).",
+    periodicidade: TEMPO_REAL,
+  },
+  inOperations: {
+    conceito:
+      "GDMs com pelo menos um item em andamento no fluxo atendido pelas Operações (certificação ou calibração).",
+    objetivo: "Medir o volume de guias sob responsabilidade do setor de Operações.",
+    origem: "Itens das GDMs com destino de certificação/calibração.",
+    periodicidade: TEMPO_REAL,
+  },
+  pendingApproval: {
+    conceito: "GDMs com itens aguardando validação do destino e aprovação do coordenador.",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
+  completed: {
+    conceito: "GDMs em que todos os itens concluíram o fluxo (reparo, calibração, descarte ou retorno ao estoque).",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
+};
+
 /* ---------- Painel de custos com reparos (RepairCostPanel) ---------- */
 export const REPAIR_COST_TOOLTIPS = {
   total: {
