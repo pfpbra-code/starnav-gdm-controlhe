@@ -53,13 +53,15 @@ export default async function (req: Request): Promise<Response> {
       history = [];
     }
 
-    // Certificações do equipamento (destino Calibração/Certificação): consulta
-    // pública do certificado atual e do histórico por SN — sem necessidade de login.
+    // Certificações do equipamento (destino Calibração/Certificação): a
+    // consulta pública só expõe certificados vinculados ao PRÓPRIO item
+    // consultado — nunca o histórico completo do número de série em outras
+    // GDMs ou embarcações.
     let certifications: any[] = [];
-    if (item.destination === 'certification' && item.serial_number) {
+    if (item.destination === 'certification') {
       try {
         certifications = await base44.asServiceRole.entities.Certification.filter(
-          { serial_number: item.serial_number },
+          { item_id: item.id },
           '-created_date',
         );
       } catch {
@@ -67,8 +69,9 @@ export default async function (req: Request): Promise<Response> {
       }
     }
 
-    // Evidências fotográficas: fotos do item e histórico completo do
-    // equipamento por SN (desembarque, reparos, certificações, inspeções).
+    // Evidências fotográficas: fotos do item e, quando há SN, o histórico
+    // do equipamento restrito à mesma embarcação (desembarque, reparos,
+    // certificações, inspeções).
     let itemPhotos: any[] = [];
     let snPhotos: any[] = [];
     try {
@@ -79,10 +82,13 @@ export default async function (req: Request): Promise<Response> {
     } catch {
       itemPhotos = [];
     }
-    if (item.serial_number) {
+    // Histórico fotográfico por SN limitado à mesma embarcação do item
+    // consultado — fotos do mesmo SN em outras embarcações (escopo RLS) não
+    // são expostas publicamente.
+    if (item.serial_number && item.vessel_id) {
       try {
         snPhotos = await base44.asServiceRole.entities.GDMPhoto.filter(
-          { serial_number: item.serial_number },
+          { serial_number: item.serial_number, vessel_id: item.vessel_id },
           '-taken_at',
         );
       } catch {

@@ -1,22 +1,26 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { accountStatusOf } from '../../shared/itemPermissions.ts';
 
-// Acionado pelo workflow quando um novo usuário é criado: notifica todos os
-// administradores sobre o cadastro pendente de aprovação e registra o
-// recebimento no log de auditoria. Chamado pelo workflow (criador admin) —
-// exige sessão administrativa.
+// Acionado pelo workflow de signup quando um novo usuário é criado: notifica
+// todos os administradores sobre o cadastro pendente de aprovação e registra o
+// recebimento no log de auditoria.
+// Autorização estrita: o gatilho real é o cadastro, então a sessão disponível
+// é a do próprio usuário recém-cadastrado — a função só aceita o chamador
+// quando o user_id consultado é ELE MESMO (fluxo de signup) ou quando é um
+// administrador autenticado. Nenhum usuário consulta dados de terceiros.
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
-    const caller = await base44.auth.me();
-    if (!caller) return Response.json({ error: 'Não autenticado' }, { status: 401 });
-    if (caller.role !== 'admin') {
-      return Response.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
-    }
-
     const body = await req.json().catch(() => ({}));
     const userId: string = body?.user_id || body?.userId;
     if (!userId) return Response.json({ error: 'user_id obrigatório' }, { status: 400 });
+
+    const caller = await base44.auth.me();
+    if (!caller) return Response.json({ error: 'Não autenticado' }, { status: 401 });
+    const isSelfSignup = caller.id === userId;
+    if (caller.role !== 'admin' && !isSelfSignup) {
+      return Response.json({ error: 'Sem permissão para notificar sobre este usuário' }, { status: 403 });
+    }
 
     let target: any = null;
     try {
@@ -26,6 +30,22 @@ export default async function (req: Request): Promise<Response> {
     }
     if (!target || accountStatusOf(target) !== 'pending_approval') {
       return Response.json({ ok: true, skipped: true });
+    }
+
+    // Idempotência: um mesmo cadastro pendente gera apenas uma rodada de
+    // alertas — chamadas repetidas (ex.: reenvio direto do endpoint) não
+    // inundam os administradores.
+    let alreadyNotified: any[] = [];
+    try {
+      alreadyNotified = await base44.asServiceRole.entities.Notification.filter({
+        type: 'system_alert',
+        related_entity_id: target.id,
+      });
+    } catch {
+      alreadyNotified = [];
+    }
+    if (alreadyNotified && alreadyNotified.length > 0) {
+      return Response.json({ ok: true, skipped: true, reason: 'already_notified' });
     }
 
     const admins = await base44.asServiceRole.entities.User.filter({ role: 'admin' });
