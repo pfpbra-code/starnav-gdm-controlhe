@@ -12,6 +12,12 @@ const DAY_MS = 86400000;
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
+    // Tarefa administrativa: somente administradores do app podem invocar.
+    const caller = await base44.auth.me();
+    if (!caller) return Response.json({ error: 'Não autenticado' }, { status: 401 });
+    if (caller.role !== 'admin') {
+      return Response.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
+    }
     const now = new Date();
 
     const certs = await base44.asServiceRole.entities.Certification.list('-created_date', 1000);

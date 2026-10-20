@@ -20,6 +20,12 @@ const NEAR_DAYS = 3;
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
+    // Tarefa administrativa: somente administradores do app podem invocar.
+    const caller = await base44.auth.me();
+    if (!caller) return Response.json({ error: 'Não autenticado' }, { status: 401 });
+    if (caller.role !== 'admin') {
+      return Response.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
+    }
     const now = new Date();
     const nowIso = now.toISOString();
 

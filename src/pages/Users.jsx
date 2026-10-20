@@ -139,9 +139,22 @@ export default function Users() {
     setShowEditDialog(true);
   };
 
-  const handleUpdateUser = (e) => {
+  const handleUpdateUser = async (e) => {
     e.preventDefault();
-    updateMutation.mutate({ id: editingUser.id, data: editFormData });
+    // Campos de vínculo (vessel_id/assigned_vessels) são protegidos: seguem
+    // apenas pela função de backend com verificação de administrador.
+    const { vessel_id, assigned_vessels, ...profileData } = editFormData;
+    updateMutation.mutate({ id: editingUser.id, data: profileData });
+    if (vessel_id !== (editingUser.vessel_id || '')) {
+      try {
+        await base44.functions.invoke('updateUserVesselAccess', {
+          user_id: editingUser.id,
+          vessel_id,
+        });
+      } catch {
+        toast.error('Erro ao vincular a embarcação do usuário');
+      }
+    }
   };
 
   const handleSavePermissions = (permissions) => {

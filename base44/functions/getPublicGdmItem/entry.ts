@@ -17,7 +17,12 @@ export default async function (req: Request): Promise<Response> {
       resolvedId = body.item_id || body.itemId || null;
     }
 
-    if (!resolvedId || typeof resolvedId !== 'string' || resolvedId.length < 10) {
+    // Endpoint público por design (QR Code de rastreabilidade externa): o
+    // identificador do item é o único segredo. IDs são ObjectIds de 24 hex
+    // gerados pela plataforma — exigir o formato integral elimina consultas
+    // por prefixo ou ID parcial adivinhado (antes aceitava 10 caracteres).
+    const ID_RE = /^[0-9a-f]{24}$/i;
+    if (!resolvedId || typeof resolvedId !== 'string' || !ID_RE.test(resolvedId)) {
       return Response.json({ error: 'Identificador inválido' }, { status: 400 });
     }
 

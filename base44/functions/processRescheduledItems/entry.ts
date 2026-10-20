@@ -8,6 +8,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
+    // Tarefa administrativa: somente administradores do app podem invocar.
+    const caller = await base44.auth.me();
+    if (!caller) return Response.json({ error: 'Não autenticado' }, { status: 401 });
+    if (caller.role !== 'admin') {
+      return Response.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
+    }
 
     const items = await base44.asServiceRole.entities.GDMItem.filter({
       status: 'disembark_rescheduled',

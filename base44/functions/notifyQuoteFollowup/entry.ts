@@ -10,6 +10,12 @@ const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
+    // Tarefa administrativa: somente administradores do app podem invocar.
+    const caller = await base44.auth.me();
+    if (!caller) return Response.json({ error: 'Não autenticado' }, { status: 401 });
+    if (caller.role !== 'admin') {
+      return Response.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
+    }
 
     const items = await base44.asServiceRole.entities.GDMItem.filter({
       status: 'sent_to_supplier',

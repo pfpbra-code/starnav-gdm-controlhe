@@ -47,8 +47,7 @@ export default function Vessels() {
     coordinator_id: '',
     responsible_user_id: '',
     sector_responsibles: {},
-    status: 'active',
-    login_password: ''
+    status: 'active'
   });
 
   const { data: user } = useQuery({
@@ -123,8 +122,7 @@ export default function Vessels() {
       type: '',
       coordinator_id: '',
       sector_responsibles: {},
-      status: 'active',
-      login_password: ''
+      status: 'active'
     });
   };
 
@@ -137,8 +135,7 @@ export default function Vessels() {
       coordinator_id: vessel.coordinator_id || '',
       responsible_user_id: vessel.responsible_user_id || '',
       sector_responsibles: vessel.sector_responsibles || {},
-      status: vessel.status || 'active',
-      login_password: vessel.login_password || ''
+      status: vessel.status || 'active'
     });
     setShowDialog(true);
   };
@@ -171,14 +168,20 @@ export default function Vessels() {
         // Vincula o usuário responsável e o coordenador: a GDM da embarcação é
         // encaminhada automaticamente ao coordenador com acesso garantido.
         try {
+          // Vínculos de acesso (vessel_id/assigned_vessels) são campos protegidos:
+          // alterados apenas pela função de backend, que exige administrador.
           if (responsibleId) {
-            await base44.entities.User.update(responsibleId, { vessel_id: vesselId });
+            await base44.functions.invoke('updateUserVesselAccess', {
+              user_id: responsibleId,
+              vessel_id: vesselId,
+            });
           }
           if (coordinatorId) {
             const coord = coordinators.find((c) => c.id === coordinatorId);
             const assigned = (coord?.assigned_vessels ?? coord?.data?.assigned_vessels) || [];
             if (coord && !assigned.includes(vesselId)) {
-              await base44.entities.User.update(coord.id, {
+              await base44.functions.invoke('updateUserVesselAccess', {
+                user_id: coord.id,
                 assigned_vessels: [...assigned, vesselId],
               });
             }
@@ -421,8 +424,8 @@ export default function Vessels() {
                   />
                 )}
                 <p className="text-xs text-slate-500">
-                  E-mail de acesso do responsável. O login/senha da embarcação é definido no
-                  campo "Senha de Acesso" e o vínculo concede acesso individual à embarcação.
+                  O acesso da embarcação usa a conta do usuário convidado (convite por e-mail,
+                  com senha gerenciada pela plataforma). O vínculo concede acesso individual à embarcação.
                 </p>
               </div>
               <VesselSectorResponsibles
@@ -449,15 +452,6 @@ export default function Vessels() {
                     className="mt-2 h-28 w-full object-cover rounded-lg border border-slate-200"
                   />
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label>Senha de Acesso</Label>
-                <Input
-                  type="password"
-                  value={formData.login_password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, login_password: e.target.value }))}
-                  placeholder="Senha para login da embarcação"
-                />
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>

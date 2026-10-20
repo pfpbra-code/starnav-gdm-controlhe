@@ -40,10 +40,26 @@
       "type": "array",
       "items": {
         "type": "string"
+      },
+      "description": "Embarca\u00e7\u00f5es \u00e0s quais o usu\u00e1rio tem acesso. Campo protegido: atribu\u00eddo apenas por administradores, via fun\u00e7\u00e3o de backend updateUserVesselAccess",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
       }
     },
     "vessel_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Embarca\u00e7\u00e3o vinculada ao usu\u00e1rio de perfil Embarca\u00e7\u00e3o. Campo protegido: atribu\u00eddo apenas por administradores, via fun\u00e7\u00e3o de backend updateUserVesselAccess",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
     },
     "permissions": {
       "type": "array",
