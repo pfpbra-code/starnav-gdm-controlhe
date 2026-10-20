@@ -17,7 +17,7 @@ export default function GDMOverviewKpis({ stats }) {
     { key: "totalGdms", label: "GDMs", value: stats.totalGdms, icon: FileText, tone: "bg-sky-50 text-sky-700" },
     { key: "totalItems", label: "Itens", value: stats.totalItems, icon: Package, tone: "bg-indigo-50 text-indigo-700" },
     { key: "inMaintenance", label: "Total de GDM's de Manutenção", value: stats.inMaintenance, icon: Wrench, tone: "bg-amber-50 text-amber-700" },
-    { key: "inOperations", label: "GDMs em Operações", value: stats.inOperations, icon: Cog, tone: "bg-violet-50 text-violet-700" },
+    { key: "inOperations", label: "Total de GDM's de Operações", value: stats.inOperations, icon: Cog, tone: "bg-violet-50 text-violet-700" },
     { key: "pendingApproval", label: "Pendentes de Aprovação", value: stats.pendingApproval, icon: Hourglass, tone: "bg-orange-50 text-orange-700" },
     { key: "completed", label: "Finalizadas", value: stats.completed, icon: CheckCircle2, tone: "bg-emerald-50 text-emerald-700" },
   ];
