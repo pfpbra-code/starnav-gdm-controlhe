@@ -30,14 +30,15 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Users as UsersIcon, Search, Edit, Loader2, UserPlus, Mail, History, Shield, XCircle } from 'lucide-react';
+import { Users as UsersIcon, Search, Edit, Loader2, UserPlus, Mail, History, Shield, XCircle, Trash2, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
 import UserActivityLog from '@/components/users/UserActivityLog';
 import UserPermissions from '@/components/users/UserPermissions';
+import PendingApprovalsCard from '@/components/users/PendingApprovalsCard';
+import DeleteUserDialog from '@/components/users/DeleteUserDialog';
 
-import { SECTORS } from '@/lib/permissions';
+import { SECTORS, ACCOUNT_STATUS_LABELS, userAccountStatus } from '@/lib/permissions';
 
 const roleLabels = {
   admin: "Administrador",
@@ -65,6 +66,8 @@ export default function Users() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [inviteData, setInviteData] = useState({ email: '', role: 'user' });
+  const [deletingUser, setDeletingUser] = useState(null);
+  const [accountActionPending, setAccountActionPending] = useState(false);
   const [editFormData, setEditFormData] = useState({
     role: '',
     status: 'active',
@@ -96,6 +99,25 @@ export default function Users() {
     },
     onError: () => toast.error('Erro ao atualizar usuário')
   });
+
+  const runAccountAction = async (payload, successMsg) => {
+    setAccountActionPending(true);
+    try {
+      const res = await base44.functions.invoke('manageUserAccount', payload);
+      const data = res?.data || {};
+      if (successMsg) toast.success(successMsg);
+      if (Array.isArray(data.pending_alerts) && data.pending_alerts.length > 0) {
+        toast.warning(`A conta ainda possuía ${data.pending_alerts.length} responsabilidade(s) pendente(s). Os administradores foram alertados para redistribuição.`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      return true;
+    } catch (error) {
+      toast.error(error?.response?.data?.error || 'Erro ao executar a ação na conta');
+      return false;
+    } finally {
+      setAccountActionPending(false);
+    }
+  };
 
   const [inviting, setInviting] = useState(false);
   const handleInvite = async () => {
@@ -143,8 +165,15 @@ export default function Users() {
     e.preventDefault();
     // Campos de vínculo (vessel_id/assigned_vessels) são protegidos: seguem
     // apenas pela função de backend com verificação de administrador.
-    const { vessel_id, assigned_vessels, ...profileData } = editFormData;
-    updateMutation.mutate({ id: editingUser.id, data: profileData });
+    // Perfil e status são campos protegidos: alterados apenas pela função de
+    // backend (manageUserAccount), com verificação de administrador e
+    // salvaguarda da última conta administradora.
+    const { vessel_id, role, status } = editFormData;
+    const ok = await runAccountAction(
+      { user_id: editingUser.id, action: 'update', role, status },
+      'Usuário atualizado!'
+    );
+    if (ok) handleCloseEditDialog();
     if (vessel_id !== (editingUser.vessel_id || '')) {
       try {
         await base44.functions.invoke('updateUserVesselAccess', {
@@ -165,18 +194,23 @@ export default function Users() {
     setShowPermissionsDialog(false);
   };
 
-  const handleSuspendUser = (user) => {
-    updateMutation.mutate({
-      id: user.id,
-      data: { status: 'suspended' }
-    });
+  const handleToggleAccess = (user) => {
+    const blocked = ['disabled', 'rejected', 'deleted', 'pending_approval'].includes(userAccountStatus(user));
+    runAccountAction(
+      blocked
+        ? { user_id: user.id, action: 'enable' }
+        : { user_id: user.id, action: 'disable' },
+      blocked ? 'Acesso reativado!' : 'Acesso bloqueado!'
+    );
   };
+
+  const pendingUsers = users.filter((u) => userAccountStatus(u) === 'pending_approval');
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || (user.status || 'active') === statusFilter;
+    const matchesStatus = statusFilter === 'all' || userAccountStatus(user) === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -225,6 +259,15 @@ export default function Users() {
         </Button>
       </div>
 
+      {/* Cadastros pendentes de aprovação */}
+      <PendingApprovalsCard
+        users={pendingUsers}
+        vessels={vessels}
+        onApprove={(u) => runAccountAction({ user_id: u.id, action: 'approve' }, 'Cadastro aprovado!')}
+        onReject={(u, reason) => runAccountAction({ user_id: u.id, action: 'reject', reason }, 'Cadastro recusado!')}
+        pending={accountActionPending}
+      />
+
       {/* Filters */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
@@ -255,9 +298,11 @@ export default function Users() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="active">Ativo</SelectItem>
-                <SelectItem value="inactive">Inativo</SelectItem>
-                <SelectItem value="suspended">Suspenso</SelectItem>
+                <SelectItem value="approved">Aprovado</SelectItem>
+                <SelectItem value="pending_approval">Pendente</SelectItem>
+                <SelectItem value="rejected">Recusado</SelectItem>
+                <SelectItem value="disabled">Bloqueado</SelectItem>
+                <SelectItem value="deleted">Excluído</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -325,7 +370,20 @@ export default function Users() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={user.status || 'active'} />
+                    <Badge
+                      variant="outline"
+                      className={
+                        userAccountStatus(user) === 'approved'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : userAccountStatus(user) === 'pending_approval'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : userAccountStatus(user) === 'deleted'
+                              ? 'bg-slate-100 text-slate-500 border-slate-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
+                      }
+                    >
+                      {ACCOUNT_STATUS_LABELS[userAccountStatus(user)]}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     {user.permissions?.length > 0 ? (
@@ -368,15 +426,32 @@ export default function Users() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {(user.status === 'active' || !user.status) && (
-                        <Button 
-                          variant="ghost" 
+                      {userAccountStatus(user) !== 'deleted' && (
+                        <Button
+                          variant="ghost"
                           size="sm"
-                          onClick={() => handleSuspendUser(user)}
-                          className="text-orange-600 hover:text-orange-700"
-                          title="Suspender"
+                          onClick={() => handleToggleAccess(user)}
+                          className={
+                            ['disabled', 'rejected', 'pending_approval'].includes(userAccountStatus(user))
+                              ? 'text-emerald-600 hover:text-emerald-700'
+                              : 'text-orange-600 hover:text-orange-700'
+                          }
+                          title={['disabled', 'rejected', 'pending_approval'].includes(userAccountStatus(user)) ? 'Reativar acesso' : 'Bloquear acesso'}
                         >
-                          <XCircle className="h-4 w-4" />
+                          {['disabled', 'rejected', 'pending_approval'].includes(userAccountStatus(user))
+                            ? <UserCheck className="h-4 w-4" />
+                            : <XCircle className="h-4 w-4" />}
+                        </Button>
+                      )}
+                      {user.id !== currentUser?.id && userAccountStatus(user) !== 'deleted' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeletingUser(user)}
+                          className="text-red-600 hover:text-red-700"
+                          title="Excluir definitivamente"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
@@ -540,6 +615,22 @@ export default function Users() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Exclusão definitiva */}
+      <DeleteUserDialog
+        user={deletingUser}
+        vessels={vessels}
+        open={!!deletingUser}
+        onOpenChange={(o) => !o && setDeletingUser(null)}
+        onConfirm={async (reason) => {
+          const ok = await runAccountAction(
+            { user_id: deletingUser.id, action: 'delete', reason },
+            'Conta excluída definitivamente!'
+          );
+          if (ok) setDeletingUser(null);
+        }}
+        pending={accountActionPending}
+      />
 
       {/* Activity Log Dialog */}
       <UserActivityLog

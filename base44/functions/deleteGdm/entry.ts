@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
+import { isAccountAllowed } from '../../shared/itemPermissions.ts';
 
 // Exclusão completa de GDM — restrita ao ADM. Remove do sistema a GDM, todos
 // os seus itens e todo o histórico de ações vinculado a eles.
@@ -9,6 +10,9 @@ export default async function(req: Request): Promise<Response> {
     if (!user) return Response.json({ error: 'Não autenticado' }, { status: 401 });
     if (user.role !== 'admin') {
       return Response.json({ error: 'Somente o ADM pode excluir GDMs do sistema' }, { status: 403 });
+    }
+    if (!isAccountAllowed(user)) {
+      return Response.json({ error: 'Conta sem acesso liberado à plataforma' }, { status: 403 });
     }
 
     const body = await req.json().catch(() => ({}));

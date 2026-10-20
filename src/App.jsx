@@ -13,6 +13,8 @@ import AlmoxarifadoBoard from './pages/AlmoxarifadoBoard';
 import SupplierDetail from './pages/SupplierDetail';
 import DisposalReports from './pages/DisposalReports';
 import RequirePermission from '@/components/RequirePermission';
+import AccountStatusGate from '@/components/AccountStatusGate';
+import { isAccountAllowed } from '@/lib/permissions';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -27,7 +29,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -47,6 +49,12 @@ const AuthenticatedApp = () => {
       navigateToLogin();
       return null;
     }
+  }
+
+  // Barreira de conta: cadastro pendente, recusado, bloqueado ou excluído
+  // não acessa nenhum módulo — apenas a tela de estado da solicitação.
+  if (user && !isAccountAllowed(user)) {
+    return <AccountStatusGate user={user} />;
   }
 
   // Render the main app

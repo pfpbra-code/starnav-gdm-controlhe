@@ -279,9 +279,36 @@ export function effectivePermissions(user) {
   return Array.from(new Set([...sectorBasePermissions(user), ...own]));
 }
 
+// Estados do cadastro (aprovação administrativa obrigatória) — bloqueiam
+// TODO o acesso interno à plataforma, inclusive por URL direta.
+export const ACCOUNT_BLOCKED_STATUSES = ["pending_approval", "rejected", "disabled", "deleted"];
+
+export const ACCOUNT_STATUS_LABELS = {
+  pending_approval: "Pendente de Aprovação",
+  approved: "Aprovado",
+  rejected: "Recusado",
+  disabled: "Bloqueado",
+  deleted: "Excluído",
+};
+
+/** Estado do cadastro; registros legados sem o campo são tratados como aprovados. */
+export function userAccountStatus(user) {
+  const status = userField(user, "account_status");
+  return typeof status === "string" ? status : "approved";
+}
+
+/** Conta liberada para operar na plataforma (cadastro aprovado e não bloqueado). */
+export function isAccountAllowed(user) {
+  if (!user) return false;
+  if (ACCOUNT_BLOCKED_STATUSES.includes(userAccountStatus(user))) return false;
+  if (userField(user, "status") === "deleted") return false;
+  return true;
+}
+
 export function hasPermission(user, permission) {
   if (!permission) return true;
   if (!user) return false;
+  if (!isAccountAllowed(user)) return false;
   if (user.status && user.status !== "active") return false;
   return effectivePermissions(user).includes(permission);
 }

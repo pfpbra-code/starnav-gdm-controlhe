@@ -1,0 +1,40 @@
+{
+  "name": "Notifica\u00e7\u00e3o de Cadastros Pendentes",
+  "description": "Notifica os administradores quando um novo usu\u00e1rio se cadastra na plataforma (cadastro pendente de aprova\u00e7\u00e3o)",
+  "trigger": {
+    "config": {
+      "trigger_type": "app_user_auth",
+      "events": [
+        "signup"
+      ]
+    },
+    "condition": "${ .trigger.event_type == \"signup\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "user_pending_approval_notify",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "notify_admins": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "alertPendingUserApproval",
+            "args": {
+              "user_id": "${ .trigger.user_id }",
+              "email": "${ .trigger.email }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Notificar administradores",
+            "description": "Novo cadastro pendente de aprova\u00e7\u00e3o"
+          }
+        }
+      }
+    ]
+  }
+}

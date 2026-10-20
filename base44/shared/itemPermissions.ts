@@ -152,3 +152,33 @@ export function canActOnVesselItems(user: any, item: any): boolean {
   const vesselId = userCustomField(user, 'vessel_id');
   return !!vesselId && vesselId === item.vessel_id;
 }
+
+// ---------------------------------------------------------------------------
+// Estado do cadastro (aprovação administrativa obrigatória)
+// ---------------------------------------------------------------------------
+
+/** Estados de cadastro que bloqueiam o acesso à plataforma. */
+export const ACCOUNT_BLOCKED_STATUSES: string[] = [
+  'pending_approval',
+  'rejected',
+  'disabled',
+  'deleted',
+];
+
+/**
+ * Estado do cadastro do usuário. Registros legados sem o campo são tratados
+ * como aprovados (contas anteriores à implantação da aprovação obrigatória).
+ */
+export function accountStatusOf(user: any): string {
+  const status = userCustomField(user, 'account_status');
+  return typeof status === 'string' ? status : 'approved';
+}
+
+/** Conta liberada para operar na plataforma (cadastro aprovado, não bloqueado). */
+export function isAccountAllowed(user: any): boolean {
+  if (!user) return false;
+  if (ACCOUNT_BLOCKED_STATUSES.includes(accountStatusOf(user))) return false;
+  const status = userCustomField(user, 'status');
+  if (status === 'deleted') return false;
+  return true;
+}

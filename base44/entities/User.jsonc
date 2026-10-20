@@ -10,7 +10,14 @@
         "vessel_user"
       ],
       "default": "user",
-      "description": "Perfil: Administrador ou Usu\u00e1rio (o login pr\u00f3prio das Embarca\u00e7\u00f5es \u00e9 mantido \u00e0 parte)"
+      "description": "Perfil: Administrador ou Usu\u00e1rio (o login pr\u00f3prio das Embarca\u00e7\u00f5es \u00e9 mantido \u00e0 parte). Campo protegido: alterado apenas por administradores, via fun\u00e7\u00e3o de backend manageUserAccount",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
     },
     "sectors": {
       "type": "array",
@@ -32,9 +39,37 @@
       "enum": [
         "active",
         "inactive",
-        "suspended"
+        "suspended",
+        "deleted"
       ],
-      "default": "active"
+      "default": "active",
+      "description": "Situa\u00e7\u00e3o operacional da conta. Campo protegido: alterado apenas por administradores, via fun\u00e7\u00e3o de backend manageUserAccount",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
+    },
+    "account_status": {
+      "type": "string",
+      "enum": [
+        "pending_approval",
+        "approved",
+        "rejected",
+        "disabled",
+        "deleted"
+      ],
+      "default": "pending_approval",
+      "description": "Estado do cadastro: pendente de aprova\u00e7\u00e3o, aprovado, recusado, bloqueado ou exclu\u00eddo. Todo novo cadastro fica pendente at\u00e9 a aprova\u00e7\u00e3o do administrador; registros legados sem o campo s\u00e3o tratados como aprovados. Campo protegido: alterado apenas por administradores, via fun\u00e7\u00e3o de backend manageUserAccount",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
     },
     "assigned_vessels": {
       "type": "array",
@@ -67,6 +102,97 @@
         "type": "string"
       },
       "description": "Autoriza\u00e7\u00f5es individuais concedidas pelo ADM, al\u00e9m das permiss\u00f5es b\u00e1sicas dos setores"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Email do administrador que aprovou o cadastro. Campo protegido (auditoria)",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora da aprova\u00e7\u00e3o do cadastro. Campo protegido (auditoria)",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
+    },
+    "rejected_by": {
+      "type": "string",
+      "description": "Email do administrador que recusou o cadastro. Campo protegido (auditoria)",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
+    },
+    "rejected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora da recusa do cadastro. Campo protegido (auditoria)",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Justificativa da recusa informada pelo administrador. Campo protegido (auditoria)",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
+    },
+    "deleted_by": {
+      "type": "string",
+      "description": "Email do administrador que excluiu definitivamente a conta. Campo protegido (auditoria)",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora da exclus\u00e3o definitiva da conta. Campo protegido (auditoria)",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
+    },
+    "deletion_reason": {
+      "type": "string",
+      "description": "Motivo da exclus\u00e3o definitiva informado pelo administrador. Campo protegido (auditoria)",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
     },
     "photo_url": {
       "type": "string",

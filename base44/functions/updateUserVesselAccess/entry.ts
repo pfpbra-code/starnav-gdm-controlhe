@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
+import { isAccountAllowed } from '../../shared/itemPermissions.ts';
 
 // Atribuição de acesso por embarcação (vessel_id / assigned_vessels do usuário).
 // Esses campos são protegidos por regra no nível do campo (somente editores do
@@ -12,6 +13,9 @@ export default async function (req: Request): Promise<Response> {
     if (!caller) return Response.json({ error: 'Não autenticado' }, { status: 401 });
     if (caller.role !== 'admin') {
       return Response.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
+    }
+    if (!isAccountAllowed(caller)) {
+      return Response.json({ error: 'Conta sem acesso liberado à plataforma' }, { status: 403 });
     }
 
     const body = await req.json().catch(() => ({}));

@@ -5,6 +5,7 @@ import {
   sectorViewPermission,
   VESSEL_STAGE_ACTIONS,
   canActOnVesselItems,
+  isAccountAllowed,
 } from '../../shared/itemPermissions.ts';
 
 // Ações protegidas sobre itens de GDM: verificação de permissão, bloqueio de
@@ -35,6 +36,9 @@ export default async function (req: Request): Promise<Response> {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Não autenticado' }, { status: 401 });
+    if (!isAccountAllowed(user)) {
+      return Response.json({ error: 'Conta sem acesso liberado à plataforma' }, { status: 403 });
+    }
 
     const body = await req.json().catch(() => ({}));
     const itemId = body.item_id || body.itemId;
