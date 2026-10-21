@@ -62,9 +62,9 @@ const AuthenticatedApp = () => {
     <>
       <Routes>
       <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey}>
-          <RequirePermission module={mainPageKey}>
-            <MainPage />
+        <LayoutWrapper currentPageName="MyProfile">
+          <RequirePermission module="MyProfile">
+            <MyProfile />
           </RequirePermission>
         </LayoutWrapper>
       } />
