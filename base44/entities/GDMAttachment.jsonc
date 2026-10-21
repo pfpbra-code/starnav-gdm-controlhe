@@ -84,9 +84,6 @@
           "created_by_id": "{{user.id}}"
         },
         {
-          "data.vessel_id": "{{user.data.vessel_id}}"
-        },
-        {
           "data.vessel_id": {
             "$in": "{{user.data.assigned_vessels}}"
           }
