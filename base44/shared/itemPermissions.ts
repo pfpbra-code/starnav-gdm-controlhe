@@ -26,8 +26,8 @@ const ALL_IDS: string[] = [
   'view_maintenance', 'view_operations', 'view_maintenance_quotes', 'view_operations_quotes',
   'approve_maintenance_quote', 'approve_operations_quote',
   // Cadastros
-  'view_vessels', 'manage_vessels', 'view_equipment', 'manage_equipment',
-  'import_equipment', 'import_spreadsheet', 'edit_vessel_photo',
+  'view_vessels', 'view_equipment', 'manage_equipment',
+  'import_equipment', 'import_spreadsheet',
   'view_suppliers', 'manage_suppliers',
   // Relatórios
   'view_reports', 'export_reports', 'view_cost_reports', 'view_analytics',
@@ -42,7 +42,7 @@ const ADMIN_ONLY: string[] = [
   'manage_users', 'edit_users', 'suspend_users', 'reset_user_access', 'manage_permissions',
   'view_audit_logs', 'export_audit_logs', 'system_settings',
   'import_equipment', 'import_spreadsheet',
-  'manage_vessels', 'manage_equipment', 'manage_suppliers', 'edit_vessel_photo', 'delete_gdm',
+  'manage_equipment', 'manage_suppliers', 'delete_gdm',
 ];
 
 /** Permissões básicas automáticas de cada setor — espelha SECTOR_BASE_PERMISSIONS. */
@@ -79,9 +79,6 @@ export const SECTOR_BASE: Record<string, string[]> = {
   ],
 };
 
-// Login próprio das embarcações (perfil mantido à parte).
-const VESSEL_PRESET: string[] = ['view_dashboard', 'view_gdm', 'create_gdm', 'generate_gdm_pdf'];
-
 /** Recupera o campo customizado do usuário (topo ou user.data). */
 export function userCustomField(user: any, key: string): any {
   const custom = user?.data || {};
@@ -98,14 +95,12 @@ export function userSectors(user: any): string[] {
 export function sectorBasePermissions(user: any): string[] {
   if (!user) return [];
   if (user.role === 'admin') return ALL_IDS;
-  if (user.role === 'vessel_user') return VESSEL_PRESET;
   return userSectors(user).flatMap((s: string) => SECTOR_BASE[s] || []);
 }
 
 export function effectivePermissions(user: any): string[] {
   if (!user) return [];
   if (user.role === 'admin') return ['*'];
-  if (user.role === 'vessel_user') return VESSEL_PRESET;
   const own = Array.isArray(userCustomField(user, 'permissions'))
     ? userCustomField(user, 'permissions').filter(Boolean)
     : [];
@@ -138,19 +133,34 @@ export function sectorViewPermission(sector: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Etapa de confirmação da embarcação (ETAPA 4 do fluxo de aprovação)
+// Etapa de confirmação do desembarque (ETAPA 4 do fluxo de aprovação)
 // ---------------------------------------------------------------------------
 
-/** Ações executadas pela própria embarcação: validadas por vínculo com o item. */
+/**
+ * Ações da etapa de confirmação do desembarque, executadas pelos responsáveis
+ * por setor vinculados à embarcação no cadastro (Configurações > Embarcações)
+ * — as embarcações não possuem mais login próprio na plataforma.
+ */
 export const VESSEL_STAGE_ACTIONS = ['confirm_disembark', 'reschedule_disembark'];
 
-/** Usuário da embarcação só pode atuar em itens da própria embarcação. */
-export function canActOnVesselItems(user: any, item: any): boolean {
+/** E-mails dos responsáveis por setor vinculados à embarcação. */
+export function vesselResponsibleEmails(vessel: any): string[] {
+  return Object.values(vessel?.sector_responsibles || {})
+    .flat()
+    .filter(Boolean) as string[];
+}
+
+/** Usuário é responsável por setor da embarcação informada. */
+export function isVesselResponsible(user: any, vessel: any): boolean {
+  if (!user?.email || !vessel) return false;
+  return vesselResponsibleEmails(vessel).includes(user.email);
+}
+
+/** Só o ADM ou um responsável vinculado à embarcação pode atuar nessa etapa. */
+export function canActOnVesselItems(user: any, item: any, vessel: any): boolean {
   if (!user || !item) return false;
   if (user.role === 'admin') return true;
-  if (user.role !== 'vessel_user') return false;
-  const vesselId = userCustomField(user, 'vessel_id');
-  return !!vesselId && vesselId === item.vessel_id;
+  return isVesselResponsible(user, vessel);
 }
 
 // ---------------------------------------------------------------------------

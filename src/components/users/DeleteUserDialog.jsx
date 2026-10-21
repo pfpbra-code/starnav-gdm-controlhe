@@ -14,14 +14,14 @@ import {
 import { AlertTriangle, Loader2, Trash2 } from 'lucide-react';
 import { SECTORS } from '@/lib/permissions';
 
-const ROLE_LABELS = { admin: 'Administrador', user: 'Usuário', vessel_user: 'Embarcação' };
+const ROLE_LABELS = { admin: 'Administrador', user: 'Usuário' };
 const SECTOR_LABELS = Object.fromEntries(SECTORS.map((s) => [s.key, s.label]));
 
 /**
  * Confirmação de exclusão definitiva de conta: revoga o acesso mantendo todo o
  * histórico operacional e de auditoria intacto.
  */
-export default function DeleteUserDialog({ user, vessels, open, onOpenChange, onConfirm, pending }) {
+export default function DeleteUserDialog({ user, open, onOpenChange, onConfirm, pending }) {
   const [reason, setReason] = useState('');
 
   useEffect(() => {
@@ -31,8 +31,6 @@ export default function DeleteUserDialog({ user, vessels, open, onOpenChange, on
   if (!user) return null;
 
   const sectors = Array.isArray(user.sectors) ? user.sectors : user.data?.sectors || [];
-  const vesselId = user.vessel_id !== undefined ? user.vessel_id : user.data?.vessel_id;
-  const vessel = vessels?.find((v) => v.id === vesselId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,13 +60,11 @@ export default function DeleteUserDialog({ user, vessels, open, onOpenChange, on
               <span className="font-medium text-right">{ROLE_LABELS[user.role] || user.role}</span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-slate-500">Setor / Embarcação</span>
+              <span className="text-slate-500">Setores</span>
               <span className="font-medium text-right">
                 {sectors.length > 0
                   ? sectors.map((key) => SECTOR_LABELS[key] || key).join(', ')
-                  : vessel
-                    ? `Embarcação ${vessel.name}`
-                    : '—'}
+                  : '—'}
               </span>
             </div>
           </div>

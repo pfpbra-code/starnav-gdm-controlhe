@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/hooks/usePermissions';
 import { itemResponsibleGroup, availableItemActions, sortItemsByPriority } from '@/lib/gdmItems';
 import SectorItemCard from '@/components/gdm/SectorItemCard';
+import { useResponsibleVesselIds } from '@/hooks/useResponsibleVesselIds';
 import {
   Search,
   FileText,
@@ -28,6 +29,7 @@ export default function ServicesTreatments() {
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
   const { user, hasPermission } = usePermissions();
+  const responsibleVesselIds = useResponsibleVesselIds(user);
 
   const { data: gdms = [], isLoading: loadingGdms } = useQuery({
     queryKey: ['gdms'],
@@ -57,7 +59,7 @@ export default function ServicesTreatments() {
     const serviceItems = items.filter(
       (i) =>
         ['repair', 'certification'].includes(i.destination) &&
-        (itemResponsibleGroup(i) === 'services' || availableItemActions(i, hasPermission, user).length > 0),
+        (itemResponsibleGroup(i) === 'services' || availableItemActions(i, hasPermission, user, responsibleVesselIds).length > 0),
     );
     const itemsByGdm = {};
     serviceItems.forEach((i) => {
@@ -92,17 +94,17 @@ export default function ServicesTreatments() {
     }
 
     result.forEach((entry) => {
-      entry.items = sortItemsByPriority(entry.items, hasPermission, user);
+      entry.items = sortItemsByPriority(entry.items, hasPermission, user, responsibleVesselIds);
     });
 
     return {
       groups: result,
       totalItems: result.reduce((s, e) => s + e.items.length, 0),
       myActionCount: serviceItems.filter(
-        (i) => availableItemActions(i, hasPermission, user).length > 0,
+        (i) => availableItemActions(i, hasPermission, user, responsibleVesselIds).length > 0,
       ).length,
     };
-  }, [gdms, items, searchTerm, user, hasPermission]);
+  }, [gdms, items, searchTerm, user, hasPermission, responsibleVesselIds]);
 
   if (loadingGdms || loadingItems) {
     return (

@@ -15,24 +15,20 @@ import {
 import { Clock, UserCheck, XCircle, Loader2 } from 'lucide-react';
 import { SECTORS } from '@/lib/permissions';
 
-const ROLE_LABELS = { admin: 'Administrador', user: 'Usuário', vessel_user: 'Embarcação' };
+const ROLE_LABELS = { admin: 'Administrador', user: 'Usuário' };
 const SECTOR_LABELS = Object.fromEntries(SECTORS.map((s) => [s.key, s.label]));
 
 /**
  * Área administrativa: cadastros aguardando aprovação. Nada além da aprovação
  * libera o acesso de um novo usuário.
  */
-export default function PendingApprovalsCard({ users, vessels, onApprove, onReject, pending }) {
+export default function PendingApprovalsCard({ users, onApprove, onReject, pending }) {
   const [rejecting, setRejecting] = useState(null);
   const [reason, setReason] = useState('');
 
   if (!users || users.length === 0) return null;
 
   const sectorsOf = (u) => (Array.isArray(u.sectors) ? u.sectors : u.data?.sectors || []);
-  const vesselNameOf = (u) => {
-    const vesselId = u.vessel_id !== undefined ? u.vessel_id : u.data?.vessel_id;
-    return vessels?.find((v) => v.id === vesselId)?.name;
-  };
 
   const confirmReject = async () => {
     if (!reason.trim()) return;
@@ -72,7 +68,6 @@ export default function PendingApprovalsCard({ users, vessels, onApprove, onReje
                 <p className="text-sm text-slate-500">{u.email}</p>
                 <p className="text-xs text-slate-400">
                   Cadastrado em {new Date(u.created_date).toLocaleString('pt-BR')}
-                  {vesselNameOf(u) && ` • Embarcação: ${vesselNameOf(u)}`}
                 </p>
                 {sectorsOf(u).length > 0 && (
                   <div className="flex flex-wrap gap-1 pt-1">

@@ -45,7 +45,6 @@ export default function Vessels() {
     code: '',
     type: '',
     coordinator_id: '',
-    responsible_user_id: '',
     sector_responsibles: {},
     status: 'active'
   });
@@ -66,15 +65,6 @@ export default function Vessels() {
       const users = await base44.entities.User.list();
       return users.filter(u => u.role === 'user');
     },
-  });
-
-  const { data: vesselUsers = [] } = useQuery({
-    queryKey: ['vesselUsers'],
-    queryFn: async () => {
-      const users = await base44.entities.User.list();
-      return users.filter(u => u.role === 'vessel_user');
-    },
-    enabled: user?.role === 'admin',
   });
 
   const { data: allUsers = [] } = useQuery({
@@ -133,7 +123,6 @@ export default function Vessels() {
       code: vessel.code || '',
       type: vessel.type || '',
       coordinator_id: vessel.coordinator_id || '',
-      responsible_user_id: vessel.responsible_user_id || '',
       sector_responsibles: vessel.sector_responsibles || {},
       status: vessel.status || 'active'
     });
@@ -144,7 +133,6 @@ export default function Vessels() {
     e.preventDefault();
     const data = { ...formData };
     const existingId = editingVessel?.id;
-    const responsibleId = formData.responsible_user_id;
     const coordinatorId = formData.coordinator_id;
     if (photoFile) {
       try {
@@ -155,9 +143,6 @@ export default function Vessels() {
         return;
       }
     }
-    const responsible = vesselUsers.find((u) => u.id === responsibleId);
-    data.responsible_email = responsible?.email || '';
-    delete data.responsible_user_id;
 
     try {
       const saved = editingVessel
@@ -165,17 +150,11 @@ export default function Vessels() {
         : await createMutation.mutateAsync(data);
       const vesselId = saved?.id || existingId;
       if (isAdmin && vesselId) {
-        // Vincula o usuário responsável e o coordenador: a GDM da embarcação é
-        // encaminhada automaticamente ao coordenador com acesso garantido.
+        // Vincula o coordenador: a GDM da embarcação é encaminhada
+        // automaticamente ao coordenador com acesso garantido.
         try {
-          // Vínculos de acesso (vessel_id/assigned_vessels) são campos protegidos:
+          // Vínculos de acesso (assigned_vessels) são campos protegidos:
           // alterados apenas pela função de backend, que exige administrador.
-          if (responsibleId) {
-            await base44.functions.invoke('updateUserVesselAccess', {
-              user_id: responsibleId,
-              vessel_id: vesselId,
-            });
-          }
           if (coordinatorId) {
             const coord = coordinators.find((c) => c.id === coordinatorId);
             const assigned = (coord?.assigned_vessels ?? coord?.data?.assigned_vessels) || [];
@@ -188,9 +167,8 @@ export default function Vessels() {
           }
           queryClient.invalidateQueries({ queryKey: ['users'] });
           queryClient.invalidateQueries({ queryKey: ['coordinators'] });
-          queryClient.invalidateQueries({ queryKey: ['vesselUsers'] });
         } catch {
-          toast.error('Embarcação salva, mas houve erro ao vincular os usuários responsáveis');
+          toast.error('Embarcação salva, mas houve erro ao vincular o coordenador');
         }
       }
     } catch {
@@ -264,7 +242,6 @@ export default function Vessels() {
               <TableHead>Código</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Coordenador</TableHead>
-              <TableHead>Responsável</TableHead>
               <TableHead>Status</TableHead>
               {isAdmin && <TableHead className="text-right">Ações</TableHead>}
             </TableRow>
@@ -293,7 +270,6 @@ export default function Vessels() {
                   <TableCell>{vessel.code}</TableCell>
                   <TableCell>{vessel.type || '-'}</TableCell>
                   <TableCell>{coordinator?.full_name || '-'}</TableCell>
-                  <TableCell className="max-w-[180px] truncate">{vessel.responsible_email || '-'}</TableCell>
                   <TableCell>
                     <StatusBadge status={vessel.status} />
                   </TableCell>
@@ -319,7 +295,7 @@ export default function Vessels() {
             })}
             {filteredVessels.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 7 : 6} className="h-32 text-center">
+                <TableCell colSpan={isAdmin ? 6 : 5} className="h-32 text-center">
                   <Ship className="h-8 w-8 mx-auto text-slate-300 mb-2" />
                   <p className="text-slate-500">Nenhuma embarcação encontrada</p>
                 </TableCell>
@@ -397,36 +373,6 @@ export default function Vessels() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Usuário Responsável (Embarcação)</Label>
-                {isAdmin ? (
-                  <Select
-                    value={formData.responsible_user_id}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, responsible_user_id: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o usuário da embarcação" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vesselUsers.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.full_name || u.email} ({u.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    value={editingVessel?.responsible_email || ''}
-                    disabled
-                    placeholder="Sem responsável vinculado"
-                  />
-                )}
-                <p className="text-xs text-slate-500">
-                  O acesso da embarcação usa a conta do usuário convidado (convite por e-mail,
-                  com senha gerenciada pela plataforma). O vínculo concede acesso individual à embarcação.
-                </p>
               </div>
               <VesselSectorResponsibles
                 users={allUsers}

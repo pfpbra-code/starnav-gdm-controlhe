@@ -1,9 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { isAccountAllowed } from '../../shared/itemPermissions.ts';
 
-// Atribuição de acesso por embarcação (vessel_id / assigned_vessels do usuário).
-// Esses campos são protegidos por regra no nível do campo (somente editores do
-// workspace) e não podem ser alterados pelo próprio usuário — apenas por
+// Atribuição de acesso por embarcação (assigned_vessels do usuário).
+// Esse campo é protegido por regra no nível do campo (somente editores do
+// workspace) e não pode ser alterado pelo próprio usuário — apenas por
 // administradores do app, sempre através desta função.
 
 export default async function (req: Request): Promise<Response> {
@@ -25,12 +25,6 @@ export default async function (req: Request): Promise<Response> {
     }
 
     const update: Record<string, any> = {};
-    if ('vessel_id' in body) {
-      if (typeof body.vessel_id !== 'string') {
-        return Response.json({ error: 'vessel_id inválido' }, { status: 400 });
-      }
-      update.vessel_id = body.vessel_id || null;
-    }
     if ('assigned_vessels' in body) {
       if (
         !Array.isArray(body.assigned_vessels) ||

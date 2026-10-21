@@ -39,7 +39,6 @@ export default function UserPermissions({ user, open, onOpenChange, onSave, isSa
 
   const sectors = (userCustom(user, 'sectors') || []).filter((s) => SECTOR_BASE_PERMISSIONS[s]);
   const isAdmin = user?.role === 'admin';
-  const isVessel = user?.role === 'vessel_user';
 
   // Permissões já garantidas automaticamente (setor, embarcação ou ADM):
   // exibidas marcadas e travadas — não são autorizações individuais.
@@ -83,11 +82,6 @@ export default function UserPermissions({ user, open, onOpenChange, onSave, isSa
                 <strong>Administrador:</strong> acesso total ao sistema — todas as
                 permissões são automáticas.
               </p>
-            ) : isVessel ? (
-              <p className="text-sm text-sky-800">
-                <strong>Embarcação:</strong> perfil com acessos fixos (GDMs da
-                própria embarcação).
-              </p>
             ) : (
               <p className="text-sm text-sky-800">
                 <strong>Setores vinculados:</strong>{' '}
@@ -117,7 +111,7 @@ export default function UserPermissions({ user, open, onOpenChange, onSave, isSa
                       <Checkbox
                         id={perm.id}
                         checked={auto || permissions.includes(perm.id)}
-                        disabled={auto || isAdmin || isVessel}
+                        disabled={auto || isAdmin}
                         onCheckedChange={() => handleToggle(perm.id)}
                       />
                       <Label
@@ -152,7 +146,7 @@ export default function UserPermissions({ user, open, onOpenChange, onSave, isSa
           <Button
             className="bg-sky-600 hover:bg-sky-700"
             onClick={() => onSave(permissions)}
-            disabled={isSaving || isAdmin || isVessel}
+            disabled={isSaving || isAdmin}
           >
             {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Salvar Autorizações

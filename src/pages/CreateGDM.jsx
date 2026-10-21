@@ -26,7 +26,7 @@ import {
   Camera
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { buildHistoryEntry, nextGdmNumberForVessel } from '@/lib/gdmWorkflow';
+import { buildHistoryEntry } from '@/lib/gdmWorkflow';
 import EquipmentAutocomplete from '@/components/gdm/EquipmentAutocomplete';
 import PhotoCaptureField from '@/components/gdm/PhotoCaptureField';
 import { ITEM_DESTINATION_OPTIONS, ITEM_DESTINATION_LABELS } from '@/lib/gdmItems';
@@ -37,6 +37,7 @@ export default function CreateGDM() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
+    gdm_number: '',
     vessel_id: '',
     disembark_date: format(new Date(), 'yyyy-MM-dd'),
     description: '',
@@ -97,14 +98,7 @@ export default function CreateGDM() {
     queryFn: () => base44.entities.Vessel.filter({ status: 'active' }),
   });
 
-  // Filter vessels based on user role
-  const availableVessels = React.useMemo(() => {
-    const vesselId = user?.vessel_id ?? user?.data?.vessel_id;
-    if (user?.role === 'vessel_user' && vesselId) {
-      return vessels.filter(v => v.id === vesselId);
-    }
-    return vessels;
-  }, [vessels, user]);
+  const availableVessels = vessels;
 
   // Fotos gerais da GDM: agregação somente leitura das evidências de cada item.
   const allItemPhotos = React.useMemo(
@@ -117,10 +111,17 @@ export default function CreateGDM() {
       const vessel = vessels.find(v => v.id === data.vessel_id);
       const first = items[0];
 
-      // Numeração sequencial por embarcação, reiniciando a cada ano (GDM-NNN/YYYY).
-      const year = new Date().getFullYear();
+      // Numeração manual: o Número da GDM é informado pelo usuário autorizado.
+      // Validação de duplicidade: o mesmo número não pode existir duas vezes
+      // para a mesma embarcação.
+      const gdmNumber = (data.gdm_number || '').trim();
       const existingForVessel = await base44.entities.GDM.filter({ vessel_id: data.vessel_id });
-      const gdmNumber = nextGdmNumberForVessel(existingForVessel, year);
+      const isDuplicate = (existingForVessel || []).some(
+        (g) => String(g.gdm_number || '').trim().toLowerCase() === gdmNumber.toLowerCase(),
+      );
+      if (isDuplicate) {
+        throw new Error(`O número ${gdmNumber} já está cadastrado para a embarcação ${vessel?.name || 'selecionada'}`);
+      }
 
       const gdmData = {
         ...data,
@@ -274,7 +275,7 @@ export default function CreateGDM() {
       navigate(createPageUrl('GDMList'));
     },
     onError: (error) => {
-      toast.error('Erro ao criar GDM');
+      toast.error(error?.message || 'Erro ao criar GDM');
       console.error(error);
     }
   });
@@ -282,6 +283,10 @@ export default function CreateGDM() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    if (!formData.gdm_number?.trim()) {
+      toast.error('Informe o Número da GDM');
+      return;
+    }
     if (!formData.vessel_id) {
       toast.error('Selecione a embarcação');
       return;
@@ -331,6 +336,20 @@ export default function CreateGDM() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Número da GDM */}
+            <div className="space-y-2 md:max-w-xs">
+              <Label className="flex items-center gap-2">
+                <Hash className="h-4 w-4 text-slate-500" />
+                Número da GDM *
+              </Label>
+              <Input
+                value={formData.gdm_number}
+                onChange={(e) => setFormData(prev => ({ ...prev, gdm_number: e.target.value }))}
+                placeholder="Ex: GDM-001/2026"
+                required
+              />
             </div>
 
             {/* Data de desembarque */}

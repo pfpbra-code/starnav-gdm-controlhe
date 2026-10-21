@@ -8,6 +8,7 @@ import { createPageUrl } from '@/utils';
 import { hasPermission } from '@/lib/permissions';
 import SectorResponsibles from '@/components/settings/SectorResponsibles';
 import Equipment from '@/pages/Equipment';
+import Vessels from '@/pages/Vessels';
 import Users from '@/pages/Users';
 import PasswordPolicies from '@/pages/PasswordPolicies';
 import {
@@ -30,10 +31,10 @@ const settingsGroups = [
     items: [
       {
         title: "Embarcações",
-        description: "Cadastrar e gerenciar embarcações da frota",
+        description: "Cadastrar e gerenciar embarcações da frota (acesso exclusivo do ADM)",
         icon: Ship,
         color: "sky",
-        page: "Vessels"
+        tab: "Vessels"
       },
       {
         title: "Equipamentos",
@@ -92,7 +93,11 @@ const colorClasses = {
 };
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState('overview');
+  // Permite abrir direto numa aba via /Settings?tab=... (ex.: link do Dashboard).
+  const [activeTab, setActiveTab] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('tab') || 'overview';
+  });
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -122,6 +127,7 @@ export default function Settings() {
 
   const tabs = [
     { value: 'overview', label: 'Visão Geral' },
+    { value: 'Vessels', label: 'Embarcações', icon: Ship },
     { value: 'Equipment', label: 'Equipamentos', icon: Package, permission: 'view_equipment' },
     { value: 'Users', label: 'Usuários', icon: UsersIcon, permission: 'manage_users' },
     { value: 'PasswordPolicies', label: 'Políticas de Senha', icon: Shield, permission: 'system_settings' },
@@ -269,6 +275,11 @@ export default function Settings() {
         </TabsContent>
 
         {/* Abas dos módulos — conteúdo original, sem alteração de funções */}
+        {tabs.some((t) => t.value === 'Vessels') && (
+          <TabsContent value="Vessels">
+            <Vessels />
+          </TabsContent>
+        )}
         {tabs.some((t) => t.value === 'Equipment') && (
           <TabsContent value="Equipment">
             <Equipment />

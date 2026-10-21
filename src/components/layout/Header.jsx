@@ -19,7 +19,6 @@ const roleLabels = {
   coordinator: "Coordenador",
   services: "Serviços",
   maintenance: "Manutenção",
-  vessel_user: "Embarcação",
 };
 
 export default function Header({ user, pageTitle, onMenuClick }) {

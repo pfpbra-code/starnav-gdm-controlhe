@@ -6,11 +6,10 @@
       "type": "string",
       "enum": [
         "admin",
-        "user",
-        "vessel_user"
+        "user"
       ],
       "default": "user",
-      "description": "Perfil: Administrador ou Usu\u00e1rio (o login pr\u00f3prio das Embarca\u00e7\u00f5es \u00e9 mantido \u00e0 parte). Campo protegido: alterado apenas por administradores, via fun\u00e7\u00e3o de backend manageUserAccount",
+      "description": "Perfil: Administrador ou Usu\u00e1rio. As embarca\u00e7\u00f5es s\u00e3o registros operacionais sem login pr\u00f3prio. Campo protegido: alterado apenas por administradores, via fun\u00e7\u00e3o de backend manageUserAccount",
       "rls": {
         "update": {
           "user_condition": {
@@ -76,18 +75,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Embarca\u00e7\u00f5es \u00e0s quais o usu\u00e1rio tem acesso. Campo protegido: atribu\u00eddo apenas por administradores, via fun\u00e7\u00e3o de backend updateUserVesselAccess",
-      "rls": {
-        "update": {
-          "user_condition": {
-            "collaborator_role": "editor"
-          }
-        }
-      }
-    },
-    "vessel_id": {
-      "type": "string",
-      "description": "Embarca\u00e7\u00e3o vinculada ao usu\u00e1rio de perfil Embarca\u00e7\u00e3o. Campo protegido: atribu\u00eddo apenas por administradores, via fun\u00e7\u00e3o de backend updateUserVesselAccess",
+      "description": "Embarca\u00e7\u00f5es \u00e0s quais o usu\u00e1rio tem acesso (escopo de dados, ex.: coordenadores). Campo protegido: atribu\u00eddo apenas por administradores, via fun\u00e7\u00e3o de backend updateUserVesselAccess",
       "rls": {
         "update": {
           "user_condition": {

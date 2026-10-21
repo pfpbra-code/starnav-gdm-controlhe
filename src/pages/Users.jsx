@@ -42,14 +42,12 @@ import { SECTORS, ACCOUNT_STATUS_LABELS, userAccountStatus } from '@/lib/permiss
 
 const roleLabels = {
   admin: "Administrador",
-  user: "Usuário",
-  vessel_user: "Embarcação"
+  user: "Usuário"
 };
 
 const roleColors = {
   admin: "bg-red-100 text-red-800",
-  user: "bg-gray-100 text-gray-800",
-  vessel_user: "bg-sky-100 text-sky-800"
+  user: "bg-gray-100 text-gray-800"
 };
 
 const SECTOR_LABELS = Object.fromEntries(SECTORS.map((s) => [s.key, s.label]));
@@ -83,11 +81,6 @@ export default function Users() {
     queryKey: ['users'],
     queryFn: () => base44.entities.User.list('-created_date'),
     enabled: currentUser?.role === 'admin'
-  });
-
-  const { data: vessels = [] } = useQuery({
-    queryKey: ['vessels'],
-    queryFn: () => base44.entities.Vessel.list(),
   });
 
   const updateMutation = useMutation({
@@ -155,35 +148,22 @@ export default function Users() {
     setEditFormData({
       role: user.role || 'user',
       status: user.status || 'active',
-      assigned_vessels: user.assigned_vessels || [],
-      vessel_id: user.vessel_id || ''
+      assigned_vessels: user.assigned_vessels || []
     });
     setShowEditDialog(true);
   };
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
-    // Campos de vínculo (vessel_id/assigned_vessels) são protegidos: seguem
-    // apenas pela função de backend com verificação de administrador.
     // Perfil e status são campos protegidos: alterados apenas pela função de
     // backend (manageUserAccount), com verificação de administrador e
     // salvaguarda da última conta administradora.
-    const { vessel_id, role, status } = editFormData;
+    const { role, status } = editFormData;
     const ok = await runAccountAction(
       { user_id: editingUser.id, action: 'update', role, status },
       'Usuário atualizado!'
     );
     if (ok) handleCloseEditDialog();
-    if (vessel_id !== (editingUser.vessel_id || '')) {
-      try {
-        await base44.functions.invoke('updateUserVesselAccess', {
-          user_id: editingUser.id,
-          vessel_id,
-        });
-      } catch {
-        toast.error('Erro ao vincular a embarcação do usuário');
-      }
-    }
   };
 
   const handleSavePermissions = (permissions) => {
@@ -262,7 +242,6 @@ export default function Users() {
       {/* Cadastros pendentes de aprovação */}
       <PendingApprovalsCard
         users={pendingUsers}
-        vessels={vessels}
         onApprove={(u) => runAccountAction({ user_id: u.id, action: 'approve' }, 'Cadastro aprovado!')}
         onReject={(u, reason) => runAccountAction({ user_id: u.id, action: 'reject', reason }, 'Cadastro recusado!')}
         pending={accountActionPending}
@@ -503,7 +482,6 @@ export default function Users() {
                 <SelectContent>
                   <SelectItem value="user">Usuário</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="vessel_user">Embarcação</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -554,33 +532,9 @@ export default function Users() {
                   <SelectContent>
                     <SelectItem value="user">Usuário</SelectItem>
                     <SelectItem value="admin">Administrador</SelectItem>
-                    {editFormData.role === 'vessel_user' && (
-                      <SelectItem value="vessel_user">Embarcação</SelectItem>
-                    )}
                   </SelectContent>
                 </Select>
               </div>
-
-              {editFormData.role === 'vessel_user' && (
-                <div className="space-y-2">
-                  <Label>Embarcação</Label>
-                  <Select
-                    value={editFormData.vessel_id}
-                    onValueChange={(value) => setEditFormData(prev => ({ ...prev, vessel_id: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a embarcação" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vessels.map((vessel) => (
-                        <SelectItem key={vessel.id} value={vessel.id}>
-                          {vessel.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
 
               <div className="space-y-2">
                 <Label>Status</Label>
@@ -619,7 +573,6 @@ export default function Users() {
       {/* Exclusão definitiva */}
       <DeleteUserDialog
         user={deletingUser}
-        vessels={vessels}
         open={!!deletingUser}
         onOpenChange={(o) => !o && setDeletingUser(null)}
         onConfirm={async (reason) => {

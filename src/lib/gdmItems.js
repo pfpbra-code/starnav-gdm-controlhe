@@ -104,18 +104,14 @@ export const ITEM_ACTION_LABELS = {
   created: "Item Criado",
 };
 
-/** Recupera campo customizado do usuário (topo ou user.data). */
-function userVesselId(user) {
-  if (!user) return null;
-  return user.vessel_id !== undefined ? user.vessel_id : user.data?.vessel_id;
-}
-
 /**
  * Ações disponíveis para um item, considerando destino, situação e permissões.
  * `can` é a função hasPermission já aplicada ao usuário: (key) => boolean.
- * `user` (opcional) habilita as ações da etapa de confirmação da embarcação.
+ * `user` e `responsibleVesselIds` (opcional, Set de IDs das embarcações em que
+ * o usuário é responsável por setor) habilitam as ações da etapa de confirmação
+ * do desembarque.
  */
-export function availableItemActions(item, can, user) {
+export function availableItemActions(item, can, user, responsibleVesselIds) {
   if (!item) return [];
   const s = item.status;
   const d = item.destination;
@@ -134,11 +130,12 @@ export function availableItemActions(item, can, user) {
     }
   }
 
-  // ETAPA 4 — Confirmação da embarcação (apenas a embarcação emissora).
+  // ETAPA 4 — Confirmação do desembarque: administradores e responsáveis por
+  // setor vinculados à embarcação no cadastro (Configurações > Embarcações).
   const isVesselOwner =
     !!user &&
     (user.role === "admin" ||
-      (user.role === "vessel_user" && userVesselId(user) === item.vessel_id));
+      (!!responsibleVesselIds && responsibleVesselIds.has(item.vessel_id)));
   if (s === "pending_disembark_confirmation" && isVesselOwner) {
     actions.push({ action: "confirm_disembark", label: "Confirmo Desembarque" });
     actions.push({
@@ -531,8 +528,8 @@ export function itemResponsibleGroup(item) {
       return item.return_nf_url ? "almoxarifado" : "services";
     case "pending_maintenance_authorization":
       return item.destination === "certification" ? "operations" : "maintenance";
-    // Confirmação/reprogramação do desembarque é ação da própria embarcação —
-    // não pertence a nenhum setor interno (não aparece nos filtros setoriais).
+    // Confirmação/reprogramação do desembarque é ação dos responsáveis por
+    // setor vinculados à embarcação — não pertence a nenhum setor interno.
     case "pending_disembark_confirmation":
     case "disembark_rescheduled":
       return "vessel";
@@ -561,9 +558,9 @@ export function itemGroup(item) {
 }
 
 /** Ordena: primeiro o que precisa da minha ação, depois pendentes, andamento e finalizados. */
-export function sortItemsByPriority(items, can, user) {
+export function sortItemsByPriority(items, can, user, responsibleVesselIds) {
   const rank = (i) => {
-    if (availableItemActions(i, can, user).some((a) => !a.destructive)) return 0;
+    if (availableItemActions(i, can, user, responsibleVesselIds).some((a) => !a.destructive)) return 0;
     const g = itemGroup(i);
     return g === "pending" ? 1 : g === "in_progress" ? 2 : g === "completed" ? 3 : 4;
   };

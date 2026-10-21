@@ -9,6 +9,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { scopeGdms } from '@/lib/permissions';
 import { returnDeadlineState, availableItemActions } from '@/lib/gdmItems';
 import SectorItemCard from './SectorItemCard';
+import { useResponsibleVesselIds } from '@/hooks/useResponsibleVesselIds';
 import { Search, Package, AlertTriangle, Clock, UserCheck } from 'lucide-react';
 
 /**
@@ -32,6 +33,7 @@ export default function PendingBoard({
   const [activeCategory, setActiveCategory] = useState('all');
   const queryClient = useQueryClient();
   const { user, hasPermission } = usePermissions();
+  const responsibleVesselIds = useResponsibleVesselIds(user);
 
   const { data: gdms = [], isLoading: loadingGdms } = useQuery({
     queryKey: ['gdms'],
@@ -71,7 +73,7 @@ export default function PendingBoard({
     let pool = items.filter((i) => gdmIds.has(i.gdm_id));
     if (myActionOnly) {
       pool = pool.filter((i) =>
-        availableItemActions(i, hasPermission, user).some((a) => !a.destructive),
+        availableItemActions(i, hasPermission, user, responsibleVesselIds).some((a) => !a.destructive),
       );
     }
     if (searchTerm) {
@@ -86,7 +88,7 @@ export default function PendingBoard({
       );
     }
     return categories.map((c) => ({ ...c, list: pool.filter(c.match) }));
-  }, [items, gdms, user, searchTerm, categories, gdmById, myActionOnly, hasPermission]);
+  }, [items, gdms, user, searchTerm, categories, gdmById, myActionOnly, hasPermission, responsibleVesselIds]);
 
   // Etapas visíveis: todas as pendentes, ou apenas a etapa selecionada no filtro.
   const visibleCategories = useMemo(
@@ -104,9 +106,9 @@ export default function PendingBoard({
     return items.filter(
       (i) =>
         gdmIds.has(i.gdm_id) &&
-        availableItemActions(i, hasPermission, user).some((a) => !a.destructive),
+        availableItemActions(i, hasPermission, user, responsibleVesselIds).some((a) => !a.destructive),
     ).length;
-  }, [items, gdms, user, hasPermission]);
+  }, [items, gdms, user, hasPermission, responsibleVesselIds]);
 
   // Alertas de prazo de retorno por equipamento (vencido / próximo).
   const deadlineAlerts = useMemo(() => {

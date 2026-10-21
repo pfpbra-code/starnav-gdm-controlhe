@@ -2,7 +2,9 @@
  * STARNAV CONTROL 2.0 — Camada central de permissões e escopo de dados.
  *
  * Modelo reestruturado: o usuário possui apenas dois perfis no editor
- * (Administrador e Usuário; o login próprio das Embarcações é mantido à parte).
+ * (Administrador e Usuário). As embarcações são registros operacionais
+ * administrados exclusivamente pelo ADM em Configurações > Embarcações —
+ * sem login ou acesso próprio.
  * O que o usuário pode fazer vem exclusivamente de:
  *   1. Setores vinculados em Configurações > Responsáveis por Setor
  *      (user.sectors) — permissões básicas automáticas do setor;
@@ -88,12 +90,10 @@ export const AVAILABLE_PERMISSIONS = [
 
   // Cadastros
   { id: "view_vessels", label: "Visualizar Embarcações", category: "Cadastros" },
-  { id: "manage_vessels", label: "Gerenciar Embarcações", category: "Cadastros" },
   { id: "view_equipment", label: "Visualizar Equipamentos", category: "Cadastros" },
   { id: "manage_equipment", label: "Gerenciar Equipamentos", category: "Cadastros" },
   { id: "import_equipment", label: "Importar Equipamentos (planilha)", category: "Cadastros" },
   { id: "import_spreadsheet", label: "Importar Planilha", category: "Cadastros" },
-  { id: "edit_vessel_photo", label: "Editar Foto da Embarcação", category: "Cadastros" },
   { id: "view_suppliers", label: "Visualizar Fornecedores", category: "Cadastros" },
   { id: "manage_suppliers", label: "Gerenciar Fornecedores", category: "Cadastros" },
 
@@ -130,7 +130,6 @@ export const PERMISSION_CATEGORIES = AVAILABLE_PERMISSIONS.reduce((acc, p) => {
 
 export const ROLE_LABELS = {
   admin: "Administrador",
-  vessel_user: "Embarcação",
   user: "Usuário",
 };
 
@@ -147,10 +146,8 @@ const ADMIN_ONLY = [
   "import_equipment",
   "import_spreadsheet",
   // Escrita em cadastros e exclusões seguem restritas ao ADM (RLS).
-  "manage_vessels",
   "manage_equipment",
   "manage_suppliers",
-  "edit_vessel_photo",
   "delete_gdm",
 ];
 
@@ -242,9 +239,6 @@ export const SECTOR_BASE_PERMISSIONS = {
   ],
 };
 
-// Permissões do login próprio das embarcações (perfil mantido à parte).
-const VESSEL_PRESET = ["view_dashboard", "view_gdm", "create_gdm", "generate_gdm_pdf"];
-
 // Campos customizados do usuário podem estar no topo ou em user.data (Base44).
 function userField(user, key) {
   const custom = user?.data || {};
@@ -260,7 +254,6 @@ export function userSectors(user) {
 /** Permissões concedidas automaticamente pelos setores do usuário. */
 export function sectorBasePermissions(user) {
   if (user?.role === "admin") return ALL_PERMISSION_IDS;
-  if (user?.role === "vessel_user") return [...VESSEL_PRESET];
   return userSectors(user).flatMap((s) => SECTOR_BASE_PERMISSIONS[s] || []);
 }
 
@@ -272,7 +265,6 @@ export function sectorBasePermissions(user) {
 export function effectivePermissions(user) {
   if (!user) return [];
   if (user.role === "admin") return ALL_PERMISSION_IDS;
-  if (user.role === "vessel_user") return [...VESSEL_PRESET];
   const own = Array.isArray(userField(user, "permissions"))
     ? userField(user, "permissions").filter(Boolean)
     : [];
@@ -330,9 +322,7 @@ export function hasAllPermissions(user, permissions = []) {
 export function allowedVesselIds(user) {
   if (!user) return [];
   if (user.role === "admin") return null;
-  const vesselId = userField(user, "vessel_id");
   const assigned = userField(user, "assigned_vessels");
-  if (user.role === "vessel_user") return vesselId ? [vesselId] : [];
   if (Array.isArray(assigned) && assigned.length > 0) {
     return assigned;
   }
@@ -383,10 +373,8 @@ export const MODULE_PERMISSIONS = {
   Dashboard: "view_dashboard",
   Notifications: null,
   NotificationPreferences: null,
-  VesselDashboard: "view_dashboard",
   GDMList: "view_all_gdms",
   GDMDetail: "view_gdm",
-  VesselGDMs: "view_gdm",
   CreateGDM: "create_gdm",
   ServicesTreatments: "manage_service_treatments",
   ServicesBoard: "send_to_supplier",
@@ -395,7 +383,6 @@ export const MODULE_PERMISSIONS = {
   Operations: "view_operations",
   // A Análise de Cotações controla as abas (Manutenção/Operações) internamente.
   MaintenanceAnalysis: null,
-  Vessels: "view_vessels",
   Equipment: "view_equipment",
   Suppliers: "view_suppliers",
   DisposalReports: "view_disposal_reports",

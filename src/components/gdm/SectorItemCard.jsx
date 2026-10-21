@@ -13,6 +13,7 @@ import {
 } from '@/lib/gdmItems';
 import ItemActionRouter from './ItemActionRouter';
 import ItemHistoryTimeline from './ItemHistoryTimeline';
+import { useResponsibleVesselIds } from '@/hooks/useResponsibleVesselIds';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -24,8 +25,9 @@ import { ptBR } from 'date-fns/locale';
 export default function SectorItemCard({ item, gdm, hasPermission, user }) {
   const [pending, setPending] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  const responsibleVesselIds = useResponsibleVesselIds(user);
 
-  const actions = availableItemActions(item, hasPermission, user);
+  const actions = availableItemActions(item, hasPermission, user, responsibleVesselIds);
   const needsMe = actions.some((a) => !a.destructive);
 
   return (

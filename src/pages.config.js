@@ -51,7 +51,6 @@ import Dashboard from './pages/Dashboard';
 import GDMList from './pages/GDMList';
 import CreateGDM from './pages/CreateGDM';
 import GDMDetail from './pages/GDMDetail';
-import Vessels from './pages/Vessels';
 import Equipment from './pages/Equipment';
 import Suppliers from './pages/Suppliers';
 import Users from './pages/Users';
@@ -59,8 +58,6 @@ import AuditLogs from './pages/AuditLogs';
 import Settings from './pages/Settings';
 import ServicesTreatments from './pages/ServicesTreatments';
 import MaintenanceAnalysis from './pages/MaintenanceAnalysis';
-import VesselDashboard from './pages/VesselDashboard';
-import VesselGDMs from './pages/VesselGDMs';
 import PasswordPolicies from './pages/PasswordPolicies';
 import Notifications from './pages/Notifications';
 import NotificationPreferences from './pages/NotificationPreferences';
@@ -72,7 +69,6 @@ export const PAGES = {
     "GDMList": GDMList,
     "CreateGDM": CreateGDM,
     "GDMDetail": GDMDetail,
-    "Vessels": Vessels,
     "Equipment": Equipment,
     "Suppliers": Suppliers,
     "Users": Users,
@@ -80,8 +76,6 @@ export const PAGES = {
     "Settings": Settings,
     "ServicesTreatments": ServicesTreatments,
     "MaintenanceAnalysis": MaintenanceAnalysis,
-    "VesselDashboard": VesselDashboard,
-    "VesselGDMs": VesselGDMs,
     "PasswordPolicies": PasswordPolicies,
     "Notifications": Notifications,
     "NotificationPreferences": NotificationPreferences,

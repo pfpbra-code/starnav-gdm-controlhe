@@ -12,6 +12,7 @@ import {
   sortItemsByPriority,
 } from '@/lib/gdmItems';
 import SectorItemCard from './SectorItemCard';
+import { useResponsibleVesselIds } from '@/hooks/useResponsibleVesselIds';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -46,6 +47,7 @@ export default function SectorGDMBoard({ sector, title, description, emptyMessag
   const [respFilter, setRespFilter] = useState('all');
   const queryClient = useQueryClient();
   const { user, hasPermission } = usePermissions();
+  const responsibleVesselIds = useResponsibleVesselIds(user);
 
   const destinations = SECTOR_DESTINATIONS[sector] || [];
 
@@ -121,7 +123,7 @@ export default function SectorGDMBoard({ sector, title, description, emptyMessag
         const matched = entry.items.filter((i) => {
           if (respFilter === 'all') return true;
           if (respFilter === 'mine')
-            return availableItemActions(i, hasPermission, user).length > 0;
+            return availableItemActions(i, hasPermission, user, responsibleVesselIds).length > 0;
           return itemResponsibleGroup(i) === respFilter;
         });
         return matched.length ? { gdm: entry.gdm, items: matched } : null;
@@ -129,7 +131,7 @@ export default function SectorGDMBoard({ sector, title, description, emptyMessag
       .filter(Boolean);
 
     result.forEach((entry) => {
-      entry.items = sortItemsByPriority(entry.items, hasPermission, user);
+      entry.items = sortItemsByPriority(entry.items, hasPermission, user, responsibleVesselIds);
     });
 
     return {
@@ -138,11 +140,11 @@ export default function SectorGDMBoard({ sector, title, description, emptyMessag
       myActionCount: items.filter(
         (i) =>
           destinations.includes(i.destination) &&
-          availableItemActions(i, hasPermission, user).length > 0,
+          availableItemActions(i, hasPermission, user, responsibleVesselIds).length > 0,
       ).length,
       coordinatorCount: items.filter((i) => i.status === 'pending_coordinator').length,
     };
-  }, [gdms, items, destinations, user, searchTerm, respFilter, hasPermission]);
+  }, [gdms, items, destinations, user, searchTerm, respFilter, hasPermission, responsibleVesselIds]);
 
   if (isLoading) {
     return (

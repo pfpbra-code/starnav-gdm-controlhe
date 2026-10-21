@@ -26,8 +26,6 @@ const pageTitles = {
   AlmoxarifadoBoard: "Almoxarifado",
   MaintenanceAnalysis: "Análise de Cotações",
   SupplierDetail: "Detalhes do Fornecedor",
-  VesselDashboard: "Painel da Embarcação",
-  VesselGDMs: "Minhas GDMs",
   PasswordPolicies: "Políticas de Senha",
   Notifications: "Notificações",
   NotificationPreferences: "Preferências de Notificação",

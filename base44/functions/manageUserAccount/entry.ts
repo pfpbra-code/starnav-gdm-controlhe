@@ -18,7 +18,7 @@ import {
 // account_status são protegidos por regra de campo no User — esta função é a
 // única via de alteração a partir do app.
 
-const VALID_ROLES = ['admin', 'user', 'vessel_user'];
+const VALID_ROLES = ['admin', 'user'];
 const VALID_STATUSES = ['active', 'inactive', 'suspended'];
 
 export default async function (req: Request): Promise<Response> {
@@ -212,12 +212,12 @@ export default async function (req: Request): Promise<Response> {
       const pendingAlerts: Array<{ type: string; label: string }> = [];
       try {
         const vessels = await base44.asServiceRole.entities.Vessel.filter({
-          $or: [{ responsible_user_id: userId }, { coordinator_id: userId }],
+          coordinator_id: userId,
         });
         (vessels || []).slice(0, 5).forEach((v: any) => {
           pendingAlerts.push({
             type: 'vessel',
-            label: `Embarcação ${v.name}: usuário responsável/coordenador`,
+            label: `Embarcação ${v.name}: coordenador responsável`,
           });
         });
         const page = await base44.asServiceRole.entities.GDMItem.filter(

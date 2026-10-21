@@ -35,8 +35,6 @@ const MENU_ITEMS = [
     label: 'Dashboard',
     page: 'Dashboard',
     permission: 'view_dashboard',
-    resolvePage: (user) =>
-      user?.role === 'vessel_user' ? 'VesselDashboard' : 'Dashboard',
   },
   { icon: FilePlus2, label: 'Criar GDM', page: 'CreateGDM', permission: 'create_gdm' },
   { icon: FileText, label: 'Guias de Desembarque', page: 'GDMList', permission: 'view_all_gdms' },
@@ -44,7 +42,6 @@ const MENU_ITEMS = [
   { icon: Cog, label: 'Operações', page: 'Operations', permission: 'view_operations' },
   { icon: Handshake, label: 'Serviços', page: 'ServicesBoard', permission: 'send_to_supplier' },
   { icon: Warehouse, label: 'Almoxarifado', page: 'AlmoxarifadoBoard', permission: 'confirm_receipt' },
-  { icon: Ship, label: 'Embarcações', page: 'Vessels', permission: 'view_vessels' },
   { icon: Building2, label: 'Fornecedores', page: 'Suppliers', permission: 'view_suppliers' },
   { icon: FileDown, label: 'Relatórios de Descarte', page: 'DisposalReports', permission: 'view_disposal_reports' },
   { icon: Upload, label: 'Importar Planilha', page: 'ImportData', permission: 'import_spreadsheet' },
@@ -54,7 +51,6 @@ const MENU_ITEMS = [
 // Módulos de apoio — preservados da estrutura anterior, também por permissão.
 const EXTRA_ITEMS = [
   { icon: ClipboardList, label: 'Tratativas', page: 'ServicesTreatments', permission: 'manage_service_treatments' },
-  { icon: FileText, label: 'Minhas GDMs', page: 'VesselGDMs', permission: null, roles: ['vessel_user'] },
   { icon: History, label: 'Auditoria', page: 'AuditLogs', permission: 'view_audit_logs' },
   { icon: Bell, label: 'Notificações', page: 'Notifications', permission: null },
 ];

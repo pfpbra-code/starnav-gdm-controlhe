@@ -37,7 +37,6 @@ export const ROLE_LABELS = {
   coordinator: 'Coordenador',
   services: 'Serviços/Compras',
   maintenance: 'Gestor de Manutenção',
-  vessel_user: 'Embarcação',
   user: 'Usuário',
 };
 
@@ -119,33 +118,11 @@ export function fileNameFromUrl(url) {
 }
 
 // ============================================================================
-// Numeração de GDM — sequencial por embarcação, reiniciando a cada ano.
-// Formato: GDM-NNN/YYYY (ex.: GDM-001/2026).
+// Numeração de GDM — informada manualmente pelo usuário na criação
+// (ex.: GDM-001/2026 ou 001/2026, conforme padrão da empresa).
+// O sistema não gera números: valida apenas a obrigatoriedade do campo e a
+// duplicidade do número dentro da mesma embarcação.
 // ============================================================================
-
-// Extrai o sequencial e o ano de um número de GDM no formato GDM-NNN/YYYY.
-// Retorna { seq, year } ou null quando o número não segue o padrão.
-export function parseGdmNumber(gdmNumber) {
-  if (!gdmNumber) return null;
-  const match = String(gdmNumber).match(/^GDM-(\d{1,4})\/(\d{4})$/i);
-  if (!match) return null;
-  return { seq: parseInt(match[1], 10), year: parseInt(match[2], 10) };
-}
-
-// Calcula o próximo número de GDM para uma embarcação no ano informado,
-// considerando as GDMs já existentes dessa embarcação.
-export function nextGdmNumberForVessel(existingGdmsForVessel, year = new Date().getFullYear()) {
-  let maxSeq = 0;
-  (existingGdmsForVessel || []).forEach((g) => {
-    const parsed = parseGdmNumber(g?.gdm_number);
-    if (parsed && parsed.year === year && parsed.seq > maxSeq) {
-      maxSeq = parsed.seq;
-    }
-  });
-  const seq = maxSeq + 1;
-  const seqStr = String(seq).padStart(3, '0');
-  return `GDM-${seqStr}/${year}`;
-}
 
 // Adiciona uma nova proposta ao histórico (append-only, nada é removido)
 export function addProposal(gdm, proposal) {

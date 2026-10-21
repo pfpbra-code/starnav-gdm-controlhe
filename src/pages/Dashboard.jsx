@@ -62,6 +62,7 @@ export default function Dashboard() {
   });
 
   const { hasPermission } = usePermissions();
+  const isAdmin = hasPermission('system_settings');
   const canViewMaintenance = hasPermission('view_maintenance');
   const canViewOperations = hasPermission('view_operations');
 
@@ -345,11 +346,13 @@ export default function Dashboard() {
                     <Ship className="h-5 w-5 text-sky-600" />
                     Embarcações
                   </CardTitle>
-                  <Link to={createPageUrl('Vessels')}>
-                    <Button variant="ghost" size="sm">
-                      Ver todas <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
+                  {isAdmin && (
+                    <Link to="/Settings?tab=Vessels">
+                      <Button variant="ghost" size="sm">
+                        Gerenciar <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <p className="text-3xl font-bold text-slate-900">{vessels.length}</p>

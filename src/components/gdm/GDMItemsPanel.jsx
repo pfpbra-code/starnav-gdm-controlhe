@@ -42,6 +42,7 @@ import ItemPhotoGallery from './ItemPhotoGallery';
 import GDMItemPdfButton from './GDMItemPdfButton';
 import DiscardReportButton from './DiscardReportButton';
 import ItemActionRouter from './ItemActionRouter';
+import { useResponsibleVesselIds } from '@/hooks/useResponsibleVesselIds';
 
 function ItemHistory({ itemId }) {
   const { data: history = [], isLoading } = useQuery({
@@ -140,18 +141,19 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
   });
 
   const can = (key) => hasPermission(user, key);
+  const responsibleVesselIds = useResponsibleVesselIds(user);
   const summary = summarizeItems(items);
 
   const visibleItems = useMemo(() => {
-    const sorted = sortItemsByPriority(items, can, user);
+    const sorted = sortItemsByPriority(items, can, user, responsibleVesselIds);
     return sorted.filter((i) => {
       if (destFilter !== 'all' && i.destination !== destFilter) return false;
       if (filter === 'all') return true;
-      if (filter === 'mine') return availableItemActions(i, can).some((a) => !a.destructive);
+      if (filter === 'mine') return availableItemActions(i, can, user, responsibleVesselIds).some((a) => !a.destructive);
       return itemGroup(i) === filter;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, filter, destFilter, user]);
+  }, [items, filter, destFilter, user, responsibleVesselIds]);
 
   const openAction = (item, a) => setPending({ item, ...a });
 
@@ -236,7 +238,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
           </p>
         )}
         {visibleItems.map((item) => {
-          const actions = availableItemActions(item, can, user);
+          const actions = availableItemActions(item, can, user, responsibleVesselIds);
           const warranty = warrantyInfo(item);
           const primary = actions.filter((a) => !a.destructive);
           const isOpen = !!expanded[item.id];

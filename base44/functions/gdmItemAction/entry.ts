@@ -64,9 +64,18 @@ export default async function (req: Request): Promise<Response> {
     const can = (p: string) => hasPermission(user, p);
     const isVesselStage = VESSEL_STAGE_ACTIONS.includes(action);
 
-    // ETAPA 4 (embarcação): validada por vínculo com a embarcação emissora.
-    if (isVesselStage && !canActOnVesselItems(user, item)) {
-      throw new Error('Somente a embarcação emissora pode confirmar o desembarque deste item');
+    // ETAPA 4 (confirmação do desembarque): validada pelo vínculo do usuário
+    // como responsável por setor da embarcação (ou pelo próprio ADM).
+    let stageVessel: any = null;
+    if (isVesselStage && item.vessel_id) {
+      try {
+        stageVessel = await base44.asServiceRole.entities.Vessel.get(item.vessel_id);
+      } catch {
+        stageVessel = null;
+      }
+    }
+    if (isVesselStage && !canActOnVesselItems(user, item, stageVessel)) {
+      throw new Error('Somente os responsáveis da embarcação podem confirmar o desembarque deste item');
     }
 
     // Separação de setores: só usuários autorizados no setor do item podem agir.
