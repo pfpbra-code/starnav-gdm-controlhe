@@ -87,11 +87,6 @@
         },
         {
           "user_condition": {
-            "role": "vessel_user"
-          }
-        },
-        {
-          "user_condition": {
             "role": "admin"
           }
         }
@@ -101,9 +96,6 @@
       "$or": [
         {
           "created_by_id": "{{user.id}}"
-        },
-        {
-          "data.vessel_id": "{{user.data.vessel_id}}"
         },
         {
           "user_condition": {
