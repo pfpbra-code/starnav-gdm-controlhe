@@ -413,7 +413,7 @@
     "disembark_confirmed_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Data/hora da confirma\u00e7\u00e3o de desembarque pela embarca\u00e7\u00e3o"
+      "description": "Data/hora da confirma\u00e7\u00e3o de desembarque pelo respons\u00e1vel vinculado \u00e0 embarca\u00e7\u00e3o"
     },
     "disembark_confirmed_by": {
       "type": "string",
@@ -422,7 +422,7 @@
     "expected_disembark_date": {
       "type": "string",
       "format": "date",
-      "description": "Nova data prevista de desembarque informada pela embarca\u00e7\u00e3o"
+      "description": "Nova data prevista de desembarque informada pelo respons\u00e1vel vinculado \u00e0 embarca\u00e7\u00e3o"
     },
     "reschedule_justification": {
       "type": "string",
@@ -514,11 +514,6 @@
         },
         {
           "user_condition": {
-            "role": "vessel_user"
-          }
-        },
-        {
-          "user_condition": {
             "role": "admin"
           }
         }
@@ -528,9 +523,6 @@
       "$or": [
         {
           "created_by_id": "{{user.id}}"
-        },
-        {
-          "data.vessel_id": "{{user.data.vessel_id}}"
         },
         {
           "data.vessel_id": {
@@ -553,9 +545,6 @@
       "$or": [
         {
           "created_by_id": "{{user.id}}"
-        },
-        {
-          "data.vessel_id": "{{user.data.vessel_id}}"
         },
         {
           "user_condition": {
