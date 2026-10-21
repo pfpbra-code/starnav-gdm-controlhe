@@ -20,7 +20,9 @@ import {
   Shield,
   Database,
   ArrowRight,
-  FileText
+  FileText,
+  Upload,
+  ClipboardList
 } from 'lucide-react';
 
 // Itens de atalho da Visão Geral — "tab" abre aba interna; "page" navega para página própria.
@@ -66,19 +68,42 @@ const settingsGroups = [
         permission: "manage_users"
       },
       {
-        title: "Logs de Auditoria",
-        description: "Visualizar histórico de ações",
-        icon: Shield,
-        color: "amber",
-        page: "AuditLogs"
-      },
-      {
         title: "Políticas de Senha",
         description: "Configurar regras de segurança",
         icon: Shield,
         color: "green",
         tab: "PasswordPolicies",
         permission: "system_settings"
+      }
+    ]
+  },
+  {
+    title: "Administração do Sistema",
+    description: "Ferramentas administrativas e de controle",
+    items: [
+      {
+        title: "Importar Planilha",
+        description: "Importar dados em lote via planilha",
+        icon: Upload,
+        color: "purple",
+        page: "ImportData",
+        permission: "import_spreadsheet"
+      },
+      {
+        title: "Tratativas",
+        description: "Registrar e consultar tratativas de serviços",
+        icon: ClipboardList,
+        color: "amber",
+        page: "ServicesTreatments",
+        permission: "manage_service_treatments"
+      },
+      {
+        title: "Auditoria",
+        description: "Visualizar histórico de ações do sistema",
+        icon: Shield,
+        color: "green",
+        page: "AuditLogs",
+        permission: "view_audit_logs"
       }
     ]
   }

@@ -14,11 +14,8 @@ import {
   LogOut,
   Wrench,
   Cog,
-  ClipboardList,
   Handshake,
   Warehouse,
-  History,
-  Upload,
   ChevronLeft,
   UserCircle,
   Bell,
@@ -44,14 +41,13 @@ const MENU_ITEMS = [
   { icon: Warehouse, label: 'Almoxarifado', page: 'AlmoxarifadoBoard', permission: 'confirm_receipt' },
   { icon: Building2, label: 'Fornecedores', page: 'Suppliers', permission: 'view_suppliers' },
   { icon: FileDown, label: 'Relatórios de Descarte', page: 'DisposalReports', permission: 'view_disposal_reports' },
-  { icon: Upload, label: 'Importar Planilha', page: 'ImportData', permission: 'import_spreadsheet' },
   { icon: Settings, label: 'Configurações', page: 'Settings', permission: 'system_settings' },
 ];
 
-// Módulos de apoio — preservados da estrutura anterior, também por permissão.
+// Módulos de apoio — também por permissão. Ferramentas administrativas
+// (Importar Planilha, Tratativas, Auditoria) ficam em Configurações >
+// Administração do Sistema, não no menu principal.
 const EXTRA_ITEMS = [
-  { icon: ClipboardList, label: 'Tratativas', page: 'ServicesTreatments', permission: 'manage_service_treatments' },
-  { icon: History, label: 'Auditoria', page: 'AuditLogs', permission: 'view_audit_logs' },
   { icon: Bell, label: 'Notificações', page: 'Notifications', permission: null },
 ];
 
