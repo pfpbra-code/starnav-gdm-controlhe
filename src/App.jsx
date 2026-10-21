@@ -14,7 +14,6 @@ import SupplierDetail from './pages/SupplierDetail';
 import DisposalReports from './pages/DisposalReports';
 import RequirePermission from '@/components/RequirePermission';
 import AccountStatusGate from '@/components/AccountStatusGate';
-import WelcomeOverlay from '@/components/WelcomeOverlay';
 import { isAccountAllowed } from '@/lib/permissions';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
@@ -61,7 +60,6 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <>
-      <WelcomeOverlay user={user} />
       <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
