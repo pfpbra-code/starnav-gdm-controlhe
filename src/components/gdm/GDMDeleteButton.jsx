@@ -30,6 +30,8 @@ export default function GDMDeleteButton({ gdm }) {
       queryClient.invalidateQueries({ queryKey: ['gdms'] });
       queryClient.invalidateQueries({ queryKey: ['gdmItems'] });
       queryClient.invalidateQueries({ queryKey: ['gdmItemHistories'] });
+      queryClient.invalidateQueries({ queryKey: ['certifications'] });
+      queryClient.invalidateQueries({ queryKey: ['managerialEquipment'] });
     },
     onError: (error) => toast.error(error?.message || 'Não foi possível excluir a GDM'),
   });
@@ -51,7 +53,8 @@ export default function GDMDeleteButton({ gdm }) {
             <DialogTitle>Excluir GDM {gdm.gdm_number}?</DialogTitle>
             <DialogDescription>
               Esta ação exclui a GDM <strong>por completo do sistema</strong>, incluindo todos os
-              itens e todo o histórico de ações. Não é possível desfazer.
+              itens, histórico, fotos, anexos e certificados vinculados.
+              Não é possível desfazer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

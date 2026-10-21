@@ -28,8 +28,13 @@ export default async function(req: Request): Promise<Response> {
     }
     if (!gdm) return Response.json({ error: 'GDM não encontrada' }, { status: 404 });
 
+    // Remove todos os registros vinculados, senão continuam contabilizando
+    // nos dashboards e no detalhe dos fornecedores:
     await base44.asServiceRole.entities.GDMItem.deleteMany({ gdm_id: gdmId });
     await base44.asServiceRole.entities.GDMItemHistory.deleteMany({ gdm_id: gdmId });
+    await base44.asServiceRole.entities.GDMPhoto.deleteMany({ gdm_id: gdmId });
+    await base44.asServiceRole.entities.GDMAttachment.deleteMany({ gdm_id: gdmId });
+    await base44.asServiceRole.entities.Certification.deleteMany({ gdm_id: gdmId });
     await base44.asServiceRole.entities.GDM.delete(gdmId);
 
     return Response.json({ success: true, gdm_number: gdm.gdm_number });
