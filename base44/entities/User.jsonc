@@ -18,6 +18,17 @@
         }
       }
     },
+    "vessel_id": {
+      "type": "string",
+      "description": "Embarca\u00e7\u00e3o legada (campo de per\u00edodo anterior ao acesso multi-embarca\u00e7\u00e3o). Sem uso pelas regras de acesso; o escopo de dados atual \u00e9 o campo protegido assigned_vessels. Campo protegido: n\u00e3o edit\u00e1vel pelo pr\u00f3prio usu\u00e1rio",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "collaborator_role": "editor"
+          }
+        }
+      }
+    },
     "sectors": {
       "type": "array",
       "items": {
