@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { base44 } from '@/api/base44Client';
+import { LOGO_URL } from '@/lib/branding';
 
 const roleLabels = {
   admin: "Administrador",
@@ -45,6 +46,11 @@ export default function Header({ user, pageTitle, onMenuClick }) {
         >
           <Menu className="h-5 w-5" />
         </Button>
+        <img
+          src={LOGO_URL}
+          alt="Starnav"
+          className="hidden h-9 w-9 shrink-0 rounded object-contain sm:block"
+        />
         <h2 className="truncate text-lg font-semibold text-slate-900 md:text-xl">
           {pageTitle}
         </h2>
