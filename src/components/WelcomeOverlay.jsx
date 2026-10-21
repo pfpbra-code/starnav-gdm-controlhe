@@ -4,16 +4,11 @@ import { Button } from '@/components/ui/button';
 import { APP_NAME, LOGO_URL, WELCOME_VIDEO_URL } from '@/lib/branding';
 
 export default function WelcomeOverlay({ user }) {
-  const [visible, setVisible] = useState(
-    () => !sessionStorage.getItem('starnav_welcome_done')
-  );
+  const [visible, setVisible] = useState(true);
 
   if (!visible) return null;
 
-  const handleClose = () => {
-    sessionStorage.setItem('starnav_welcome_done', '1');
-    setVisible(false);
-  };
+  const handleClose = () => setVisible(false);
 
   const firstName = user?.full_name?.split(' ')[0];
 
@@ -28,6 +23,7 @@ export default function WelcomeOverlay({ user }) {
             muted
             loop
             playsInline
+            preload="auto"
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-black/50" />
