@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { APP_NAME, LOGO_URL, WELCOME_VIDEO_URL } from '@/lib/branding';
+import { APP_NAME, WELCOME_VIDEO_URL } from '@/lib/branding';
 
 export default function WelcomeOverlay({ user }) {
   const [visible, setVisible] = useState(true);
@@ -31,7 +31,6 @@ export default function WelcomeOverlay({ user }) {
       )}
 
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
-        <img src={LOGO_URL} alt="Starnav" className="mb-6 h-24 w-auto object-contain" />
         <h1 className="text-3xl font-bold text-white md:text-4xl">
           {firstName ? `Bem-vindo, ${firstName}!` : 'Bem-vindo!'}
         </h1>
