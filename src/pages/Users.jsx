@@ -37,6 +37,7 @@ import UserActivityLog from '@/components/users/UserActivityLog';
 import UserPermissions from '@/components/users/UserPermissions';
 import PendingApprovalsCard from '@/components/users/PendingApprovalsCard';
 import DeleteUserDialog from '@/components/users/DeleteUserDialog';
+import UserLinkedVessels from '@/components/users/UserLinkedVessels';
 
 import { SECTORS, ACCOUNT_STATUS_LABELS, userAccountStatus } from '@/lib/permissions';
 import { displayNameOf } from '@/lib/displayName';
@@ -551,10 +552,12 @@ export default function Users() {
                     <SelectItem value="active">Ativo</SelectItem>
                     <SelectItem value="inactive">Inativo</SelectItem>
                     <SelectItem value="suspended">Suspenso</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                    </SelectContent>
+                    </Select>
+                    </div>
+
+                    <UserLinkedVessels user={editingUser} />
+                    </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseEditDialog}>
                 Cancelar
