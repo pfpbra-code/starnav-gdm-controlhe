@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { AlertTriangle, Loader2, Trash2 } from 'lucide-react';
 import { SECTORS } from '@/lib/permissions';
+import { displayNameOf } from '@/lib/displayName';
 
 const ROLE_LABELS = { admin: 'Administrador', user: 'Usuário' };
 const SECTOR_LABELS = Object.fromEntries(SECTORS.map((s) => [s.key, s.label]));
@@ -49,7 +50,7 @@ export default function DeleteUserDialog({ user, open, onOpenChange, onConfirm, 
           <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 text-sm">
             <div className="flex justify-between gap-4">
               <span className="text-slate-500">Usuário</span>
-              <span className="font-medium text-right">{user.full_name || 'Sem nome'}</span>
+              <span className="font-medium text-right">{displayNameOf(user) || 'Sem nome'}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-slate-500">E-mail</span>

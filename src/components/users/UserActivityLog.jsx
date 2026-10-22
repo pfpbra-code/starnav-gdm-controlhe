@@ -1,4 +1,5 @@
 import React from 'react';
+import { displayNameOf } from '@/lib/displayName';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ export default function UserActivityLog({ user, open, onOpenChange }) {
         <DialogHeader>
           <DialogTitle>Histórico de Atividades</DialogTitle>
           <DialogDescription>
-            Usuário: {user?.full_name || user?.email}
+            Usuário: {displayNameOf(user) || user?.email}
           </DialogDescription>
         </DialogHeader>
 

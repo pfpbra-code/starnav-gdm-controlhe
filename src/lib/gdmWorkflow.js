@@ -1,6 +1,8 @@
 // Central GDM workflow definitions: statuses, steps, roles and history builder.
 // Used by GDMDetail, GDMList and StatusBadge to keep the flow consistent.
 
+import { displayNameOf } from '@/lib/displayName';
+
 export const STATUS_LABELS = {
   pending_coordinator: 'Aguardando Aprovação do Coordenador',
   pending_services: 'Aguardando Serviços/Compras',
@@ -56,7 +58,7 @@ export function buildHistoryEntry({
   return {
     action,
     user: user?.email,
-    user_name: user?.full_name || user?.email,
+    user_name: displayNameOf(user) || user?.email,
     role: user?.role,
     timestamp: new Date().toISOString(),
     details,

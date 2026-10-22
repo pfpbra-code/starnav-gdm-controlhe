@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { displayNameOf } from '@/lib/displayName';
 import {
   FileText,
   Ship,
@@ -192,7 +193,7 @@ export default function Dashboard() {
     <div className="space-y-8">
       {/* Welcome */}
       <div className="bg-gradient-to-r from-sky-600 to-sky-700 rounded-2xl p-6 text-white">
-        <h1 className="text-2xl font-bold">Bem-vindo, {user?.full_name?.split(' ')[0] || 'Usuário'}!</h1>
+        <h1 className="text-2xl font-bold">Bem-vindo, {displayNameOf(user)?.split(' ')[0] || 'Usuário'}!</h1>
         <p className="mt-1 text-sky-100">
           Sistema de Gestão de Materiais — Starnav Serviços Marítimos
         </p>

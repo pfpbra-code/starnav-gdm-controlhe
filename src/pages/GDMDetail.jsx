@@ -11,6 +11,7 @@ import GDMItemsPanel from '@/components/gdm/GDMItemsPanel';
 import GDMItemsSummary from '@/components/gdm/GDMItemsSummary';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { displayNameOf } from '@/lib/displayName';
 import {
   Ship,
   Package,
@@ -182,7 +183,7 @@ export default function GDMDetail() {
                       <div>
                         <p className="text-xs text-slate-500">Responsável atual</p>
                         <p className="font-medium text-slate-900">
-                          {user?.full_name || user?.email || '-'}
+                          {displayNameOf(user) || user?.email || '-'}
                         </p>
                         <p className="text-xs text-slate-500">{ROLE_LABELS[user?.role] || user?.role}</p>
                       </div>

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { displayNameOf } from '@/lib/displayName';
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -99,7 +100,7 @@ export default function GDMList() {
   const userNames = React.useMemo(() => {
     const map = {};
     (users || []).forEach((u) => {
-      if (u?.id) map[u.id] = u.full_name || u.email;
+      if (u?.id) map[u.id] = displayNameOf(u) || u.email;
     });
     return map;
   }, [users]);

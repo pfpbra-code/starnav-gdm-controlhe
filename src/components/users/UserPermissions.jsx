@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Shield, Lock } from 'lucide-react';
+import { displayNameOf } from '@/lib/displayName';
 import {
   AVAILABLE_PERMISSIONS,
   ALL_PERMISSION_IDS,
@@ -71,7 +72,7 @@ export default function UserPermissions({ user, open, onOpenChange, onSave, isSa
             Autorizações Individuais
           </DialogTitle>
           <DialogDescription>
-            Usuário: {user?.full_name || user?.email}
+            Usuário: {displayNameOf(user) || user?.email}
           </DialogDescription>
         </DialogHeader>
 

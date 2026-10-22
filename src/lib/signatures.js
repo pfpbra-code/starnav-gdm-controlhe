@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { displayNameOf } from '@/lib/displayName';
 
 export const SIGNATURE_MISSING_MESSAGE =
   'A assinatura eletrônica ainda não foi cadastrada. Acesse Meu Perfil para configurar sua assinatura.';
@@ -96,7 +97,7 @@ export async function createSignatureRecord({
   return base44.entities.Signature.create({
     user_id: user.id,
     user_email: user.email,
-    user_name: user.full_name || '',
+    user_name: displayNameOf(user) || '',
     user_job_title: user.job_title || user.data?.job_title || '',
     signature_url: signatureUrl,
     action,

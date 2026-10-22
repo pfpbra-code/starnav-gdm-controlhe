@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { displayNameOf } from '@/lib/displayName';
 import {
   Select,
   SelectContent,
@@ -269,7 +270,7 @@ export default function Vessels() {
                   </TableCell>
                   <TableCell>{vessel.code}</TableCell>
                   <TableCell>{vessel.type || '-'}</TableCell>
-                  <TableCell>{coordinator?.full_name || '-'}</TableCell>
+                  <TableCell>{displayNameOf(coordinator) || '-'}</TableCell>
                   <TableCell>
                     <StatusBadge status={vessel.status} />
                   </TableCell>
@@ -368,7 +369,7 @@ export default function Vessels() {
                   <SelectContent>
                     {coordinators.map((coord) => (
                       <SelectItem key={coord.id} value={coord.id}>
-                        {coord.full_name}
+                        {displayNameOf(coord)}
                       </SelectItem>
                     ))}
                   </SelectContent>

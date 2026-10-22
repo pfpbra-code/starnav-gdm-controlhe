@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 import {
   hasPermission,
+  displayNameOf,
   SECTOR_BY_DESTINATION,
   sectorViewPermission,
   VESSEL_STAGE_ACTIONS,
@@ -892,7 +893,7 @@ export default async function (req: Request): Promise<Response> {
               {
                 action: 'status_synced_from_items',
                 user: user.email,
-                user_name: user.full_name || user.email,
+                user_name: displayNameOf(user),
                 role: user.role,
                 timestamp: new Date().toISOString(),
                 details: `Status da GDM atualizado automaticamente a partir dos itens (${target}).`,

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Clock, UserCheck, XCircle, Loader2 } from 'lucide-react';
 import { SECTORS } from '@/lib/permissions';
+import { displayNameOf } from '@/lib/displayName';
 
 const ROLE_LABELS = { admin: 'Administrador', user: 'Usuário' };
 const SECTOR_LABELS = Object.fromEntries(SECTORS.map((s) => [s.key, s.label]));
@@ -60,7 +61,7 @@ export default function PendingApprovalsCard({ users, onApprove, onReject, pendi
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium">{u.full_name || 'Sem nome'}</p>
+                  <p className="font-medium">{displayNameOf(u) || 'Sem nome'}</p>
                   <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
                     {ROLE_LABELS[u.role] || u.role}
                   </Badge>
@@ -110,7 +111,7 @@ export default function PendingApprovalsCard({ users, onApprove, onReject, pendi
           <DialogHeader>
             <DialogTitle>Recusar cadastro</DialogTitle>
             <DialogDescription>
-              O acesso de {rejecting?.full_name || rejecting?.email} ({rejecting?.email}) será bloqueado.
+              O acesso de {displayNameOf(rejecting) || rejecting?.email} ({rejecting?.email}) será bloqueado.
               A justificativa ficará registrada na auditoria.
             </DialogDescription>
           </DialogHeader>

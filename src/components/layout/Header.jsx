@@ -14,6 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { base44 } from '@/api/base44Client';
 import { LOGO_URL } from '@/lib/branding';
+import { displayNameOf } from '@/lib/displayName';
 
 const roleLabels = {
   admin: "Administrador",
@@ -23,7 +24,7 @@ const roleLabels = {
 };
 
 export default function Header({ user, pageTitle, onMenuClick }) {
-  const initials = user?.full_name
+  const initials = displayNameOf(user)
     ?.split(' ')
     .map(n => n[0])
     .join('')
@@ -71,13 +72,13 @@ export default function Header({ user, pageTitle, onMenuClick }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                {user?.photo_url ? <AvatarImage src={user.photo_url} alt={user?.full_name} /> : null}
+                {user?.photo_url ? <AvatarImage src={user.photo_url} alt={displayNameOf(user)} /> : null}
                 <AvatarFallback className="bg-sky-100 text-sky-700 text-sm">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium">{user?.full_name || 'Usuário'}</p>
+                <p className="text-sm font-medium">{displayNameOf(user) || 'Usuário'}</p>
                 <p className="text-xs text-slate-500">{roleLabels[user?.role] || 'Usuário'}</p>
               </div>
             </Button>

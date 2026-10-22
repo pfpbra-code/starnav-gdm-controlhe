@@ -85,6 +85,12 @@ export function userCustomField(user: any, key: string): any {
   return user?.[key] !== undefined ? user[key] : custom[key];
 }
 
+/** Nome de exibição do usuário (definido por ele em Meu Perfil); vazio usa o nome da conta. */
+export function displayNameOf(user: any): string {
+  const dn = userCustomField(user, 'display_name');
+  return typeof dn === 'string' && dn.trim() ? dn.trim() : user?.full_name || user?.email || '';
+}
+
 /** Setores vinculados ao usuário. */
 export function userSectors(user: any): string[] {
   const sectors = userCustomField(user, 'sectors');

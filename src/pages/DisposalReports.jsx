@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { displayNameOf } from '@/lib/displayName';
 import {
   Select,
   SelectContent,
@@ -100,7 +101,7 @@ export default function DisposalReports() {
 
   const userNames = useMemo(() => {
     const map = {};
-    (users || []).forEach((u) => { if (u?.id) map[u.id] = u.full_name || u.email; });
+    (users || []).forEach((u) => { if (u?.id) map[u.id] = displayNameOf(u) || u.email; });
     return map;
   }, [users]);
 

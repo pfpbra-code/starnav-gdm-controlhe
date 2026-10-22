@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Check, UserPlus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { displayNameOf } from '@/lib/displayName';
 
 /**
  * Seletor múltiplo de usuários responsáveis por um setor.
@@ -29,7 +30,7 @@ export default function SectorResponsiblePicker({ users, selected, onChange }) {
 
   const nameFor = (email) => {
     const u = users.find((x) => x.email === email);
-    return u?.full_name || email;
+    return displayNameOf(u) || email;
   };
 
   return (
@@ -54,7 +55,7 @@ export default function SectorResponsiblePicker({ users, selected, onChange }) {
                 {users.map((u) => (
                   <CommandItem
                     key={u.id}
-                    value={`${u.full_name || ''} ${u.email}`}
+                    value={`${displayNameOf(u) || ''} ${u.email}`}
                     onSelect={() => toggle(u.email)}
                   >
                     <Check
@@ -64,7 +65,7 @@ export default function SectorResponsiblePicker({ users, selected, onChange }) {
                       )}
                     />
                     <span className="truncate">
-                      {u.full_name || u.email} ({u.email})
+                      {displayNameOf(u) || u.email} ({u.email})
                     </span>
                   </CommandItem>
                 ))}

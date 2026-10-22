@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/hooks/usePermissions';
 import { ROLE_LABELS } from '@/lib/permissions';
+import { displayNameOf } from '@/lib/displayName';
 import ProfileEditForm from '@/components/profile/ProfileEditForm';
 import SignatureSection from '@/components/profile/SignatureSection';
 import { toast } from 'sonner';
@@ -59,7 +60,7 @@ export default function MyProfile() {
   );
 
   const initials =
-    user.full_name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+    displayNameOf(user)?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
   const photoUrl = user.photo_url || user.data?.photo_url || '';
   const phone = user.phone || user.data?.phone || '';
   const jobTitle = user.job_title || user.data?.job_title || '';
@@ -107,14 +108,14 @@ export default function MyProfile() {
         <CardContent className="p-6 -mt-14">
           <div className="flex flex-col lg:flex-row lg:items-end gap-5">
             <Avatar className="h-28 w-28 border-4 border-white shadow-lg">
-              {photoUrl ? <AvatarImage src={photoUrl} alt={user.full_name} /> : null}
+              {photoUrl ? <AvatarImage src={photoUrl} alt={displayNameOf(user)} /> : null}
               <AvatarFallback className="bg-sky-100 text-sky-700 text-2xl">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0 space-y-2">
               <h1 className="text-3xl font-bold tracking-tight break-words text-slate-900">
-                {user.full_name || 'Usuário'}
+                {displayNameOf(user) || 'Usuário'}
               </h1>
               <div className="flex flex-wrap gap-2">
                 <Badge className="bg-sky-100 text-sky-800 border-sky-200">

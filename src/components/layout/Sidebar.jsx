@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from "@/lib/utils";
 import { hasPermission, hasAnyPermission } from "@/lib/permissions";
+import { displayNameOf } from "@/lib/displayName";
 import {
   LayoutDashboard,
   FileText,
@@ -183,7 +184,7 @@ export default function Sidebar({ user, collapsed, setCollapsed, currentPage, mo
           <div className="border-t border-slate-700 p-3">
             {!isCollapsed && (
               <div className="mb-3 px-3">
-                <p className="text-sm font-medium truncate">{user?.full_name || 'Usuário'}</p>
+                <p className="text-sm font-medium truncate">{displayNameOf(user) || 'Usuário'}</p>
                 <p className="text-xs text-slate-400 truncate">{user?.email}</p>
               </div>
             )}

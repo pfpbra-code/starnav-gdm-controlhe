@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Paperclip, FileImage, FileText, X, Upload, Camera } from 'lucide-react';
+import { displayNameOf } from '@/lib/displayName';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ITEM_DESTINATION_LABELS } from '@/lib/gdmItems';
@@ -53,7 +54,7 @@ export default function DiscardConfirmDialog({ pending, onClose }) {
 
   useEffect(() => {
     setDiscardDate(format(new Date(), 'yyyy-MM-dd'));
-    setResponsible(user?.full_name || user?.email || '');
+    setResponsible(displayNameOf(user) || user?.email || '');
     setObservation('');
     setFiles([]);
     setFileError('');

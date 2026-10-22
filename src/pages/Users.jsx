@@ -39,6 +39,7 @@ import PendingApprovalsCard from '@/components/users/PendingApprovalsCard';
 import DeleteUserDialog from '@/components/users/DeleteUserDialog';
 
 import { SECTORS, ACCOUNT_STATUS_LABELS, userAccountStatus } from '@/lib/permissions';
+import { displayNameOf } from '@/lib/displayName';
 
 const roleLabels = {
   admin: "Administrador",
@@ -187,7 +188,8 @@ export default function Users() {
   const pendingUsers = users.filter((u) => userAccountStatus(u) === 'pending_approval');
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const searchTarget = `${user.full_name || ''} ${displayNameOf(user) || ''}`.toLowerCase();
+    const matchesSearch = searchTarget.includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || userAccountStatus(user) === statusFilter;
@@ -304,7 +306,7 @@ export default function Users() {
           </TableHeader>
           <TableBody>
             {filteredUsers.map((user) => {
-              const initials = user.full_name
+              const initials = displayNameOf(user)
                 ?.split(' ')
                 .map(n => n[0])
                 .join('')
@@ -321,7 +323,7 @@ export default function Users() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{user.full_name || 'Sem nome'}</p>
+                        <p className="font-medium">{displayNameOf(user) || 'Sem nome'}</p>
                         <p className="text-sm text-slate-500">{user.email}</p>
                       </div>
                     </div>
@@ -516,7 +518,7 @@ export default function Users() {
             <div className="space-y-4 py-4">
               <div className="p-3 bg-slate-50 rounded-lg">
                 <p className="text-sm text-slate-500">Usuário</p>
-                <p className="font-medium">{editingUser?.full_name || editingUser?.email}</p>
+                <p className="font-medium">{displayNameOf(editingUser) || editingUser?.email}</p>
                 <p className="text-sm text-slate-500">{editingUser?.email}</p>
               </div>
 
