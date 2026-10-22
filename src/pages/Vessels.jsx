@@ -34,6 +34,7 @@ import { Ship, Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
 import VesselSectorResponsibles from '@/components/vessels/VesselSectorResponsibles';
+import VesselLinkedPeople from '@/components/vessels/VesselLinkedPeople';
 
 export default function Vessels() {
   const queryClient = useQueryClient();
@@ -242,14 +243,13 @@ export default function Vessels() {
               <TableHead>Nome</TableHead>
               <TableHead>Código</TableHead>
               <TableHead>Tipo</TableHead>
-              <TableHead>Coordenador</TableHead>
+              <TableHead>Vinculados</TableHead>
               <TableHead>Status</TableHead>
               {isAdmin && <TableHead className="text-right">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredVessels.map((vessel) => {
-              const coordinator = coordinators.find(c => c.id === vessel.coordinator_id);
               return (
                 <TableRow key={vessel.id} className="hover:bg-slate-50">
                   <TableCell>
@@ -270,7 +270,9 @@ export default function Vessels() {
                   </TableCell>
                   <TableCell>{vessel.code}</TableCell>
                   <TableCell>{vessel.type || '-'}</TableCell>
-                  <TableCell>{displayNameOf(coordinator) || '-'}</TableCell>
+                  <TableCell className="min-w-[220px]">
+                    <VesselLinkedPeople vessel={vessel} users={[...coordinators, ...allUsers]} />
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={vessel.status} />
                   </TableCell>
