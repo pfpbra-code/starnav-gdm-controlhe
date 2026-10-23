@@ -38,10 +38,14 @@
       "type": "string",
       "description": "Nome do fornecedor de destino (denormalizado)"
     },
+    "request_number": {
+      "type": "string",
+      "description": "N\u00ba da solicita\u00e7\u00e3o de NF"
+    },
     "request_date": {
       "type": "string",
       "format": "date-time",
-      "description": "Data/hora da solicita\u00e7\u00e3o"
+      "description": "Data para emiss\u00e3o da NF"
     },
     "requested_by": {
       "type": "string",
@@ -61,11 +65,15 @@
     },
     "supplier_company_name": {
       "type": "string",
-      "description": "Raz\u00e3o social do fornecedor"
+      "description": "Raz\u00e3o social do fornecedor (empresa destino)"
     },
     "supplier_cnpj": {
       "type": "string",
       "description": "CNPJ do fornecedor"
+    },
+    "supplier_state_registration": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o estadual do fornecedor"
     },
     "supplier_address": {
       "type": "string",
@@ -112,6 +120,10 @@
             "type": "string",
             "description": "Unidade de medida"
           },
+          "unit_value": {
+            "type": "number",
+            "description": "Valor unit\u00e1rio (R$)"
+          },
           "description": {
             "type": "string",
             "description": "Descri\u00e7\u00e3o do item da NF"
@@ -128,6 +140,10 @@
       "type": "string",
       "description": "Tipo de frete (CIF, FOB etc.)"
     },
+    "freight_paid_by": {
+      "type": "string",
+      "description": "Frete pago por (ex.: STARNAV)"
+    },
     "operation_type": {
       "type": "string",
       "description": "Tipo de opera\u00e7\u00e3o (entrada, sa\u00edda etc.)"
@@ -143,6 +159,11 @@
     "observations": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es da solicita\u00e7\u00e3o"
+    },
+    "material_will_return": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o volume/material ir\u00e1 retornar ap\u00f3s a tratativa (SIM/N\u00c3O)"
     },
     "audit_changes": {
       "type": "array",

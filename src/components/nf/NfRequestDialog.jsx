@@ -98,6 +98,7 @@ export default function NfRequestDialog({ item, onClose }) {
   const buildPayload = () => ({
     gdm_id: item.gdm_id,
     gdm_number: form.gdm_number,
+    request_number: form.request_number,
     vessel_id: item.vessel_id,
     vessel_name: form.vessel_name,
     item_id: item.id,
@@ -112,6 +113,7 @@ export default function NfRequestDialog({ item, onClose }) {
     destination: form.destination,
     supplier_company_name: form.supplier_company_name,
     supplier_cnpj: form.supplier_cnpj,
+    supplier_state_registration: form.supplier_state_registration,
     supplier_address: form.supplier_address,
     supplier_city: form.supplier_city,
     supplier_state: form.supplier_state,
@@ -120,10 +122,12 @@ export default function NfRequestDialog({ item, onClose }) {
     nf_items: form.nf_items,
     carrier: form.carrier,
     freight_type: form.freight_type,
+    freight_paid_by: form.freight_paid_by,
     operation_type: form.operation_type,
     operation_nature: form.operation_nature,
     cfop: form.cfop,
     observations: form.observations,
+    material_will_return: form.material_will_return !== false,
   });
 
   const exportRecord = () => ({
@@ -254,6 +258,12 @@ export default function NfRequestDialog({ item, onClose }) {
                     onChange={(e) => setField('gdm_number', e.target.value)}
                   />
                 </Field>
+                <Field label="Nº Solicitação">
+                  <Input
+                    value={form.request_number || ''}
+                    onChange={(e) => setField('request_number', e.target.value)}
+                  />
+                </Field>
                 <Field label="Embarcação">
                   <Input
                     value={form.vessel_name}
@@ -307,6 +317,12 @@ export default function NfRequestDialog({ item, onClose }) {
                     onChange={(e) => setField('supplier_cnpj', e.target.value)}
                   />
                 </Field>
+                <Field label="Insc. Estadual">
+                  <Input
+                    value={form.supplier_state_registration || ''}
+                    onChange={(e) => setField('supplier_state_registration', e.target.value)}
+                  />
+                </Field>
                 <Field label="Endereço" className="md:col-span-3">
                   <Input
                     value={form.supplier_address}
@@ -355,6 +371,12 @@ export default function NfRequestDialog({ item, onClose }) {
                     onChange={(e) => setField('freight_type', e.target.value)}
                   />
                 </Field>
+                <Field label="Frete Pago Por">
+                  <Input
+                    value={form.freight_paid_by || ''}
+                    onChange={(e) => setField('freight_paid_by', e.target.value)}
+                  />
+                </Field>
                 <Field label="Tipo de Operação">
                   <Input
                     value={form.operation_type}
@@ -391,6 +413,20 @@ export default function NfRequestDialog({ item, onClose }) {
                 onChange={(e) => setField('observations', e.target.value)}
                 placeholder="Observações da solicitação..."
               />
+              <Field label="Volume / material irá retornar?">
+                <Select
+                  value={form.material_will_return ? 'sim' : 'nao'}
+                  onValueChange={(value) => setField('material_will_return', value === 'sim')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sim">SIM</SelectItem>
+                    <SelectItem value="nao">NÃO</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
             </Section>
 
             {existing && (

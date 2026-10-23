@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2 } from 'lucide-react';
+import { fmtNfMoney } from '@/lib/nfRequest';
 
 /**
  * Itens (equipamentos) da solicitação de NF: preenchidos automaticamente com o
@@ -14,7 +15,15 @@ export default function NfItemsEditor({ items, onChange }) {
   const add = () =>
     onChange([
       ...items,
-      { code: '', name: '', serial_number: '', quantity: 1, unit: 'UN', description: '' },
+      {
+        code: '',
+        name: '',
+        serial_number: '',
+        quantity: 1,
+        unit: 'UN',
+        unit_value: 0,
+        description: '',
+      },
     ]);
 
   return (
@@ -55,11 +64,23 @@ export default function NfItemsEditor({ items, onChange }) {
               onChange={(e) => update(idx, 'unit', e.target.value)}
             />
             <Input
-              className="md:col-span-7"
+              type="number"
+              min="0"
+              step="0.01"
+              className="md:col-span-2"
+              placeholder="Valor unit. (R$)"
+              value={it.unit_value ?? ''}
+              onChange={(e) => update(idx, 'unit_value', Number(e.target.value) || 0)}
+            />
+            <Input
+              className="md:col-span-3"
               placeholder="Descrição"
               value={it.description || ''}
               onChange={(e) => update(idx, 'description', e.target.value)}
             />
+            <div className="md:col-span-2 text-sm font-semibold text-slate-700 md:text-right">
+              {fmtNfMoney((Number(it.quantity) || 0) * (Number(it.unit_value) || 0))}
+            </div>
             <Button
               type="button"
               variant="ghost"
