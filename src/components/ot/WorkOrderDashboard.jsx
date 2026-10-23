@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { usePermissions } from '@/hooks/usePermissions';
-import { buildWorkOrderRows, inDatePeriod } from '@/lib/workOrders';
+import { buildWorkOrderRows, inDatePeriod, exportWorkOrdersCsv } from '@/lib/workOrders';
 import { OT_STATUS_LABELS } from '@/lib/gdmItems';
 import WorkOrderKpis from './WorkOrderKpis';
 import WorkOrderCharts from './WorkOrderCharts';
@@ -17,7 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 function filterSelect(value, onChange, options, placeholder) {
   return (
@@ -161,14 +163,28 @@ export default function WorkOrderDashboard() {
       {/* Filtros */}
       <Card className="border shadow-sm">
         <CardContent className="p-4 space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Buscar por OT, GDM, equipamento, código ou número de série..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex gap-2 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Buscar por OT, GDM, equipamento, código ou número de série..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                exportWorkOrdersCsv(rows);
+                toast.success(`Planilha exportada (${rows.length} OT(s))`);
+              }}
+              disabled={rows.length === 0}
+              title="Exporta as OTs filtradas para uma planilha"
+            >
+              <Download className="h-4 w-4" />
+              Exportar Planilha
+            </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-2">
             {filterSelect(vesselFilter, setVesselFilter, vesselOptions, 'Embarcação')}

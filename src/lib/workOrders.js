@@ -4,6 +4,14 @@
 // Situações de OT que ainda não foi encerrada.
 export const OT_OPEN_STATES = ['open', 'in_service', 'awaiting_close'];
 
+// Rótulos dos status da OT usados na planilha exportada.
+const OT_STATUS_EXPORT_LABELS = {
+  open: 'OT Aberta',
+  in_service: 'Em Serviço',
+  awaiting_close: 'Recebido - Aguardando Fechamento da OT',
+  closed: 'OT Fechada',
+};
+
 // Prazo padrão (dias) para considerar uma OT vencida quando não há prazo de
 // retorno acordado com o fornecedor.
 export const OT_DEFAULT_DEADLINE_DAYS = 30;
@@ -59,6 +67,75 @@ export function buildWorkOrderRows(items = [], gdms = []) {
       cycleDays: otCycleDays(i),
       overdue: otIsOverdue(i),
     }));
+}
+
+function csvCell(value) {
+  const v = value === null || value === undefined ? '' : String(value);
+  return `"${v.replace(/"/g, '""')}"`;
+}
+
+function csvDate(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/**
+ * Exporta as linhas do Controle de OT para uma planilha CSV (UTF-8 com BOM,
+ * separador ";", compatível com Excel) respeitando os filtros aplicados.
+ */
+export function exportWorkOrdersCsv(rows = []) {
+  const header = [
+    'OT',
+    'GDM',
+    'Item',
+    'Equipamento',
+    'Número de Série',
+    'Fornecedor',
+    'Embarcação',
+    'Data de Envio ao Fornecedor',
+    'Data de Recebimento',
+    'Responsável pelo Recebimento',
+    'Status da OT',
+    'Dias em Aberto',
+    'Vencida',
+    'Data de Fechamento',
+    'Fechada por',
+  ];
+  const lines = rows.map((r) =>
+    [
+      r.item.ot_number,
+      r.gdm_number,
+      r.item.item_number,
+      r.item.equipment_name,
+      r.item.serial_number,
+      r.item.supplier_name,
+      r.item.vessel_name || r.gdm?.vessel_name,
+      csvDate(r.item.sent_to_supplier_at),
+      csvDate(r.item.return_received_at),
+      r.item.return_received_by,
+      OT_STATUS_EXPORT_LABELS[r.item.ot_status] || r.item.ot_status,
+      r.daysOpen,
+      r.isOpen && r.overdue ? 'Sim' : 'Não',
+      csvDate(r.item.ot_closed_at),
+      r.item.ot_closed_by,
+    ]
+      .map(csvCell)
+      .join(';'),
+  );
+
+  const csv = '\uFEFF' + [header.map(csvCell).join(';'), ...lines].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `controle-de-ot-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 /** Data dentro do período [from, to] (strings yyyy-mm-dd, opcionais). */
