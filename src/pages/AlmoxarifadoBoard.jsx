@@ -1,5 +1,7 @@
 import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PendingBoard from '@/components/gdm/PendingBoard';
+import WorkOrderDashboard from '@/components/ot/WorkOrderDashboard';
 
 // Pendências exclusivas do Almoxarifado, por categoria.
 // A ação tomada retira o item da pendência ativa, sem excluir dados da GDM.
@@ -36,14 +38,25 @@ const CATEGORIES = [
   },
 ];
 
-/** Aba Almoxarifado: somente GDMs e itens que aguardam ação do setor. */
+/** Aba Almoxarifado: pendências do setor + Controle de OT (tempo real). */
 export default function AlmoxarifadoBoard() {
   return (
-    <PendingBoard
-      title="Almoxarifado"
-      description="GDMs e itens que aguardam ação do Almoxarifado"
-      emptyMessage="Nenhuma pendência para o Almoxarifado"
-      categories={CATEGORIES}
-    />
+    <Tabs defaultValue="pending" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="pending">Pendências do Setor</TabsTrigger>
+        <TabsTrigger value="ot">Controle de OT</TabsTrigger>
+      </TabsList>
+      <TabsContent value="pending">
+        <PendingBoard
+          title="Almoxarifado"
+          description="GDMs e itens que aguardam ação do Almoxarifado"
+          emptyMessage="Nenhuma pendência para o Almoxarifado"
+          categories={CATEGORIES}
+        />
+      </TabsContent>
+      <TabsContent value="ot">
+        <WorkOrderDashboard />
+      </TabsContent>
+    </Tabs>
   );
 }

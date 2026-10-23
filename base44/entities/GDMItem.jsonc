@@ -320,6 +320,45 @@
       "type": "string",
       "description": "Email de quem confirmou a aprova\u00e7\u00e3o e o envio da OC ao fornecedor"
     },
+    "ot_number": {
+      "type": "string",
+      "description": "N\u00famero da Ordem de Trabalho (OT) emitida por Servi\u00e7os para o equipamento enviado ao fornecedor (reparo, certifica\u00e7\u00e3o ou calibra\u00e7\u00e3o)"
+    },
+    "ot_issued_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora da emiss\u00e3o da OT por Servi\u00e7os"
+    },
+    "ot_issued_by": {
+      "type": "string",
+      "description": "Email de quem emitiu a OT (auditoria)"
+    },
+    "ot_status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "in_service",
+        "awaiting_close",
+        "closed"
+      ],
+      "description": "Situa\u00e7\u00e3o da OT: aberta (equipamento enviado ao fornecedor), em servi\u00e7o (fornecedor executando), aguardando fechamento (recebido pelo Almoxarifado com OT aberta) ou fechada (processo conclu\u00eddo)"
+    },
+    "ot_closed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora do fechamento da OT pelo Almoxarifado"
+    },
+    "ot_closed_by": {
+      "type": "string",
+      "description": "Email de quem fechou a OT (auditoria)"
+    },
+    "ot_alerts_sent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Marcos de alerta da OT j\u00e1 notificados (pending_close, age15, age30, age60, almox_pending) \u2014 cada marco \u00e9 notificado uma \u00fanica vez por OT"
+    },
     "return_dispatched_at": {
       "type": "string",
       "format": "date-time",

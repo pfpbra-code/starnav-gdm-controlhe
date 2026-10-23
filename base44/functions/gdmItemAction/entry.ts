@@ -281,6 +281,15 @@ export default async function (req: Request): Promise<Response> {
       extra.return_registered_by = null;
       extra.return_confirmed_at = null;
       extra.return_confirmed_by = null;
+      // Novo ciclo de fornecedor = nova OT: os campos da OT anterior são
+      // limpos para que Serviços emita a OT do ciclo vigente.
+      extra.ot_number = null;
+      extra.ot_issued_at = null;
+      extra.ot_issued_by = null;
+      extra.ot_status = null;
+      extra.ot_closed_at = null;
+      extra.ot_closed_by = null;
+      extra.ot_alerts_sent = [];
       next = 'awaiting_shipping_proof';
 
       await mirrorGdm(base44, item.gdm_id, {
@@ -574,6 +583,10 @@ export default async function (req: Request): Promise<Response> {
       }
       if (!can('edit_gdm')) throw new Error('Sem permissão');
       if (prev !== 'repair_approved') throw new Error('O reparo ainda não foi aprovado');
+      // OT: fornecedor executando a atividade.
+      if (item.ot_number && item.ot_status === 'open') {
+        extra.ot_status = 'in_service';
+      }
       next = 'in_treatment';
     } else if (action === 'complete') {
       if (!can('confirm_return')) throw new Error('Sem permissão para finalizar o item');
@@ -653,7 +666,49 @@ export default async function (req: Request): Promise<Response> {
 
       extra.oc_approval_confirmed_at = now;
       extra.oc_approval_confirmed_by = user.email;
+      // OT: com a OC aprovada e enviada, o fornecedor executa o serviço.
+      if (item.ot_number && item.ot_status === 'open') {
+        extra.ot_status = 'in_service';
+      }
       next = 'awaiting_return';
+    } else if (action === 'issue_ot') {
+      // Serviços emite a Ordem de Trabalho (OT) do equipamento enviado ao
+      // fornecedor (reparo, certificação ou calibração). A OT fica ABERTA.
+      if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
+        throw new Error('Este item não segue o fluxo de fornecedor');
+      }
+      if (!can('send_to_supplier')) throw new Error('Sem permissão para emitir OT');
+      if (item.ot_number) throw new Error('A OT já foi emitida para este item');
+      if (!item.sent_to_supplier_at) {
+        throw new Error('O equipamento ainda não foi enviado ao fornecedor');
+      }
+      const otNumber = String(body.ot_number || body.otNumber || '').trim();
+      if (!otNumber) throw new Error('Informe o número da OT');
+
+      extra.ot_number = otNumber;
+      extra.ot_issued_at = now;
+      extra.ot_issued_by = user.email;
+      extra.ot_status = 'open';
+      extra.ot_closed_at = null;
+      extra.ot_closed_by = null;
+      extra.ot_alerts_sent = [];
+      next = prev;
+
+      await mirrorGdm(base44, item.gdm_id, {
+        ot_number: otNumber,
+        ot_issued_by: user.email,
+        ot_issued_at: now,
+      });
+    } else if (action === 'close_ot') {
+      // Almoxarifado fecha a OT (equipamento recebido, OT em aberto).
+      if (!item.ot_number) throw new Error('Este item não possui OT emitida');
+      if (item.ot_status === 'closed') throw new Error('A OT já está fechada');
+      if (!can('confirm_receipt')) throw new Error('Sem permissão para fechar a OT');
+
+      extra.ot_status = 'closed';
+      extra.ot_closed_at = now;
+      extra.ot_closed_by = user.email;
+      next = prev;
     } else if (action === 'register_return_dispatch') {
       // Serviços registra quando o material saiu do fornecedor para entrega.
       if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
@@ -695,6 +750,17 @@ export default async function (req: Request): Promise<Response> {
         extra.warranty_end_at = new Date(
           new Date(now).getTime() + Number(item.warranty_days) * 86400000,
         ).toISOString();
+      }
+      // OT: no recebimento do retorno, o Almoxarifado escolhe fechar a OT ou
+      // mantê-la aberta (fica em destaque no Controle de OT como pendência).
+      if (item.ot_number && ['open', 'in_service'].includes(item.ot_status)) {
+        if (String(body.ot_action || '') === 'close') {
+          extra.ot_status = 'closed';
+          extra.ot_closed_at = now;
+          extra.ot_closed_by = user.email;
+        } else {
+          extra.ot_status = 'awaiting_close';
+        }
       }
       // Calibração/Certificação (Operações): o recebimento do retorno NÃO finaliza
       // o item — o certificado e a validade da certificação são obrigatórios.

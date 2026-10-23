@@ -59,6 +59,8 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   const [returnProofUrl, setReturnProofUrl] = useState('');
   const [pwtNumber, setPwtNumber] = useState('');
   const [ocNumber, setOcNumber] = useState('');
+  const [otNumber, setOtNumber] = useState('');
+  const [otDecision, setOtDecision] = useState('');
   const [dispatchDate, setDispatchDate] = useState('');
   const [receiptNfUrl, setReceiptNfUrl] = useState('');
   const [laudoUrl, setLaudoUrl] = useState('');
@@ -87,6 +89,8 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     setReturnProofUrl('');
     setPwtNumber('');
     setOcNumber('');
+    setOtNumber('');
+    setOtDecision('');
     setDispatchDate('');
     setReceiptNfUrl('');
     setLaudoUrl('');
@@ -165,9 +169,14 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
       payload.oc_number = ocNumber.trim();
     } else if (action === 'register_return_dispatch') {
       if (dispatchDate) payload.dispatch_date = dispatchDate;
+    } else if (action === 'issue_ot') {
+      payload.ot_number = otNumber.trim();
     } else if (action === 'confirm_return_receipt') {
       payload.nf_url = receiptNfUrl;
       payload.laudo_url = laudoUrl;
+      if (item.ot_number && item.ot_status !== 'closed') {
+        payload.ot_action = otDecision;
+      }
     }
     actionMutation.mutate(payload);
   };
@@ -189,7 +198,13 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     (action === 'register_supplier_return' && (!returnNfUrl || !returnProofUrl)) ||
     (action === 'issue_pwt' && !pwtNumber.trim()) ||
     (action === 'issue_oc' && !ocNumber.trim()) ||
-    (action === 'confirm_return_receipt' && (!receiptNfUrl || !laudoUrl));
+    (action === 'issue_ot' && !otNumber.trim()) ||
+    (action === 'confirm_return_receipt' &&
+      (!receiptNfUrl ||
+        !laudoUrl ||
+        (!!item?.ot_number &&
+          item?.ot_status !== 'closed' &&
+          !otDecision)));
 
   // Prévia da data prevista de retorno: dias → cálculo automático (envio + prazo).
   const expectedReturnPreview = (() => {
@@ -645,11 +660,39 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
             </>
           )}
 
+          {action === 'issue_ot' && (
+            <>
+              <div className="space-y-2">
+                <Label>Número da Ordem de Trabalho (OT) *</Label>
+                <Input
+                  value={otNumber}
+                  onChange={(e) => setOtNumber(e.target.value)}
+                  placeholder="Ex: OT-00123"
+                />
+              </div>
+              <p className="text-xs text-slate-500">
+                A OT fica registrada como <strong>🟡 OT Aberta</strong> e passa a ser monitorada
+                pelo Controle de OT (abas de Serviços e Almoxarifado, com atualização em tempo
+                real). O encerramento é responsabilidade do Almoxarifado, após o recebimento do
+                equipamento retornado.
+              </p>
+            </>
+          )}
+
           {action === 'confirm_oc_approved' && (
             <p className="text-xs text-slate-500">
               Confirma que a OC foi aprovada e enviada ao fornecedor{' '}
               <strong>{item?.supplier_name || ''}</strong>. O item passa a aguardar o retorno do
               material.
+            </p>
+          )}
+
+          {action === 'close_ot' && (
+            <p className="text-xs text-slate-500">
+              Ao fechar a OT <strong>{item?.ot_number || ''}</strong>, o sistema registra a data
+              de fechamento e o responsável, atualiza o status para{' '}
+              <strong>🟢 OT Fechada</strong> e alimenta o Controle de OT de Serviços e
+              Almoxarifado em tempo real.
             </p>
           )}
 
@@ -682,6 +725,47 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
                 value={laudoUrl}
                 onChange={setLaudoUrl}
               />
+              {!!item?.ot_number && item?.ot_status !== 'closed' && (
+                <div className="space-y-2">
+                  <Label>Ordem de Trabalho (OT {item.ot_number}) *</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOtDecision('close')}
+                      className={`text-left rounded-lg border p-3 transition-colors ${
+                        otDecision === 'close'
+                          ? 'border-emerald-500 bg-emerald-50'
+                          : 'border-slate-200 bg-white hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="block font-medium text-sm text-slate-800">
+                        🟢 Fechar OT
+                      </span>
+                      <span className="block text-xs text-slate-500 mt-0.5">
+                        Registra a data de fechamento e o responsável, e conclui a OT no
+                        Controle de OT.
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOtDecision('keep')}
+                      className={`text-left rounded-lg border p-3 transition-colors ${
+                        otDecision === 'keep'
+                          ? 'border-red-400 bg-red-50'
+                          : 'border-slate-200 bg-white hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="block font-medium text-sm text-slate-800">
+                        🔴 Manter OT Aberta
+                      </span>
+                      <span className="block text-xs text-slate-500 mt-0.5">
+                        O item fica destacado no Controle de OT como "Recebido - Aguardando
+                        Fechamento da OT", com alertas automáticos.
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-slate-500">
                 Ambos os anexos são obrigatórios: a confirmação do recebimento finaliza o fluxo
                 do item com data e responsável registrados. Itens de calibração/certificação

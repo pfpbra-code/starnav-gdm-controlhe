@@ -94,6 +94,8 @@ export const ITEM_ACTION_LABELS = {
   issue_pwt: "PWT Emitido (Planejamento)",
   issue_oc: "OC Emitida (Serviços)",
   confirm_oc_approved: "OC Aprovada e Enviada ao Fornecedor (Serviços)",
+  issue_ot: "OT Emitida (Serviços)",
+  close_ot: "OT Fechada (Almoxarifado)",
   register_return_dispatch: "Saída para Entrega Registrada (Serviços)",
   confirm_return_receipt: "Recebimento do Retorno Confirmado (Almoxarifado)",
   register_certificate: "Certificado Registrado (Operações)",
@@ -103,6 +105,36 @@ export const ITEM_ACTION_LABELS = {
   advance_treatment: "Avanço da Tratativa",
   created: "Item Criado",
 };
+
+// Situações padronizadas da OT (Ordem de Trabalho) do item.
+export const OT_STATUS_LABELS = {
+  open: "OT Aberta",
+  in_service: "Em Serviço",
+  awaiting_close: "Recebido - Aguardando Fechamento da OT",
+  closed: "OT Fechada",
+};
+
+export const OT_STATUS_COLORS = {
+  open: "bg-amber-100 text-amber-800",
+  in_service: "bg-sky-100 text-sky-800",
+  awaiting_close: "bg-orange-100 text-orange-800",
+  closed: "bg-green-100 text-green-800",
+};
+
+// Situações do item em que a OT pode ser emitida por Serviços: equipamento já
+// enviado ao fornecedor e ainda não recebido de volta.
+const OT_ISSUE_STATUSES = [
+  "sent_to_supplier",
+  "awaiting_maintenance_authorization",
+  "discount_negotiation",
+  "repair_approved",
+  "in_treatment",
+  "awaiting_pwt",
+  "awaiting_oc_issuance",
+  "awaiting_oc_approval",
+  "awaiting_return",
+  "awaiting_supplier_return",
+];
 
 /**
  * Ações disponíveis para um item, considerando destino, situação e permissões.
@@ -221,6 +253,20 @@ export function availableItemActions(item, can, user, responsibleVesselIds) {
         action: "confirm_oc_approved",
         label: "OC aprovada e enviada ao fornecedor",
       });
+    }
+
+    // OT (Ordem de Trabalho): emitida por Serviços após o envio ao fornecedor;
+    // fechada pelo Almoxarifado após o recebimento do equipamento retornado.
+    if (!item.ot_number && OT_ISSUE_STATUSES.includes(s) && can("send_to_supplier")) {
+      actions.push({ action: "issue_ot", label: "Emitir OT" });
+    }
+    if (
+      item.ot_number &&
+      item.ot_status !== "closed" &&
+      item.return_received_at &&
+      can("confirm_receipt")
+    ) {
+      actions.push({ action: "close_ot", label: "Fechar OT" });
     }
 
     if (s === "awaiting_return") {
@@ -634,4 +680,6 @@ export const SUPPLIER_FLOW_ACTIONS = [
   "register_return_dispatch",
   "confirm_return_receipt",
   "update_warranty",
+  "issue_ot",
+  "close_ot",
 ];

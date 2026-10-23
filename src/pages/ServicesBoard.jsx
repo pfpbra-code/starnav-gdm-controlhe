@@ -4,6 +4,7 @@ import PendingBoard from '@/components/gdm/PendingBoard';
 import RepairControlPanel from '@/components/gdm/RepairControlPanel';
 import ServicesKpis from '@/components/gdm/ServicesKpis';
 import EquipmentControlDashboard from '@/components/services/EquipmentControlDashboard';
+import WorkOrderDashboard from '@/components/ot/WorkOrderDashboard';
 
 // Pendências exclusivas do setor de Serviços, por categoria.
 // Cada item sai da pendência assim que a ação é concluída e permanece no histórico.
@@ -48,6 +49,7 @@ export default function ServicesBoard() {
         <TabsTrigger value="pending">Pendências do Setor</TabsTrigger>
         <TabsTrigger value="control">Controle de Reparos e Certificações</TabsTrigger>
         <TabsTrigger value="equipment">Dados por Equipamento</TabsTrigger>
+        <TabsTrigger value="ot">Controle de OT</TabsTrigger>
       </TabsList>
       <TabsContent value="pending">
         <PendingBoard
@@ -65,6 +67,9 @@ export default function ServicesBoard() {
       </TabsContent>
       <TabsContent value="equipment">
         <EquipmentControlDashboard />
+      </TabsContent>
+      <TabsContent value="ot">
+        <WorkOrderDashboard />
       </TabsContent>
     </Tabs>
   );
