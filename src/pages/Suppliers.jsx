@@ -44,6 +44,9 @@ export default function Suppliers() {
   const queryClient = useQueryClient();
   const { hasPermission, user } = usePermissions();
   const canManage = hasPermission('manage_suppliers');
+  // Indicadores e ranking gerencial: autorização individual do ADM.
+  const canViewKpis = hasPermission('view_analytics');
+  const canViewRanking = hasPermission('view_supplier_ranking');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -244,11 +247,11 @@ export default function Suppliers() {
         </TabsList>
 
         <TabsContent value="panel" className="mt-4 space-y-6">
-          {/* Indicadores internos */}
-          <SupplierControlKpis stats={stats} />
+          {/* Indicadores internos (autorização individual) */}
+          {canViewKpis && <SupplierControlKpis stats={stats} />}
 
-          {/* Ranking gerencial */}
-          <SupplierRanking stats={stats} />
+          {/* Ranking gerencial (autorização individual) */}
+          {canViewRanking && <SupplierRanking stats={stats} />}
 
           {/* Busca */}
       <Card className="border-0 shadow-sm">
