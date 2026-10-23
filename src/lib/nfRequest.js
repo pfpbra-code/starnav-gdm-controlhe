@@ -27,6 +27,16 @@ export const NF_FIELD_LABELS = {
   observations: 'Observações',
 };
 
+// Opções fixas de Natureza da Operação (seleção em lista).
+export const NF_OPERATION_NATURE_OPTIONS = [
+  'CONSERTO',
+  'INDUSTRIALIZAÇÃO',
+  'VENDAS',
+  'REMESSA P/ ARMAZENAGEM',
+  'DEVOLUÇÃO DE MATERIAL',
+  'SAÍDA DE ATIVO DE EMPREITEIRA',
+];
+
 const OBJECTIVE_BY_DESTINATION = {
   repair: 'Envio de equipamento para reparo',
   certification: 'Envio de equipamento para calibração/certificação',
@@ -97,8 +107,7 @@ export function buildNfAutoForm({ item, gdm, supplier, user }) {
     carrier: '',
     freight_type: '',
     operation_type: 'Saída',
-    operation_nature:
-      item?.destination === 'certification' ? 'Remessa para calibração' : 'Remessa para conserto',
+    operation_nature: 'CONSERTO',
     cfop: '',
     observations: '',
   };

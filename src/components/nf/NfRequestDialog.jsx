@@ -13,6 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { NF_OPERATION_NATURE_OPTIONS } from '@/lib/nfRequest';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSigner } from '@/lib/signatures';
@@ -354,10 +362,21 @@ export default function NfRequestDialog({ item, onClose }) {
                   />
                 </Field>
                 <Field label="Natureza da Operação">
-                  <Input
-                    value={form.operation_nature}
-                    onChange={(e) => setField('operation_nature', e.target.value)}
-                  />
+                  <Select
+                    value={form.operation_nature || undefined}
+                    onValueChange={(value) => setField('operation_nature', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a natureza" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NF_OPERATION_NATURE_OPTIONS.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
                 <Field label="CFOP">
                   <Input value={form.cfop} onChange={(e) => setField('cfop', e.target.value)} />
