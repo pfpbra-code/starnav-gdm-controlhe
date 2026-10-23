@@ -43,6 +43,10 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   const [expectedShipDate, setExpectedShipDate] = useState('');
   const [nfUrl, setNfUrl] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [sentDate, setSentDate] = useState('');
+  const [deadlineMode, setDeadlineMode] = useState('days');
+  const [deadlineDays, setDeadlineDays] = useState('');
+  const [expectedReturnDate, setExpectedReturnDate] = useState('');
   const [quoteUrl, setQuoteUrl] = useState('');
   const [quoteValue, setQuoteValue] = useState('');
   const [quoteDeadline, setQuoteDeadline] = useState('');
@@ -67,6 +71,10 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     setExpectedShipDate('');
     setNfUrl('');
     setPhotoUrl('');
+    setSentDate(new Date().toISOString().slice(0, 10));
+    setDeadlineMode('days');
+    setDeadlineDays('');
+    setExpectedReturnDate('');
     setQuoteUrl('');
     setQuoteValue('');
     setQuoteDeadline('');
@@ -128,6 +136,12 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     } else if (action === 'attach_shipping_proof') {
       payload.nf_url = nfUrl;
       payload.photo_url = photoUrl;
+      payload.sent_date = sentDate;
+      if (deadlineMode === 'days') {
+        payload.return_deadline_days = Number(deadlineDays);
+      } else {
+        payload.expected_return_date = expectedReturnDate;
+      }
     } else if (action === 'attach_quote' || action === 'renegotiate_quote') {
       payload.quote_value = Number(quoteValue);
       if (quoteUrl) payload.quote_document_url = quoteUrl;
@@ -162,7 +176,11 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     actionMutation.isPending ||
     !signatureChecked ||
     (needsSupplier && (!supplierId || !expectedShipDate)) ||
-    (action === 'attach_shipping_proof' && (!nfUrl || !photoUrl)) ||
+    (action === 'attach_shipping_proof' &&
+      (!nfUrl ||
+        !photoUrl ||
+        !sentDate ||
+        (deadlineMode === 'days' ? !Number(deadlineDays) : !expectedReturnDate))) ||
     (action === 'attach_quote' && (!quoteUrl || !quoteValue || !quoteDeadline || !warrantyDays)) ||
     (action === 'renegotiate_quote' && !quoteValue) ||
     (action === 'update_warranty' && (!warrantyDays || Number(warrantyDays) <= 0)) ||
@@ -172,6 +190,22 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     (action === 'issue_pwt' && !pwtNumber.trim()) ||
     (action === 'issue_oc' && !ocNumber.trim()) ||
     (action === 'confirm_return_receipt' && (!receiptNfUrl || !laudoUrl));
+
+  // Prévia da data prevista de retorno: dias → cálculo automático (envio + prazo).
+  const expectedReturnPreview = (() => {
+    if (action !== 'attach_shipping_proof') return '';
+    if (deadlineMode === 'date') return expectedReturnDate || '';
+    const days = Number(deadlineDays);
+    if (sentDate && days > 0) {
+      const d = new Date(`${sentDate}T12:00:00`);
+      d.setDate(d.getDate() + days);
+      return d.toISOString().slice(0, 10);
+    }
+    return '';
+  })();
+  const expectedReturnLabel = expectedReturnPreview
+    ? new Date(`${expectedReturnPreview}T12:00:00`).toLocaleDateString('pt-BR')
+    : '';
 
   const decisionOption = (value, icon, title, hint) => (
     <button
@@ -248,6 +282,73 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
             <>
               <AttachmentField label="NF assinada" value={nfUrl} onChange={setNfUrl} />
               <PhotoUrlField label="Foto do envio" value={photoUrl} onChange={setPhotoUrl} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Data de envio *</Label>
+                  <Input
+                    type="date"
+                    value={sentDate}
+                    onChange={(e) => setSentDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Prazo de retorno *</Label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDeadlineMode('days')}
+                      className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
+                        deadlineMode === 'days'
+                          ? 'border-sky-500 bg-sky-50 text-sky-700 font-medium'
+                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      Prazo (dias)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeadlineMode('date')}
+                      className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
+                        deadlineMode === 'date'
+                          ? 'border-sky-500 bg-sky-50 text-sky-700 font-medium'
+                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      Data prevista
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {deadlineMode === 'days' ? (
+                <div className="space-y-2">
+                  <Label>Prazo de retorno acordado (dias) *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={deadlineDays}
+                    onChange={(e) => setDeadlineDays(e.target.value)}
+                    placeholder="Ex: 30"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Data prevista de retorno *</Label>
+                  <Input
+                    type="date"
+                    value={expectedReturnDate}
+                    onChange={(e) => setExpectedReturnDate(e.target.value)}
+                  />
+                </div>
+              )}
+              {expectedReturnPreview && (
+                <p className="text-xs text-slate-600 bg-sky-50 border border-sky-200 rounded p-2">
+                  Data prevista de retorno:{' '}
+                  <strong>{expectedReturnLabel}</strong>. O sistema passa a monitorar o prazo e
+                  atualizar automaticamente a situação do item (próximo do prazo, atenção e
+                  atrasado), com alertas para Serviços e Administradores.
+                </p>
+              )}
               <p className="text-xs text-slate-500">
                 Ambos os anexos são obrigatórios: sem a NF assinada e a foto do envio o item não
                 pode ser marcado como enviado ao fornecedor. A foto pode ser tirada pela câmera

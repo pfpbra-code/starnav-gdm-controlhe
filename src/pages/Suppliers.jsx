@@ -8,7 +8,11 @@ import SupplierControlKpis from '@/components/suppliers/SupplierControlKpis';
 import SupplierDialog from '@/components/suppliers/SupplierDialog';
 import SupplierImportDialog from '@/components/suppliers/SupplierImportDialog';
 import SupplierRanking from '@/components/suppliers/SupplierRanking';
+import SupplierFollowUp from '@/components/suppliers/SupplierFollowUp';
+import SupplierCollectReturn from '@/components/suppliers/SupplierCollectReturn';
 import SupplierLogo from '@/components/suppliers/SupplierLogo';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { scoreBadgeClass } from '@/lib/supplierControl';
 import { SUPPLIER_CATEGORIES, appendCategoriesHistory } from '@/lib/supplierCategories';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +27,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Plus, Building2, Edit, Trash2, Lock, Upload, Loader2 } from 'lucide-react';
+import { Search, Plus, Building2, Edit, Trash2, Lock, Upload, Loader2, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +74,11 @@ export default function Suppliers() {
     queryFn: () => base44.entities.GDMItemHistory.list('-created_date', 1000),
   });
 
+  const { data: certifications = [] } = useQuery({
+    queryKey: ['certifications'],
+    queryFn: () => base44.entities.Certification.list('-created_date', 1000),
+  });
+
   // Sincronização em tempo real: vínculos de itens atualizam os indicadores.
   useEffect(() => {
     const unsubscribe = base44.entities.GDMItem.subscribe(() => {
@@ -81,8 +90,8 @@ export default function Suppliers() {
   }, [queryClient]);
 
   const stats = useMemo(
-    () => buildSupplierStats({ suppliers, items, gdms, histories }),
-    [suppliers, items, gdms, histories]
+    () => buildSupplierStats({ suppliers, items, gdms, histories, certifications }),
+    [suppliers, items, gdms, histories, certifications]
   );
 
   const saveMutation = useMutation({
@@ -227,13 +236,21 @@ export default function Suppliers() {
         </div>
       </div>
 
-      {/* Indicadores internos */}
-      <SupplierControlKpis stats={stats} />
+      <Tabs defaultValue="panel" className="w-full">
+        <TabsList className="bg-slate-100">
+          <TabsTrigger value="panel">Painel</TabsTrigger>
+          <TabsTrigger value="followup">Follow-up de Fornecedores</TabsTrigger>
+          <TabsTrigger value="collect">Cobrar Retorno</TabsTrigger>
+        </TabsList>
 
-      {/* Ranking gerencial */}
-      <SupplierRanking stats={stats} />
+        <TabsContent value="panel" className="mt-4 space-y-6">
+          {/* Indicadores internos */}
+          <SupplierControlKpis stats={stats} />
 
-      {/* Busca */}
+          {/* Ranking gerencial */}
+          <SupplierRanking stats={stats} />
+
+          {/* Busca */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
           <div className="relative">
@@ -309,6 +326,7 @@ export default function Suppliers() {
                 <TableHead>Aguard. Retorno</TableHead>
                 <TableHead>Finalizados</TableHead>
                 <TableHead>Valor em Orçamento</TableHead>
+                <TableHead>Score</TableHead>
                 {canManage && <TableHead className="text-right">Ações</TableHead>}
               </TableRow>
             </TableHeader>
@@ -380,6 +398,15 @@ export default function Suppliers() {
                   </TableCell>
                   <TableCell className="text-slate-600">{row.completed}</TableCell>
                   <TableCell className="font-medium">{formatBRL(row.totalValue)}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={cn('font-semibold', scoreBadgeClass(row.score))}
+                    >
+                      <Star className="h-3 w-3 mr-1" />
+                      {row.score}/100
+                    </Badge>
+                  </TableCell>
                   {canManage && (
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
@@ -410,7 +437,7 @@ export default function Suppliers() {
               ))}
               {filteredStats.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={canManage ? 8 : 7} className="h-32 text-center">
+                  <TableCell colSpan={canManage ? 9 : 8} className="h-32 text-center">
                     <Building2 className="h-8 w-8 mx-auto text-slate-300 mb-2" />
                     <p className="text-slate-500">
                       Nenhum fornecedor encontrado. Clique em uma linha para ver os detalhes.
@@ -427,7 +454,17 @@ export default function Suppliers() {
             </div>
           )}
         </div>
-      </Card>
+        </Card>
+        </TabsContent>
+
+        <TabsContent value="followup" className="mt-4">
+          <SupplierFollowUp items={items} gdms={gdms} />
+        </TabsContent>
+
+        <TabsContent value="collect" className="mt-4">
+          <SupplierCollectReturn items={items} gdms={gdms} />
+        </TabsContent>
+      </Tabs>
 
       <SupplierImportDialog
         open={importOpen}

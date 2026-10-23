@@ -1,21 +1,29 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 
-// ALERTAS DE PRAZO DE RETORNO — controlados individualmente por equipamento,
-// a partir do prazo informado na cotação do fornecedor (quote_deadline).
-// Executado diariamente pelo workflow "Alerta de Prazos de Retorno":
-//   - prazo vencido ou próximo (<= 3 dias) gera notificação para o setor de Serviços;
-//   - cada item é notificado uma única vez por ciclo (return_deadline_notified_at);
-//   - o alerta desaparece quando o item é recebido ou o fluxo é finalizado
-//     (status fora da lista de etapas monitoradas).
+// ALERTAS DE PRAZO DE RETORNO — controle automático por equipamento, a partir
+// da data prevista de retorno registrada no envio ao fornecedor
+// (expected_return_date, com fallback para o prazo da cotação, quote_deadline).
+// Executado diariamente pelo workflow "Alerta de Prazos de Retorno".
+// Marcos notificados, cada um uma única vez por ciclo (return_deadline_alerts):
+//   15d     — faltam até 15 dias para o vencimento
+//   7d      — faltam até 7 dias para o vencimento
+//   vencido — prazo vencido
+//   atraso15 — atraso acima de 15 dias
+//   atraso30 — atraso acima de 30 dias
+// Destinatários: setor de Serviços e administradores.
 
 const MONITORED_STATUSES = [
+  'sent_to_supplier',
+  'awaiting_maintenance_authorization',
+  'discount_negotiation',
+  'repair_approved',
+  'in_treatment',
   'awaiting_pwt',
   'awaiting_oc_issuance',
   'awaiting_oc_approval',
   'awaiting_return',
-  'in_treatment',
+  'awaiting_supplier_return',
 ];
-const NEAR_DAYS = 3;
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -27,69 +35,110 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
     }
     const now = new Date();
-    const nowIso = now.toISOString();
 
-    const items = await base44.asServiceRole.entities.GDMItem.list('-created_date', 500);
+    const items = await base44.asServiceRole.entities.GDMItem.list('-updated_date', 500);
     const gdms = await base44.asServiceRole.entities.GDM.list('-created_date', 500);
     const gdmById: Record<string, any> = {};
     (gdms || []).forEach((g: any) => { gdmById[g.id] = g; });
 
-    // Pendências de prazo: vencidas ou próximas do vencimento, ainda não notificadas.
-    const pending = (items || []).filter((i: any) => {
-      if (!MONITORED_STATUSES.includes(i.status)) return false;
-      if (!i.quote_deadline || i.return_deadline_notified_at) return false;
-      const deadline = new Date(`${i.quote_deadline}T23:59:59`);
-      const diffDays = (deadline.getTime() - now.getTime()) / 86400000;
-      return diffDays < 0 || diffDays <= NEAR_DAYS;
-    });
-
-    if (pending.length === 0) {
-      return Response.json({ notified: 0, message: 'Nenhum prazo de retorno exigindo alerta' });
-    }
-
-    // Destinatários: usuários do setor de Serviços.
+    // Destinatários: usuários do setor de Serviços e administradores.
     const users = await base44.asServiceRole.entities.User.list();
-    const servicesUsers = (users || []).filter((u: any) => {
+    const recipients: any[] = (users || []).filter((u: any) => {
+      if (u.role === 'admin') return true;
       const sectors = Array.isArray(u.sectors) ? u.sectors : u.data?.sectors || [];
       return sectors.includes('services');
     });
-    if (servicesUsers.length === 0) {
-      return Response.json({ notified: 0, message: 'Nenhum usuário de Serviços para notificar' });
+    if (recipients.length === 0) {
+      return Response.json({ notified: 0, message: 'Nenhum destinatário para notificar' });
     }
 
     let notified = 0;
-    for (const item of pending) {
-      const deadline = new Date(`${item.quote_deadline}T23:59:59`);
-      const overdue = deadline.getTime() < now.getTime();
+    let flagged = 0;
+
+    for (const item of items || []) {
+      if (!MONITORED_STATUSES.includes(item.status)) continue;
+      const due = item.expected_return_date || item.quote_deadline;
+      if (!due) continue;
+      const diffDays = (new Date(`${due}T23:59:59`).getTime() - now.getTime()) / 86400000;
+
       const gdm = gdmById[item.gdm_id];
       const gdmNumber = gdm?.gdm_number || '—';
+      const where = `Item ${String(item.item_number).padStart(2, '0')} (${item.equipment_name}) da GDM ${gdmNumber} — fornecedor ${item.supplier_name || '—'}.`;
 
-      for (const u of servicesUsers) {
-        await base44.asServiceRole.entities.Notification.create({
-          user_id: u.id,
-          user_email: u.email,
-          type: 'system_alert',
-          title: overdue
-            ? 'Prazo de retorno vencido'
-            : 'Prazo de retorno próximo do vencimento',
-          message: `Item ${String(item.item_number).padStart(2, '0')} (${item.equipment_name}) da GDM ${gdmNumber} — prazo do fornecedor ${item.supplier_name || '—'}: ${item.quote_deadline}.`,
-          priority: overdue ? 'high' : 'medium',
-          link: `/GDMDetail?id=${item.gdm_id}`,
-          link_text: 'Ver item da GDM',
-          related_entity_type: 'GDMItem',
-          related_entity_id: item.id,
-          metadata: { gdm_number: gdmNumber, quote_deadline: item.quote_deadline, overdue },
-        });
-        notified++;
+      let milestone: { key: string; title: string; message: string; priority: string } | null = null;
+      if (diffDays < 0) {
+        const overdueDays = Math.floor(-diffDays) + 1;
+        if (overdueDays > 30) {
+          milestone = {
+            key: 'atraso30',
+            title: 'Atraso de retorno acima de 30 dias',
+            message: `${where} Prazo previsto (${due}) vencido há ${overdueDays} dias. Cobrança urgente do retorno.`,
+            priority: 'critical',
+          };
+        } else if (overdueDays > 15) {
+          milestone = {
+            key: 'atraso15',
+            title: 'Atraso de retorno acima de 15 dias',
+            message: `${where} Prazo previsto (${due}) vencido há ${overdueDays} dias.`,
+            priority: 'high',
+          };
+        } else {
+          milestone = {
+            key: 'vencido',
+            title: 'Prazo de retorno vencido',
+            message: `${where} Prazo previsto (${due}) vencido.`,
+            priority: 'high',
+          };
+        }
+      } else if (diffDays <= 7) {
+        milestone = {
+          key: '7d',
+          title: 'Prazo de retorno vence em até 7 dias',
+          message: `${where} Vencimento previsto: ${due}.`,
+          priority: 'medium',
+        };
+      } else if (diffDays <= 15) {
+        milestone = {
+          key: '15d',
+          title: 'Prazo de retorno vence em até 15 dias',
+          message: `${where} Vencimento previsto: ${due}.`,
+          priority: 'medium',
+        };
       }
+      if (!milestone) continue;
 
-      // Marca o item como notificado neste ciclo (alerta único por ciclo).
+      const alerted = Array.isArray(item.return_deadline_alerts) ? item.return_deadline_alerts : [];
+      if (alerted.includes(milestone.key)) continue;
+      flagged++;
+
+      await Promise.all(
+        recipients.map((u) =>
+          base44.asServiceRole.entities.Notification.create({
+            user_id: u.id,
+            user_email: u.email,
+            type: 'system_alert',
+            title: milestone!.title,
+            message: milestone!.message,
+            priority: milestone!.priority,
+            link: `/GDMDetail?id=${item.gdm_id}`,
+            link_text: 'Ver item da GDM',
+            related_entity_type: 'GDMItem',
+            related_entity_id: item.id,
+            metadata: { gdm_number: gdmNumber, due, milestone: milestone!.key },
+          }),
+        ),
+      );
+      notified += recipients.length;
+
       await base44.asServiceRole.entities.GDMItem.update(item.id, {
-        return_deadline_notified_at: nowIso,
+        return_deadline_alerts: [...alerted, milestone.key],
       });
     }
 
-    return Response.json({ notified, items: pending.length });
+    if (flagged === 0) {
+      return Response.json({ notified: 0, message: 'Nenhum prazo de retorno exigindo alerta' });
+    }
+    return Response.json({ notified, items: flagged });
   } catch (error) {
     return Response.json({ error: error?.message || 'Falha no alerta de prazos' }, { status: 500 });
   }

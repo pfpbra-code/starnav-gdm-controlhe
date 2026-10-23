@@ -138,6 +138,22 @@
       "type": "string",
       "description": "Email do respons\u00e1vel pelo envio"
     },
+    "return_deadline_days": {
+      "type": "number",
+      "description": "Prazo de retorno acordado com o fornecedor, em dias, informado no envio do equipamento"
+    },
+    "expected_return_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data prevista de retorno do equipamento: informada diretamente no envio ou calculada automaticamente (data de envio + prazo em dias)"
+    },
+    "return_deadline_alerts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Marcos de alerta de prazo de retorno j\u00e1 notificados (15d, 7d, vencido, atraso15, atraso30) \u2014 cada marco \u00e9 notificado uma \u00fanica vez por ciclo de fornecedor"
+    },
     "quote_due_at": {
       "type": "string",
       "format": "date-time",

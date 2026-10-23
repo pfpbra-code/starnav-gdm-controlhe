@@ -289,7 +289,9 @@ export default async function (req: Request): Promise<Response> {
         maintenance_decision: null,
       });
     } else if (action === 'attach_shipping_proof') {
-      // Almoxarifado anexa a NF assinada e a foto do envio (ambas obrigatórias).
+      // Almoxarifado anexa a NF assinada e a foto do envio (ambas obrigatórias)
+      // e registra a data de envio + prazo de retorno (dias ou data prevista,
+      // calculado automaticamente quando informado em dias).
       if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
         throw new Error('Este item não segue o fluxo de fornecedor');
       }
@@ -298,12 +300,34 @@ export default async function (req: Request): Promise<Response> {
       if (!body.nf_url) throw new Error('Anexe a NF assinada');
       if (!body.photo_url) throw new Error('Anexe a foto do envio');
 
+      const sentDate =
+        typeof body.sent_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.sent_date)
+          ? body.sent_date
+          : now.slice(0, 10);
+      const sentAt = new Date(`${sentDate}T12:00:00`).toISOString();
+      const deadlineDays = Math.round(Number(body.return_deadline_days));
+      let expectedReturn: string | null =
+        typeof body.expected_return_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.expected_return_date)
+          ? body.expected_return_date
+          : null;
+      if (!expectedReturn && deadlineDays > 0) {
+        const due = new Date(`${sentDate}T12:00:00`);
+        due.setDate(due.getDate() + deadlineDays);
+        expectedReturn = due.toISOString().slice(0, 10);
+      }
+      if (!expectedReturn) {
+        throw new Error('Informe o prazo de retorno em dias ou a data prevista de retorno');
+      }
+
       extra.shipping_proof_url = body.nf_url;
       extra.shipping_photo_url = body.photo_url;
       extra.shipping_proof_at = now;
       extra.shipping_proof_by = user.email;
-      extra.sent_to_supplier_at = now;
+      extra.sent_to_supplier_at = sentAt;
       extra.sent_by = user.email;
+      if (deadlineDays > 0) extra.return_deadline_days = deadlineDays;
+      extra.expected_return_date = expectedReturn;
+      extra.return_deadline_alerts = [];
       extra.quote_due_at = new Date(Date.now() + THREE_DAYS_MS).toISOString();
       extra.quote_followup_notified_at = null;
       next = 'sent_to_supplier';
@@ -311,7 +335,7 @@ export default async function (req: Request): Promise<Response> {
       await mirrorGdm(base44, item.gdm_id, {
         supplier_id: item.supplier_id,
         supplier_name: item.supplier_name,
-        sent_to_supplier_date: now.slice(0, 10),
+        sent_to_supplier_date: sentDate,
         sent_by: user.email,
       });
     } else if (action === 'attach_quote') {
