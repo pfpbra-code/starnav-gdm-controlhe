@@ -119,6 +119,16 @@ export const AVAILABLE_PERMISSIONS = [
 
 export const ALL_PERMISSION_IDS = AVAILABLE_PERMISSIONS.map((p) => p.id);
 
+// Dashboards (incluindo o Controle de OT): liberados exclusivamente pela
+// autorização individual do ADM — nunca concedidos automaticamente por setor.
+export const DASHBOARD_PERMISSIONS = [
+  "view_dashboard",
+  "view_dashboard_gerencial",
+  "view_reliability",
+  "view_certifications",
+  "view_ot",
+];
+
 export const PERMISSION_LABELS = Object.fromEntries(
   AVAILABLE_PERMISSIONS.map((p) => [p.id, p.label]),
 );
@@ -157,10 +167,10 @@ const ADMIN_ONLY = [
  * adicional depende de autorização individual do ADM.
  */
 export const SECTOR_BASE_PERMISSIONS = {
-  // Manutenção: GDMs, dashboard operacional, descarte, aba Manutenção e todas
-  // as suas funções, análise de cotações e confiabilidade (MTBF/MTTR/SN).
+  // Manutenção: GDMs, descarte, aba Manutenção e todas as suas funções
+  // (análise de cotações e autorizações). Dashboards — operacional, gerencial,
+  // confiabilidade e OT — exigem autorização individual do ADM.
   maintenance: [
-    "view_dashboard",
     "view_gdm",
     "view_all_gdms",
     "generate_gdm_pdf",
@@ -173,12 +183,11 @@ export const SECTOR_BASE_PERMISSIONS = {
     "request_discount",
     "request_new_quote",
     "approve_maintenance",
-    "view_reliability",
   ],
-  // Operações: GDMs, dashboard operacional, descarte, aba Operações e a
-  // gestão de certificações (validade, histórico e consultas).
+  // Operações: GDMs, descarte e aba Operações (pendências e cotações).
+  // Dashboards — operacional, gerencial e certificações — exigem
+  // autorização individual do ADM.
   operations: [
-    "view_dashboard",
     "view_gdm",
     "view_all_gdms",
     "generate_gdm_pdf",
@@ -186,13 +195,11 @@ export const SECTOR_BASE_PERMISSIONS = {
     "generate_disposal_report",
     "view_operations",
     "view_operations_quotes",
-    "view_certifications",
   ],
-  // Almoxarifado: criar GDM, GDMs, aba Almoxarifado, descarte, dashboards
-  // operacional e gerencial, controle de recebimento e movimentação.
+  // Almoxarifado: criar GDM, GDMs, aba Almoxarifado, descarte e controle de
+  // recebimento/movimentação (incluindo fechar OT). Dashboards — operacional,
+  // gerencial e Controle de OT — exigem autorização individual do ADM.
   almoxarifado: [
-    "view_dashboard",
-    "view_dashboard_gerencial",
     "view_gdm",
     "view_all_gdms",
     "create_gdm",
@@ -203,33 +210,31 @@ export const SECTOR_BASE_PERMISSIONS = {
     "upload_disposal_evidence",
     "view_disposal_reports",
     "generate_disposal_report",
-    "view_ot",
     "confirm_return",
   ],
-  // Planejamento: dashboard operacional, descarte, aba Manutenção (consulta),
-  // emissão de PWT, confiabilidade, consulta de equipamentos e indicadores.
-  // Análise/Aprovação de cotações e Dashboard Gerencial ficam bloqueados.
+  // Planejamento: descarte, aba Manutenção (consulta), emissão de PWT,
+  // consulta de equipamentos e indicadores. Dashboards e cotações ficam
+  // bloqueados sem autorização individual do ADM.
   planejamento: [
-    "view_dashboard",
     "view_gdm",
     "generate_gdm_pdf",
     "view_disposal_reports",
     "generate_disposal_report",
     "view_maintenance",
     "issue_pwt",
-    "view_reliability",
     "view_equipment",
     "view_analytics",
   ],
   // Serviços: todas as funcionalidades operacionais da plataforma, exceto as
-  // funções exclusivas do Administrador.
-  services: ALL_PERMISSION_IDS.filter((id) => !ADMIN_ONLY.includes(id)),
+  // funções exclusivas do Administrador e os dashboards (autorização ADM).
+  services: ALL_PERMISSION_IDS.filter(
+    (id) => !ADMIN_ONLY.includes(id) && !DASHBOARD_PERMISSIONS.includes(id)
+  ),
   // Coordenação: revisão das Guias de Desembarque após a criação — visualizar
   // todas as GDMs, validar e alterar o destino dos itens com justificativa
   // (auditado), e consultar os Relatórios de Descarte. Demais módulos e
   // dashboards só via autorização individual do ADM.
   coordinator: [
-    "view_dashboard",
     "view_gdm",
     "view_all_gdms",
     "approve_gdm",

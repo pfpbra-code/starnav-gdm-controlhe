@@ -45,36 +45,44 @@ const ADMIN_ONLY: string[] = [
   'manage_equipment', 'manage_suppliers', 'delete_gdm',
 ];
 
+// Dashboards (incluindo o Controle de OT): liberados exclusivamente pela
+// autorização individual do ADM — nunca concedidos automaticamente por setor.
+const DASHBOARD_PERMISSIONS: string[] = [
+  'view_dashboard', 'view_dashboard_gerencial', 'view_reliability',
+  'view_certifications', 'view_ot',
+];
+
 /** Permissões básicas automáticas de cada setor — espelha SECTOR_BASE_PERMISSIONS. */
 export const SECTOR_BASE: Record<string, string[]> = {
   maintenance: [
-    'view_dashboard', 'view_gdm', 'view_all_gdms', 'generate_gdm_pdf',
+    'view_gdm', 'view_all_gdms', 'generate_gdm_pdf',
     'view_disposal_reports', 'generate_disposal_report',
     'view_maintenance', 'view_maintenance_quotes', 'approve_maintenance_quote',
     'quote_analysis', 'request_discount', 'request_new_quote', 'approve_maintenance',
-    'view_reliability',
   ],
   operations: [
-    'view_dashboard', 'view_gdm', 'view_all_gdms', 'generate_gdm_pdf',
+    'view_gdm', 'view_all_gdms', 'generate_gdm_pdf',
     'view_disposal_reports', 'generate_disposal_report',
-    'view_operations', 'view_operations_quotes', 'view_certifications',
+    'view_operations', 'view_operations_quotes',
   ],
   almoxarifado: [
-    'view_dashboard', 'view_dashboard_gerencial', 'view_gdm', 'view_all_gdms', 'create_gdm',
+    'view_gdm', 'view_all_gdms', 'create_gdm',
     'generate_gdm_pdf', 'confirm_receipt', 'report_not_received', 'confirm_disposal',
     'upload_disposal_evidence', 'view_disposal_reports', 'generate_disposal_report',
-    'view_ot', 'confirm_return',
+    'confirm_return',
   ],
   planejamento: [
-    'view_dashboard', 'view_gdm', 'generate_gdm_pdf', 'view_disposal_reports',
-    'generate_disposal_report', 'view_maintenance', 'issue_pwt', 'view_reliability',
+    'view_gdm', 'generate_gdm_pdf', 'view_disposal_reports',
+    'generate_disposal_report', 'view_maintenance', 'issue_pwt',
     'view_equipment', 'view_analytics',
   ],
-  services: ALL_IDS.filter((id) => !ADMIN_ONLY.includes(id)),
+  services: ALL_IDS.filter(
+    (id) => !ADMIN_ONLY.includes(id) && !DASHBOARD_PERMISSIONS.includes(id),
+  ),
   // Coordenação: revisão das Guias de Desembarque — aprovar tratativa,
   // alterar destino dos itens (auditado) e relatórios de descarte.
   coordinator: [
-    'view_dashboard', 'view_gdm', 'view_all_gdms', 'approve_gdm',
+    'view_gdm', 'view_all_gdms', 'approve_gdm',
     'change_gdm_destination', 'view_disposal_reports', 'generate_disposal_report',
   ],
 };
