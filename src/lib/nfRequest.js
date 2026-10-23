@@ -31,6 +31,17 @@ export const NF_FIELD_LABELS = {
   material_will_return: 'Material irá retornar?',
 };
 
+// Opções fixas de CFOP (seleção em lista: código + descrição).
+export const NF_CFOP_OPTIONS = [
+  { code: '5901/6901', label: 'REMESSA P/ INDUSTRIALIZAÇÃO' },
+  { code: '5915/6915', label: 'REMESSA P/ CONSERTO' },
+  { code: '5949/6949', label: 'SIMPLES REMESSA' },
+  { code: '5555/6555', label: 'REMESSA BEM ATIVO TERCEIROS' },
+  { code: '5201/6201', label: 'DEVOLUÇÃO MATERIAIS' },
+  { code: '5905/6905', label: 'REMESSA P/ ARMAZENAGEM' },
+  { code: '5949/6949', label: 'REMESSA EM GARANTIA' },
+];
+
 // Opções fixas de Natureza da Operação (seleção em lista).
 export const NF_OPERATION_NATURE_OPTIONS = [
   'CONSERTO',

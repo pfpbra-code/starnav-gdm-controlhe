@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { NF_OPERATION_NATURE_OPTIONS } from '@/lib/nfRequest';
+import { NF_CFOP_OPTIONS, NF_OPERATION_NATURE_OPTIONS } from '@/lib/nfRequest';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSigner } from '@/lib/signatures';
@@ -401,7 +401,23 @@ export default function NfRequestDialog({ item, onClose }) {
                   </Select>
                 </Field>
                 <Field label="CFOP">
-                  <Input value={form.cfop} onChange={(e) => setField('cfop', e.target.value)} />
+                  <Select
+                    value={
+                      NF_CFOP_OPTIONS.some((o) => o.code === form.cfop) ? form.cfop : undefined
+                    }
+                    onValueChange={(value) => setField('cfop', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o CFOP" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NF_CFOP_OPTIONS.map((option, i) => (
+                        <SelectItem key={`${option.code}-${i}`} value={option.code}>
+                          {option.code} — {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
               </div>
             </Section>
