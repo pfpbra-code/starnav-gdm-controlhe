@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PendingBoard from '@/components/gdm/PendingBoard';
 import WorkOrderDashboard from '@/components/ot/WorkOrderDashboard';
+import OpenOTSummaryCard from '@/components/ot/OpenOTSummaryCard';
 
 // Pendências exclusivas do Almoxarifado, por categoria.
 // A ação tomada retira o item da pendência ativa, sem excluir dados da GDM.
@@ -46,7 +47,10 @@ export default function AlmoxarifadoBoard() {
         <TabsTrigger value="pending">Pendências do Setor</TabsTrigger>
         <TabsTrigger value="ot">Controle de OT</TabsTrigger>
       </TabsList>
-      <TabsContent value="pending">
+      <TabsContent value="pending" className="space-y-4">
+        <div className="max-w-sm">
+          <OpenOTSummaryCard />
+        </div>
         <PendingBoard
           title="Almoxarifado"
           description="GDMs e itens que aguardam ação do Almoxarifado"
