@@ -219,7 +219,11 @@ export default function WorkOrderDashboard() {
 
       <WorkOrderCharts rows={allRows} />
 
-      <WorkOrderTable rows={rows} canCloseOT={hasPermission('confirm_receipt')} />
+      <WorkOrderTable
+        rows={rows}
+        canCloseOT={hasPermission('confirm_receipt')}
+        canManageOT={hasPermission('send_to_supplier')}
+      />
     </div>
   );
 }

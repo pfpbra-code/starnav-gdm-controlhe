@@ -13,7 +13,8 @@ import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import ItemActionRouter from '@/components/gdm/ItemActionRouter';
 import { OT_STATUS_LABELS, OT_STATUS_COLORS } from '@/lib/gdmItems';
-import { Eye, PackageX } from 'lucide-react';
+import OtStatusActionDialog from './OtStatusActionDialog';
+import { Eye, PackageX, Play, RotateCcw } from 'lucide-react';
 
 function formatDate(value) {
   return value ? format(new Date(value), 'dd/MM/yyyy') : '—';
@@ -24,8 +25,9 @@ function formatDate(value) {
  * O fechamento da OT pelo Almoxarifado usa a mesma função (gdmItemAction)
  * de todos os módulos, com assinatura eletrônica e registro no histórico.
  */
-export default function WorkOrderTable({ rows, canCloseOT }) {
+export default function WorkOrderTable({ rows, canCloseOT, canManageOT }) {
   const [pending, setPending] = useState(null);
+  const [pendingOtStatus, setPendingOtStatus] = useState(null);
 
   const canClose = (item) =>
     canCloseOT &&
@@ -117,6 +119,40 @@ export default function WorkOrderTable({ rows, canCloseOT }) {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          {canManageOT && item.ot_status === 'open' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setPendingOtStatus({
+                                  item,
+                                  ot_status: 'in_service',
+                                  label: 'Iniciar Serviço da OT',
+                                })
+                              }
+                              title="OT passa para Em Serviço"
+                            >
+                              <Play className="h-3.5 w-3.5" />
+                              Iniciar Serviço
+                            </Button>
+                          )}
+                          {canManageOT && item.ot_status === 'in_service' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setPendingOtStatus({
+                                  item,
+                                  ot_status: 'open',
+                                  label: 'Retornar OT para Aberta',
+                                })
+                              }
+                              title="OT volta para Aberta"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                              Reabrir
+                            </Button>
+                          )}
                           {canClose(item) && (
                             <Button
                               size="sm"
@@ -145,6 +181,10 @@ export default function WorkOrderTable({ rows, canCloseOT }) {
         </CardContent>
       </Card>
       <ItemActionRouter pending={pending} onClose={() => setPending(null)} />
+      <OtStatusActionDialog
+        pending={pendingOtStatus}
+        onClose={() => setPendingOtStatus(null)}
+      />
     </>
   );
 }

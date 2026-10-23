@@ -709,6 +709,20 @@ export default async function (req: Request): Promise<Response> {
       extra.ot_closed_at = now;
       extra.ot_closed_by = user.email;
       next = prev;
+    } else if (action === 'set_ot_status') {
+      // Serviços altera a situação da OT diretamente na listagem do Controle
+      // de OT (abrir o serviço ou retornar a OT para aberta), sem abrir a GDM.
+      if (!item.ot_number) throw new Error('Este item não possui OT emitida');
+      if (item.ot_status === 'closed') throw new Error('A OT já está fechada');
+      if (!can('send_to_supplier')) throw new Error('Sem permissão para alterar a situação da OT');
+      const target = String(body.ot_status || '').trim();
+      if (!['open', 'in_service'].includes(target)) {
+        throw new Error('Situação de OT inválida');
+      }
+      if (item.ot_status === target) throw new Error('A OT já está nesta situação');
+
+      extra.ot_status = target;
+      next = prev;
     } else if (action === 'register_return_dispatch') {
       // Serviços registra quando o material saiu do fornecedor para entrega.
       if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
