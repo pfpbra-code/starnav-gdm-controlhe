@@ -11,17 +11,19 @@ import { usePermissions } from '@/hooks/usePermissions';
  */
 export default function Operations() {
   const { hasPermission } = usePermissions();
+  const canViewPendencias = hasPermission('view_operations');
   const canViewCertifications = hasPermission('view_certifications');
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="pendencias">
+      <Tabs defaultValue={canViewPendencias ? 'pendencias' : 'certificacoes'}>
         <TabsList>
-          <TabsTrigger value="pendencias">Pendências</TabsTrigger>
+          {canViewPendencias && <TabsTrigger value="pendencias">Pendências</TabsTrigger>}
           {canViewCertifications && (
             <TabsTrigger value="certificacoes">Gestão de Certificações</TabsTrigger>
           )}
         </TabsList>
+        {canViewPendencias && (
         <TabsContent value="pendencias">
           <SectorGDMBoard
             sector="operations"
@@ -30,6 +32,7 @@ export default function Operations() {
             emptyMessage="Nenhum item de operações encontrado"
           />
         </TabsContent>
+        )}
         {canViewCertifications && (
           <TabsContent value="certificacoes">
             <CertificationsDashboard />

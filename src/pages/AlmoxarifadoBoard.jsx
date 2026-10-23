@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PendingBoard from '@/components/gdm/PendingBoard';
 import WorkOrderDashboard from '@/components/ot/WorkOrderDashboard';
 import OpenOTSummaryCard from '@/components/ot/OpenOTSummaryCard';
+import { usePermissions } from '@/hooks/usePermissions';
 
 // Pendências exclusivas do Almoxarifado, por categoria.
 // A ação tomada retira o item da pendência ativa, sem excluir dados da GDM.
@@ -41,16 +42,21 @@ const CATEGORIES = [
 
 /** Aba Almoxarifado: pendências do setor + Controle de OT (tempo real). */
 export default function AlmoxarifadoBoard() {
+  const { hasPermission } = usePermissions();
+  const canViewOt = hasPermission('view_ot');
+
   return (
     <Tabs defaultValue="pending" className="space-y-6">
       <TabsList>
         <TabsTrigger value="pending">Pendências do Setor</TabsTrigger>
-        <TabsTrigger value="ot">Controle de OT</TabsTrigger>
+        {canViewOt && <TabsTrigger value="ot">Controle de OT</TabsTrigger>}
       </TabsList>
       <TabsContent value="pending" className="space-y-4">
-        <div className="max-w-sm">
-          <OpenOTSummaryCard />
-        </div>
+        {canViewOt && (
+          <div className="max-w-sm">
+            <OpenOTSummaryCard />
+          </div>
+        )}
         <PendingBoard
           title="Almoxarifado"
           description="GDMs e itens que aguardam ação do Almoxarifado"
@@ -58,9 +64,11 @@ export default function AlmoxarifadoBoard() {
           categories={CATEGORIES}
         />
       </TabsContent>
+      {canViewOt && (
       <TabsContent value="ot">
         <WorkOrderDashboard />
       </TabsContent>
+      )}
     </Tabs>
   );
 }

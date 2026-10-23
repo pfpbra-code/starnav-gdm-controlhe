@@ -12,16 +12,22 @@ import { usePermissions } from '@/hooks/usePermissions';
  */
 export default function Maintenance() {
   const { hasPermission } = usePermissions();
+  const canViewItems = hasPermission('view_maintenance');
   const canViewQuotes = hasPermission('view_maintenance_quotes');
   const canViewReliability = hasPermission('view_reliability');
 
+  // Aba inicial: painel do setor quando liberado; caso contrário, a
+  // primeira aba autorizada individualmente pelo ADM.
+  const initialTab = canViewItems ? 'items' : canViewReliability ? 'reliability' : 'quotes';
+
   return (
-    <Tabs defaultValue="items" className="space-y-6">
+    <Tabs defaultValue={initialTab} className="space-y-6">
       <TabsList>
-        <TabsTrigger value="items">Itens do Setor</TabsTrigger>
+        {canViewItems && <TabsTrigger value="items">Itens do Setor</TabsTrigger>}
         {canViewQuotes && <TabsTrigger value="quotes">Análise de Cotações</TabsTrigger>}
         {canViewReliability && <TabsTrigger value="reliability">Confiabilidade</TabsTrigger>}
       </TabsList>
+      {canViewItems && (
       <TabsContent value="items">
         <SectorGDMBoard
           sector="maintenance"
@@ -30,6 +36,7 @@ export default function Maintenance() {
           emptyMessage="Nenhum item de manutenção encontrado"
         />
       </TabsContent>
+      )}
       {canViewQuotes && (
         <TabsContent value="quotes">
           <MaintenanceAnalysis embedded />

@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
+  ShieldX,
   Building2,
   Plus,
   ArrowRight,
@@ -187,7 +188,24 @@ export default function Dashboard() {
     );
   }
 
+  const canViewOperational = hasPermission('view_dashboard');
   const canViewManagerial = hasPermission('view_dashboard_gerencial');
+
+  // Nenhum dashboard liberado: a rota já bloqueia, mas a página se protege.
+  if (!canViewOperational && !canViewManagerial) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <CardContent className="py-16 text-center">
+          <ShieldX className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+          <h2 className="text-xl font-semibold text-slate-900">Acesso Negado</h2>
+          <p className="text-slate-500 mt-1">
+            Você não possui permissão para acessar os dashboards.
+            Solicite acesso ao administrador.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -199,12 +217,13 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <Tabs defaultValue="operational" className="space-y-6">
+      <Tabs defaultValue={canViewOperational ? 'operational' : 'managerial'} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="operational">Visão Operacional</TabsTrigger>
+          {canViewOperational && <TabsTrigger value="operational">Visão Operacional</TabsTrigger>}
           {canViewManagerial && <TabsTrigger value="managerial">Dashboard Gerencial</TabsTrigger>}
         </TabsList>
 
+        {canViewOperational && (
         <TabsContent value="operational" className="space-y-8">
           {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -424,6 +443,7 @@ export default function Dashboard() {
             )}
           </div>
         </TabsContent>
+        )}
 
         {canViewManagerial && (
           <TabsContent value="managerial">

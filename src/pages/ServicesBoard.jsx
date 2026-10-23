@@ -5,6 +5,7 @@ import RepairControlPanel from '@/components/gdm/RepairControlPanel';
 import ServicesKpis from '@/components/gdm/ServicesKpis';
 import EquipmentControlDashboard from '@/components/services/EquipmentControlDashboard';
 import WorkOrderDashboard from '@/components/ot/WorkOrderDashboard';
+import { usePermissions } from '@/hooks/usePermissions';
 
 // Pendências exclusivas do setor de Serviços, por categoria.
 // Cada item sai da pendência assim que a ação é concluída e permanece no histórico.
@@ -43,13 +44,17 @@ const CATEGORIES = [
 
 /** Aba Serviços: pendências do setor + controle completo de reparos e certificações. */
 export default function ServicesBoard() {
+  const { hasPermission } = usePermissions();
+  const canViewEquipment = hasPermission('view_analytics');
+  const canViewOt = hasPermission('view_ot');
+
   return (
     <Tabs defaultValue="pending" className="space-y-6">
       <TabsList>
         <TabsTrigger value="pending">Pendências do Setor</TabsTrigger>
         <TabsTrigger value="control">Controle de Reparos e Certificações</TabsTrigger>
-        <TabsTrigger value="equipment">Dados por Equipamento</TabsTrigger>
-        <TabsTrigger value="ot">Controle de OT</TabsTrigger>
+        {canViewEquipment && <TabsTrigger value="equipment">Dados por Equipamento</TabsTrigger>}
+        {canViewOt && <TabsTrigger value="ot">Controle de OT</TabsTrigger>}
       </TabsList>
       <TabsContent value="pending">
         <PendingBoard
@@ -65,12 +70,16 @@ export default function ServicesBoard() {
       <TabsContent value="control">
         <RepairControlPanel />
       </TabsContent>
+      {canViewEquipment && (
       <TabsContent value="equipment">
         <EquipmentControlDashboard />
       </TabsContent>
+      )}
+      {canViewOt && (
       <TabsContent value="ot">
         <WorkOrderDashboard />
       </TabsContent>
+      )}
     </Tabs>
   );
 }

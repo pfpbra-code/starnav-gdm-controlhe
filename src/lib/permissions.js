@@ -367,10 +367,14 @@ export function sectorViewPermission(sector) {
 // Módulos (usado pela sidebar e pelas rotas)
 // ---------------------------------------------------------------------------
 
-/** Permissão mínima exigida por página. null = sempre liberado. */
+/**
+ * Permissão mínima exigida por página. null = sempre liberado.
+ * Um array exige QUALQUER UMA das permissões (dashboards liberados
+ * individualmente pelo ADM continuam acessíveis sozinhos).
+ */
 export const MODULE_PERMISSIONS = {
   MyProfile: null,
-  Dashboard: "view_dashboard",
+  Dashboard: ["view_dashboard", "view_dashboard_gerencial"],
   Notifications: null,
   NotificationPreferences: null,
   GDMList: "view_all_gdms",
@@ -379,8 +383,8 @@ export const MODULE_PERMISSIONS = {
   ServicesTreatments: "manage_service_treatments",
   ServicesBoard: "send_to_supplier",
   AlmoxarifadoBoard: "confirm_receipt",
-  Maintenance: "view_maintenance",
-  Operations: "view_operations",
+  Maintenance: ["view_maintenance", "view_reliability"],
+  Operations: ["view_operations", "view_certifications"],
   // A Análise de Cotações controla as abas (Manutenção/Operações) internamente.
   MaintenanceAnalysis: null,
   Equipment: "view_equipment",
@@ -397,5 +401,6 @@ export const MODULE_PERMISSIONS = {
 export function canAccessModule(user, moduleName) {
   const required = MODULE_PERMISSIONS[moduleName];
   if (required === undefined) return true;
+  if (Array.isArray(required)) return hasAnyPermission(user, required);
   return hasPermission(user, required);
 }
