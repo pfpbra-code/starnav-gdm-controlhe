@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
 import ItemActionDialog from './ItemActionDialog';
 import SupplierFlowActionDialog from './SupplierFlowActionDialog';
 import DiscardConfirmDialog from './DiscardConfirmDialog';
@@ -20,6 +21,15 @@ const NF_FLOW_ACTIONS = ['request_nf'];
  * ações pelo mesmo caminho (gdmItemAction).
  */
 export default function ItemActionRouter({ pending, onClose }) {
+  // Item atualizado usado quando o Serviços solicita a NF logo após definir o
+  // fornecedor: o formulário precisa do item com o supplier_id já registrado.
+  const [nfItem, setNfItem] = useState(null);
+
+  const handleRequestNf = async (item) => {
+    const fresh = await base44.entities.GDMItem.get(item.id);
+    setNfItem(fresh);
+  };
+
   const isSupplierFlow =
     pending && SUPPLIER_FLOW_ACTIONS.includes(pending.action);
   const isDiscardFlow =
@@ -28,6 +38,17 @@ export default function ItemActionRouter({ pending, onClose }) {
     pending && CERTIFICATE_FLOW_ACTIONS.includes(pending.action);
   const isNfFlow =
     pending && NF_FLOW_ACTIONS.includes(pending.action);
+  if (nfItem) {
+    return (
+      <NfRequestDialog
+        item={nfItem}
+        onClose={() => {
+          setNfItem(null);
+          onClose();
+        }}
+      />
+    );
+  }
   if (isNfFlow) {
     return <NfRequestDialog item={pending.item} onClose={onClose} />;
   }
@@ -35,7 +56,13 @@ export default function ItemActionRouter({ pending, onClose }) {
     return <RegisterCertificateDialog item={pending.item} onClose={onClose} />;
   }
   if (isSupplierFlow) {
-    return <SupplierFlowActionDialog pending={pending} onClose={onClose} />;
+    return (
+      <SupplierFlowActionDialog
+        pending={pending}
+        onClose={onClose}
+        onRequestNf={handleRequestNf}
+      />
+    );
   }
   if (isDiscardFlow) {
     return <DiscardConfirmDialog pending={pending} onClose={onClose} />;

@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import AttachmentField from './AttachmentField';
 import PhotoUrlField from './PhotoUrlField';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, CheckCircle2, Percent, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ITEM_DESTINATION_LABELS, ITEM_STATUS_LABELS } from '@/lib/gdmItems';
@@ -34,7 +35,7 @@ import SignatureConfirmStep from '@/components/signature/SignatureConfirmStep';
  * — a mesma usada por todos os módulos (fonte única de verdade).
  * `pending`: { item, action, label }
  */
-export default function SupplierFlowActionDialog({ pending, onClose }) {
+export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf }) {
   const queryClient = useQueryClient();
   const item = pending?.item;
   const action = pending?.action;
@@ -65,6 +66,8 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
   const [receiptNfUrl, setReceiptNfUrl] = useState('');
   const [laudoUrl, setLaudoUrl] = useState('');
   const [observation, setObservation] = useState('');
+  // Solicitação de NF (Serviços): opção exibida ao selecionar o fornecedor.
+  const [requestNf, setRequestNf] = useState(false);
   const { signatureUrl } = useSigner();
   const [signatureChecked, setSignatureChecked] = useState(false);
 
@@ -95,6 +98,7 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
     setReceiptNfUrl('');
     setLaudoUrl('');
     setObservation('');
+    setRequestNf(false);
     setSignatureChecked(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending]);
@@ -117,13 +121,23 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
       });
       return base44.functions.invoke('gdmItemAction', payload).then((res) => res.data);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Ação registrada');
       queryClient.invalidateQueries({ queryKey: ['gdmItems'] });
       queryClient.invalidateQueries({ queryKey: ['gdmItemHistory', item.id] });
       queryClient.invalidateQueries({ queryKey: ['gdmItemHistories'] });
       queryClient.invalidateQueries({ queryKey: ['gdm', item.gdm_id] });
       queryClient.invalidateQueries({ queryKey: ['gdms'] });
+      // Serviços solicitou a NF junto com a definição do fornecedor: abre o
+      // formulário de NF já preenchido com o fornecedor recém-selecionado.
+      if (action === 'select_supplier' && requestNf && onRequestNf) {
+        try {
+          await onRequestNf(item);
+          return;
+        } catch {
+          toast.error('Não foi possível abrir a solicitação de NF');
+        }
+      }
       onClose();
     },
     onError: (error) => toast.error(error?.message || 'Não foi possível concluir a ação'),
@@ -290,6 +304,22 @@ export default function SupplierFlowActionDialog({ pending, onClose }) {
                   onChange={(e) => setExpectedShipDate(e.target.value)}
                 />
               </div>
+              <label className="flex items-start gap-2.5 rounded-lg border border-sky-200 bg-sky-50 p-3 cursor-pointer">
+                <Checkbox
+                  checked={requestNf}
+                  onCheckedChange={(v) => setRequestNf(!!v)}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-slate-800">
+                    Solicitar NF de envio agora
+                  </span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    Após confirmar o fornecedor, abre a Solicitação de Emissão de NF
+                    preenchida automaticamente com este fornecedor e os dados do item.
+                  </span>
+                </span>
+              </label>
             </>
           )}
 
