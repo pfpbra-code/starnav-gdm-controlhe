@@ -1,0 +1,268 @@
+{
+  "name": "NfRequest",
+  "type": "object",
+  "properties": {
+    "gdm_id": {
+      "type": "string",
+      "description": "ID da GDM vinculada \u00e0 solicita\u00e7\u00e3o"
+    },
+    "gdm_number": {
+      "type": "string",
+      "description": "N\u00famero da GDM"
+    },
+    "vessel_id": {
+      "type": "string",
+      "description": "ID da embarca\u00e7\u00e3o (denormalizado para escopo de acesso)"
+    },
+    "vessel_name": {
+      "type": "string",
+      "description": "Nome da embarca\u00e7\u00e3o"
+    },
+    "item_id": {
+      "type": "string",
+      "description": "ID do item da GDM vinculado \u00e0 solicita\u00e7\u00e3o"
+    },
+    "item_number": {
+      "type": "number",
+      "description": "N\u00famero do item dentro da GDM"
+    },
+    "equipment_id": {
+      "type": "string",
+      "description": "ID do equipamento do item vinculado"
+    },
+    "supplier_id": {
+      "type": "string",
+      "description": "ID do fornecedor de destino"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Nome do fornecedor de destino (denormalizado)"
+    },
+    "request_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora da solicita\u00e7\u00e3o"
+    },
+    "requested_by": {
+      "type": "string",
+      "description": "E-mail do usu\u00e1rio solicitante"
+    },
+    "requester_name": {
+      "type": "string",
+      "description": "Nome de exibi\u00e7\u00e3o do usu\u00e1rio solicitante"
+    },
+    "shipment_objective": {
+      "type": "string",
+      "description": "Objetivo da remessa"
+    },
+    "destination": {
+      "type": "string",
+      "description": "Destino do equipamento (reparo, calibra\u00e7\u00e3o etc.)"
+    },
+    "supplier_company_name": {
+      "type": "string",
+      "description": "Raz\u00e3o social do fornecedor"
+    },
+    "supplier_cnpj": {
+      "type": "string",
+      "description": "CNPJ do fornecedor"
+    },
+    "supplier_address": {
+      "type": "string",
+      "description": "Endere\u00e7o do fornecedor (logradouro)"
+    },
+    "supplier_city": {
+      "type": "string",
+      "description": "Cidade do fornecedor"
+    },
+    "supplier_state": {
+      "type": "string",
+      "description": "Estado (UF) do fornecedor"
+    },
+    "supplier_zip": {
+      "type": "string",
+      "description": "CEP do fornecedor"
+    },
+    "supplier_phone": {
+      "type": "string",
+      "description": "Telefone do fornecedor"
+    },
+    "nf_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "C\u00f3digo do equipamento"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nome do equipamento"
+          },
+          "serial_number": {
+            "type": "string",
+            "description": "N\u00famero de s\u00e9rie (SN)"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantidade"
+          },
+          "unit": {
+            "type": "string",
+            "description": "Unidade de medida"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descri\u00e7\u00e3o do item da NF"
+          }
+        }
+      },
+      "description": "Itens (equipamentos) da solicita\u00e7\u00e3o de NF, edit\u00e1veis pelo usu\u00e1rio"
+    },
+    "carrier": {
+      "type": "string",
+      "description": "Transportadora respons\u00e1vel pelo envio"
+    },
+    "freight_type": {
+      "type": "string",
+      "description": "Tipo de frete (CIF, FOB etc.)"
+    },
+    "operation_type": {
+      "type": "string",
+      "description": "Tipo de opera\u00e7\u00e3o (entrada, sa\u00edda etc.)"
+    },
+    "operation_nature": {
+      "type": "string",
+      "description": "Natureza da opera\u00e7\u00e3o"
+    },
+    "cfop": {
+      "type": "string",
+      "description": "C\u00f3digo CFOP"
+    },
+    "observations": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es da solicita\u00e7\u00e3o"
+    },
+    "audit_changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Campo alterado (chave)"
+          },
+          "field_label": {
+            "type": "string",
+            "description": "Nome do campo alterado (exibi\u00e7\u00e3o)"
+          },
+          "previous_value": {
+            "type": "string",
+            "description": "Valor anterior do campo"
+          },
+          "new_value": {
+            "type": "string",
+            "description": "Novo valor do campo"
+          },
+          "changed_by": {
+            "type": "string",
+            "description": "E-mail do usu\u00e1rio respons\u00e1vel pela altera\u00e7\u00e3o"
+          },
+          "changed_by_name": {
+            "type": "string",
+            "description": "Nome de exibi\u00e7\u00e3o do usu\u00e1rio respons\u00e1vel"
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data/hora da altera\u00e7\u00e3o"
+          }
+        }
+      },
+      "description": "Auditoria de todas as altera\u00e7\u00f5es realizadas ap\u00f3s o preenchimento autom\u00e1tico, nunca removidas"
+    },
+    "resent_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de reenvios da solicita\u00e7\u00e3o"
+    },
+    "last_resent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora do \u00faltimo reenvio"
+    },
+    "last_resent_by": {
+      "type": "string",
+      "description": "E-mail de quem reenviou a solicita\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "gdm_id",
+    "item_id",
+    "nf_items"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.vessel_id": {
+            "$in": "{{user.data.assigned_vessels}}"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

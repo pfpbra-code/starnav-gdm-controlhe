@@ -96,6 +96,9 @@ export const ITEM_ACTION_LABELS = {
   confirm_oc_approved: "OC Aprovada e Enviada ao Fornecedor (Serviços)",
   issue_ot: "OT Emitida (Serviços)",
   close_ot: "OT Fechada (Almoxarifado)",
+  request_nf: "Solicitação de Emissão de NF (Serviços)",
+  update_nf_request: "Solicitação de NF Alterada (Serviços)",
+  resend_nf_request: "Solicitação de NF Reenviada (Serviços)",
   register_return_dispatch: "Saída para Entrega Registrada (Serviços)",
   confirm_return_receipt: "Recebimento do Retorno Confirmado (Almoxarifado)",
   register_certificate: "Certificado Registrado (Operações)",
@@ -123,6 +126,22 @@ export const OT_STATUS_COLORS = {
 
 // Situações do item em que a OT pode ser emitida por Serviços: equipamento já
 // enviado ao fornecedor e ainda não recebido de volta.
+// Situações em que o item tem fornecedor definido e ainda está no ciclo de
+// envio/retorno — janela para solicitar a NF de envio ao fornecedor.
+const NF_REQUEST_STATUSES = [
+  "awaiting_shipping_proof",
+  "sent_to_supplier",
+  "awaiting_maintenance_authorization",
+  "discount_negotiation",
+  "repair_approved",
+  "in_treatment",
+  "awaiting_pwt",
+  "awaiting_oc_issuance",
+  "awaiting_oc_approval",
+  "awaiting_return",
+  "awaiting_supplier_return",
+];
+
 const OT_ISSUE_STATUSES = [
   "sent_to_supplier",
   "awaiting_maintenance_authorization",
@@ -212,6 +231,12 @@ export function availableItemActions(item, can, user, responsibleVesselIds) {
 
     if (s === "awaiting_shipping_proof" && can("confirm_receipt")) {
       actions.push({ action: "attach_shipping_proof", label: "Anexar comprovante de envio" });
+    }
+
+    // Solicitação de NF de envio: disponível para Serviços enquanto o item tem
+    // fornecedor definido e está no ciclo de envio/retorno.
+    if (item.supplier_id && NF_REQUEST_STATUSES.includes(s) && can("send_to_supplier")) {
+      actions.push({ action: "request_nf", label: "Solicitar NF" });
     }
 
     if (s === "sent_to_supplier" && can("send_to_supplier")) {
