@@ -1,0 +1,75 @@
+{
+  "name": "ManualAttachment",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo do documento complementar do manual (ex.: Procedimento de Envio ao Fornecedor)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o/observa\u00e7\u00e3o sobre o documento"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Nome original do arquivo"
+    },
+    "file_uri": {
+      "type": "string",
+      "description": "Caminho do arquivo no armazenamento privado (acesso via URL assinada)"
+    },
+    "file_type": {
+      "type": "string",
+      "description": "Tipo MIME do arquivo (image/jpeg, image/png, application/pdf etc.)"
+    },
+    "file_size": {
+      "type": "number",
+      "description": "Tamanho do arquivo em bytes"
+    },
+    "uploaded_by": {
+      "type": "string",
+      "description": "Email do ADM que anexou o documento"
+    },
+    "uploaded_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora do anexo do documento"
+    }
+  },
+  "required": [
+    "title",
+    "file_name",
+    "file_uri"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -32,6 +32,8 @@ const ALL_IDS: string[] = [
   // Relatórios
   'view_reports', 'export_reports', 'view_cost_reports', 'view_analytics',
   'view_supplier_ranking', 'view_equipment_ranking', 'view_critical_equipment',
+  // Manual de procedimentos (autorização individual do ADM)
+  'view_manual',
   // Administração
   'manage_users', 'edit_users', 'suspend_users', 'reset_user_access', 'manage_permissions',
   'view_audit_logs', 'export_audit_logs', 'system_settings',

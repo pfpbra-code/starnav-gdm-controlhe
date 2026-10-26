@@ -32,6 +32,9 @@ export const AVAILABLE_PERMISSIONS = [
   { id: "view_reliability", label: "Dashboard de Confiabilidade (MTBF/MTTR)", category: "Dashboards" },
   { id: "view_certifications", label: "Dashboard de Certificações", category: "Dashboards" },
 
+  // Manual de procedimentos (autorização individual do ADM)
+  { id: "view_manual", label: "Manual de Procedimentos", category: "Manual" },
+
   // GDM
   { id: "view_gdm", label: "Visualizar GDM", category: "GDM" },
   { id: "view_all_gdms", label: "Visualizar todas as Guias de Desembarque", category: "GDM" },
@@ -395,6 +398,7 @@ export const MODULE_PERMISSIONS = {
   Equipment: "view_equipment",
   Suppliers: "view_suppliers",
   DisposalReports: "view_disposal_reports",
+  Manual: "view_manual",
   SupplierDetail: "view_suppliers",
   Users: "manage_users",
   AuditLogs: "view_audit_logs",

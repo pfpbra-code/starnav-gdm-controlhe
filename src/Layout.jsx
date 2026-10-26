@@ -19,6 +19,7 @@ const pageTitles = {
   Equipment: "Equipamentos",
   Suppliers: "Fornecedores",
   DisposalReports: "Relatórios de Descarte",
+  Manual: "Manual de Procedimentos",
   AuditLogs: "Logs de Auditoria",
   Settings: "Configurações",
   ServicesTreatments: "Tratativas",

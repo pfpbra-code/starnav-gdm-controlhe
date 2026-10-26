@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   UserCircle,
   Bell,
+  BookOpen,
   X,
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ const MENU_ITEMS = [
   { icon: Warehouse, label: 'Almoxarifado', page: 'AlmoxarifadoBoard', permission: 'confirm_receipt' },
   { icon: Building2, label: 'Fornecedores', page: 'Suppliers', permission: 'view_suppliers' },
   { icon: FileDown, label: 'Relatórios de Descarte', page: 'DisposalReports', permission: 'view_disposal_reports' },
+  { icon: BookOpen, label: 'Manual', page: 'Manual', permission: 'view_manual' },
   { icon: Settings, label: 'Configurações', page: 'Settings', permission: 'system_settings' },
 ];
 

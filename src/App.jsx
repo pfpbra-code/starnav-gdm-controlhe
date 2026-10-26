@@ -12,6 +12,7 @@ import ServicesBoard from './pages/ServicesBoard';
 import AlmoxarifadoBoard from './pages/AlmoxarifadoBoard';
 import SupplierDetail from './pages/SupplierDetail';
 import DisposalReports from './pages/DisposalReports';
+import Manual from './pages/Manual';
 import RequirePermission from '@/components/RequirePermission';
 import AccountStatusGate from '@/components/AccountStatusGate';
 import { isAccountAllowed } from '@/lib/permissions';
@@ -132,6 +133,13 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="DisposalReports">
           <RequirePermission module="DisposalReports">
             <DisposalReports />
+          </RequirePermission>
+        </LayoutWrapper>
+      } />
+      <Route path="/Manual" element={
+        <LayoutWrapper currentPageName="Manual">
+          <RequirePermission module="Manual">
+            <Manual />
           </RequirePermission>
         </LayoutWrapper>
       } />
