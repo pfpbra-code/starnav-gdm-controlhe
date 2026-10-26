@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PenLine } from 'lucide-react';
 import { MANUAL_SECTORS, MANUAL_PROCESSES } from '@/lib/manualContent';
 import ManualSteps from '@/components/manual/ManualSteps';
+import ManualPdfButton from '@/components/manual/ManualPdfButton';
 import ManualAttachments from '@/components/manual/ManualAttachments';
 
 /**
@@ -46,8 +47,13 @@ export default function Manual() {
           <TabsContent key={sector.key} value={sector.key}>
             <Card>
               <CardHeader>
-                <CardTitle>{sector.label}</CardTitle>
-                <CardDescription>{sector.intro}</CardDescription>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle>{sector.label}</CardTitle>
+                    <CardDescription>{sector.intro}</CardDescription>
+                  </div>
+                  <ManualPdfButton section={sector} />
+                </div>
               </CardHeader>
               <CardContent>
                 <ManualSteps steps={sector.steps} />
