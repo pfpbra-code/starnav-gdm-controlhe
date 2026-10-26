@@ -3,10 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PenLine } from 'lucide-react';
+import { Image as ImageIcon, PenLine } from 'lucide-react';
 import { MANUAL_SECTORS, MANUAL_PROCESSES } from '@/lib/manualContent';
 import ManualSteps from '@/components/manual/ManualSteps';
 import ManualPdfButton from '@/components/manual/ManualPdfButton';
+import MasterManualPdfButton from '@/components/manual/MasterManualPdfButton';
 import ManualAttachments from '@/components/manual/ManualAttachments';
 
 /**
@@ -32,8 +33,9 @@ export default function Manual() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue={MANUAL_SECTORS[0].key} className="space-y-4">
+      <Tabs defaultValue="master" className="space-y-4">
         <TabsList className="h-auto flex-wrap justify-start">
+          <TabsTrigger value="master">Manual Completo</TabsTrigger>
           {MANUAL_SECTORS.map((sector) => (
             <TabsTrigger key={sector.key} value={sector.key}>
               {sector.label}
@@ -42,6 +44,46 @@ export default function Manual() {
           <TabsTrigger value="processes">Processos</TabsTrigger>
           <TabsTrigger value="documents">Documentos</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="master">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Manual Mestre da Plataforma</CardTitle>
+                  <CardDescription>
+                    Material único para treinamento, onboarding e consulta operacional: capa, sumário
+                    clicável, controle de versão, objetivo do sistema, glossário, fluxograma geral,
+                    índice de funcionalidades, capítulos por setor e por funcionalidade, dashboards
+                    com fórmulas dos indicadores, QR Code, assinatura eletrônica, 4 exemplos práticos
+                    ponta a ponta e perguntas frequentes.
+                  </CardDescription>
+                </div>
+                <MasterManualPdfButton />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-slate-700">
+                O PDF é gerado com todos os capítulos em um único arquivo, com o mesmo padrão visual
+                da plataforma. Cada passo a passo traz explicação dos campos, exemplos preenchidos,
+                observações e alertas de erros comuns.
+              </p>
+              <Card className="border-amber-200 bg-amber-50">
+                <CardContent className="flex items-start gap-3 p-4">
+                  <ImageIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+                  <p className="text-sm text-slate-700">
+                    <strong>Prints das telas:</strong> para ilustrar os passos com capturas de tela
+                    da plataforma, anexe as imagens na aba <strong>Documentos</strong> incluindo o
+                    nome do capítulo no título do documento (ex.: "Criação de GDM — Passo 1").
+                    Elas são embutidas automaticamente nos passos do capítulo correspondente na
+                    ordem em que foram anexadas; passos sem print recebem um espaço reservado com a
+                    indicação da tela a capturar.
+                  </p>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {MANUAL_SECTORS.map((sector) => (
           <TabsContent key={sector.key} value={sector.key}>
