@@ -4,8 +4,6 @@ import {
   displayNameOf,
   SECTOR_BY_DESTINATION,
   sectorViewPermission,
-  VESSEL_STAGE_ACTIONS,
-  canActOnVesselItems,
   isAccountAllowed,
 } from '../../shared/itemPermissions.ts';
 
@@ -63,21 +61,6 @@ export default async function (req: Request): Promise<Response> {
     if (!item) return Response.json({ error: 'Item não encontrado' }, { status: 404 });
 
     const can = (p: string) => hasPermission(user, p);
-    const isVesselStage = VESSEL_STAGE_ACTIONS.includes(action);
-
-    // ETAPA 4 (confirmação do desembarque): validada pelo vínculo do usuário
-    // como responsável por setor da embarcação (ou pelo próprio ADM).
-    let stageVessel: any = null;
-    if (isVesselStage && item.vessel_id) {
-      try {
-        stageVessel = await base44.asServiceRole.entities.Vessel.get(item.vessel_id);
-      } catch {
-        stageVessel = null;
-      }
-    }
-    if (isVesselStage && !canActOnVesselItems(user, item, stageVessel)) {
-      throw new Error('Somente os responsáveis da embarcação podem confirmar o desembarque deste item');
-    }
 
     // Separação de setores: só usuários autorizados no setor do item podem agir.
     const itemSector = SECTOR_BY_DESTINATION[item.destination] || 'maintenance';
@@ -106,7 +89,21 @@ export default async function (req: Request): Promise<Response> {
         next = 'awaiting_receipt';
         extra.expected_disembark_date = expectedDisembarkDate;
       } else {
-        next = 'pending_almoxarifado';
+        // GDM criada como "Recebido": o equipamento já está fisicamente no
+        // Almoxarifado desde a abertura da GDM. A confirmação da tratativa
+        // pela Coordenação avança direto para a etapa do destino, sem nova
+        // confirmação de recebimento (etapa exclusiva de GDMs "Não Recebido").
+        const finalDestination = destination || item.destination;
+        next =
+          finalDestination === 'discard'
+            ? 'pending_maintenance_authorization'
+            : finalDestination === 'stock_return'
+              ? 'received'
+              : 'awaiting_supplier_definition';
+        if (!item.stock_received_at) {
+          extra.stock_received_at = now;
+          extra.stock_received_by = user.id;
+        }
       }
       if (destination && destination !== item.destination) {
         if (!VALID_DESTINATIONS.includes(destination)) {
@@ -123,15 +120,12 @@ export default async function (req: Request): Promise<Response> {
       if (prev !== 'pending_coordinator') throw new Error('Item não está aguardando aprovação');
       next = 'rejected';
     } else if (action === 'confirm_receipt') {
-      // ETAPA 3 — Almoxarifado confirma recebimento. Reparo/calibração seguem
-      // para Serviços aguardando a definição do fornecedor.
+      // Confirmação de chegada física — exclusiva de GDMs abertas como
+      // "Não Recebido": a tratativa já foi validada pela Coordenação e o
+      // fluxo segue direto para a etapa do destino.
       if (!can('confirm_receipt')) throw new Error('Sem permissão para confirmar recebimento');
-      // Aceita tanto o recebimento padrão (pós-aprovação) quanto a confirmação
-      // de chegada física de item aberto como "Não Recebido" (awaiting_receipt):
-      // nesse caso a tratativa já foi validada pela Coordenação e o fluxo segue
-      // direto para a etapa do destino, sem retornar ao Coordenador.
-      if (!['pending_almoxarifado', 'awaiting_receipt'].includes(prev)) {
-        throw new Error('Item não está aguardando o almoxarifado');
+      if (prev !== 'awaiting_receipt') {
+        throw new Error('Item não está aguardando a chegada do equipamento');
       }
       next =
         item.destination === 'discard'
@@ -141,30 +135,6 @@ export default async function (req: Request): Promise<Response> {
             : 'awaiting_supplier_definition';
       extra.stock_received_at = now;
       extra.stock_received_by = user.id;
-    } else if (action === 'report_not_received') {
-      if (!can('report_not_received')) throw new Error('Sem permissão para informar não recebimento');
-      if (prev !== 'pending_almoxarifado') throw new Error('Item não está aguardando o almoxarifado');
-      next = 'pending_disembark_confirmation';
-      extra.not_received_at = now;
-      extra.not_received_by = user.email;
-    } else if (action === 'confirm_disembark') {
-      if (prev !== 'pending_disembark_confirmation') {
-        throw new Error('Item não está aguardando confirmação de desembarque');
-      }
-      next = 'pending_almoxarifado';
-      extra.disembark_confirmed_at = now;
-      extra.disembark_confirmed_by = user.email;
-    } else if (action === 'reschedule_disembark') {
-      if (prev !== 'pending_disembark_confirmation') {
-        throw new Error('Item não está aguardando confirmação de desembarque');
-      }
-      if (!expectedDisembarkDate) throw new Error('Informe a nova data prevista de desembarque');
-      if (!observation || !String(observation).trim()) {
-        throw new Error('Informe a justificativa da reprogramação');
-      }
-      next = 'disembark_rescheduled';
-      extra.expected_disembark_date = expectedDisembarkDate;
-      extra.reschedule_justification = observation;
     } else if (action === 'confirm_stock_return') {
       if (!can('confirm_receipt')) throw new Error('Sem permissão para confirmar devolução');
       if (item.destination !== 'stock_return') throw new Error('Item não é de retorno ao estoque');
@@ -980,12 +950,19 @@ export default async function (req: Request): Promise<Response> {
               .map((u: any) => createNotif(u, 'Destino de item alterado pela Coordenação', msg)),
           );
         }
+        const finalDestination = extra.destination || item.destination;
+        const notifySector =
+          item.receipt_situation === 'not_received' || finalDestination === 'stock_return'
+            ? 'almoxarifado'
+            : finalDestination === 'discard'
+              ? 'maintenance'
+              : 'services';
         const msgNext = item.receipt_situation === 'not_received'
           ? `A Coordenação aprovou a tratativa do item ${itemLabel} (GDM aberta como Não Recebido). O item está em "Aguardando Recebimento" até a chegada física do equipamento.`
-          : `A Coordenação concluiu a análise do item ${itemLabel}. O material aguarda recebimento do Almoxarifado.`;
+          : `A Coordenação confirmou a tratativa do item ${itemLabel}. Como a GDM foi criada como Recebido, o item seguiu direto para a próxima etapa do processo.`;
         await Promise.all(
           users
-            .filter((u: any) => sectorsOf(u).includes('almoxarifado'))
+            .filter((u: any) => sectorsOf(u).includes(notifySector))
             .map((u: any) => createNotif(u, 'Item aprovado pela Coordenação', msgNext)),
         );
       } catch {

@@ -18,8 +18,7 @@ export const ITEM_STATUS_LABELS = {
   approved: "Aprovado",
   rejected: "Reprovado",
   cancelled: "Cancelado",
-  pending_almoxarifado: "Aguardando Recebimento (Almoxarifado)",
-  awaiting_receipt: "Aguardando Recebimento (Chegada do Equipamento)",
+  awaiting_receipt: "Aguardando Recebimento",
   received: "Recebido pelo Almoxarifado",
   awaiting_supplier_definition: "Aguardando Definição de Fornecedor",
   awaiting_shipping_proof: "Aguardando Comprovante de Envio",
@@ -36,8 +35,6 @@ export const ITEM_STATUS_LABELS = {
   awaiting_oc_issuance: "Aguardando Emissão da OC (Serviços)",
   awaiting_oc_approval: "Aguardando Aprovação da OC",
   discount_negotiation: "Negociação de Desconto",
-  pending_disembark_confirmation: "Confirmação de Desembarque (Embarcação)",
-  disembark_rescheduled: "Desembarque Reprogramado",
   awaiting_discard_confirmation: "Aguardando Confirmação do Descarte",
   discard_approved: "Descarte Aprovado",
   completed: "Finalizado",
@@ -49,7 +46,6 @@ export const ITEM_STATUS_COLORS = {
   approved: "bg-sky-100 text-sky-800",
   rejected: "bg-red-100 text-red-700",
   cancelled: "bg-slate-200 text-slate-600",
-  pending_almoxarifado: "bg-amber-100 text-amber-800",
   awaiting_receipt: "bg-amber-100 text-amber-800",
   received: "bg-sky-100 text-sky-800",
   awaiting_supplier_definition: "bg-indigo-100 text-indigo-800",
@@ -67,8 +63,6 @@ export const ITEM_STATUS_COLORS = {
   awaiting_oc_issuance: "bg-indigo-100 text-indigo-800",
   awaiting_oc_approval: "bg-orange-100 text-orange-800",
   discount_negotiation: "bg-violet-100 text-violet-800",
-  pending_disembark_confirmation: "bg-orange-100 text-orange-800",
-  disembark_rescheduled: "bg-purple-100 text-purple-800",
   awaiting_discard_confirmation: "bg-orange-100 text-orange-800",
   discard_approved: "bg-slate-200 text-slate-600",
   completed: "bg-green-100 text-green-800",
@@ -87,11 +81,7 @@ export function getItemStatusLabel(item) {
 export const ITEM_ACTION_LABELS = {
   approve: "Tratativa Confirmada pelo Coordenador",
   reject: "Reprovado pelo Coordenador",
-  confirm_receipt: "Recebimento Confirmado (Almoxarifado)",
-  report_not_received: "Não Recebido pelo Almoxarifado",
-  confirm_disembark: "Desembarque Confirmado pela Embarcação",
-  reschedule_disembark: "Desembarque Reprogramado pela Embarcação",
-  return_to_almoxarifado: "Retornado ao Almoxarifado (Nova Data Atingida)",
+  confirm_receipt: "Chegada do Equipamento Confirmada (Almoxarifado)",
   confirm_stock_return: "Devolução ao Estoque Confirmada",
   authorize_discard: "Descarte Autorizado pelo Gestor",
   confirm_discard: "Descarte Confirmado pelo Almoxarifado",
@@ -197,31 +187,6 @@ export function availableItemActions(item, can, user, responsibleVesselIds) {
   // o item aguarda apenas a chegada física, sem retornar ao Coordenador.
   if (s === "awaiting_receipt" && can("confirm_receipt")) {
     actions.push({ action: "confirm_receipt", label: "Confirmar Recebimento" });
-  }
-
-  if (s === "pending_almoxarifado") {
-    if (can("confirm_receipt")) {
-      actions.push({ action: "confirm_receipt", label: "Recebido" });
-    }
-    if (can("report_not_received")) {
-      actions.push({ action: "report_not_received", label: "Não Recebido", destructive: true });
-    }
-  }
-
-  // ETAPA 4 — Confirmação do desembarque: administradores e responsáveis por
-  // setor vinculados à embarcação no cadastro (Configurações > Embarcações).
-  const isVesselOwner =
-    !!user &&
-    (user.role === "admin" ||
-      (!!responsibleVesselIds && responsibleVesselIds.has(item.vessel_id)));
-  if (s === "pending_disembark_confirmation" && isVesselOwner) {
-    actions.push({ action: "confirm_disembark", label: "Confirmo Desembarque" });
-    actions.push({
-      action: "reschedule_disembark",
-      label: "Não Desembarcado",
-      destructive: true,
-      askDate: true,
-    });
   }
 
   if (d === "stock_return" && s === "received" && can("confirm_receipt")) {
@@ -377,16 +342,12 @@ export function itemResponsible(item) {
   switch (item.status) {
     case "pending_coordinator":
       return "Coordenador";
-    case "pending_almoxarifado":
     case "awaiting_receipt":
     case "received":
     case "awaiting_discard_confirmation":
       return "Almoxarifado";
     case "awaiting_shipping_proof":
       return "Almoxarifado";
-    case "pending_disembark_confirmation":
-    case "disembark_rescheduled":
-      return "Embarcação";
     case "awaiting_supplier_definition":
     case "pending_services":
     case "sent_to_supplier":
@@ -455,7 +416,6 @@ export const OVERALL_LABELS = {
 const FLOW_BY_DESTINATION = {
   repair: [
     { status: "pending_coordinator", label: "Aprovação do Coordenador" },
-    { status: "pending_almoxarifado", label: "Recebimento pelo Almoxarifado" },
     { status: "awaiting_supplier_definition", label: "Definição do Fornecedor (Serviços)" },
     { status: "awaiting_shipping_proof", label: "Comprovante de Envio (Almoxarifado)" },
     { status: "sent_to_supplier", label: "Enviado — Aguardando Cotação (Serviços)" },
@@ -468,7 +428,6 @@ const FLOW_BY_DESTINATION = {
   ],
   certification: [
     { status: "pending_coordinator", label: "Aprovação do Coordenador" },
-    { status: "pending_almoxarifado", label: "Recebimento pelo Almoxarifado" },
     { status: "awaiting_supplier_definition", label: "Definição do Fornecedor (Serviços)" },
     { status: "awaiting_shipping_proof", label: "Comprovante de Envio (Almoxarifado)" },
     { status: "sent_to_supplier", label: "Enviado — Aguardando Cotação (Serviços)" },
@@ -481,13 +440,11 @@ const FLOW_BY_DESTINATION = {
   ],
   stock_return: [
     { status: "pending_coordinator", label: "Aprovação do Coordenador" },
-    { status: "pending_almoxarifado", label: "Aguardando Almoxarifado" },
     { status: "received", label: "Recebido pelo Almoxarifado" },
     { status: "completed", label: "Devolução confirmada / Finalizado" },
   ],
   discard: [
     { status: "pending_coordinator", label: "Aprovação do Coordenador" },
-    { status: "pending_almoxarifado", label: "Recebimento pelo Almoxarifado" },
     { status: "pending_maintenance_authorization", label: "Autorização do Gestor de Manutenção" },
     { status: "awaiting_discard_confirmation", label: "Confirmação final do Almoxarifado" },
     { status: "completed", label: "Finalizado" },
@@ -498,10 +455,6 @@ const FLOW_BY_DESTINATION = {
 // que retornam a um ponto já exibido na linha do tempo).
 const STATUS_ALIAS = {
   draft: "pending_coordinator",
-  approved: "pending_almoxarifado",
-  awaiting_receipt: "pending_almoxarifado",
-  pending_disembark_confirmation: "pending_almoxarifado",
-  disembark_rescheduled: "pending_almoxarifado",
   pending_services: "awaiting_supplier_definition",
   discount_negotiation: "awaiting_maintenance_authorization",
   in_treatment: "awaiting_return",
@@ -513,7 +466,19 @@ const STATUS_ALIAS = {
 /** Etapas do item com marcação de concluída / atual / futura. */
 export function itemFlow(item) {
   if (!item) return [];
-  const steps = FLOW_BY_DESTINATION[item.destination] || FLOW_BY_DESTINATION.repair;
+  const baseSteps = FLOW_BY_DESTINATION[item.destination] || FLOW_BY_DESTINATION.repair;
+  // GDM aberta como "Não Recebido": após a validação do desembarque pela
+  // Coordenação, o item passa pela chegada física (Almoxarifado) antes de
+  // seguir para a etapa do destino. GDM "Recebida" segue direto, sem etapa
+  // de recebimento — o equipamento já estava no Almoxarifado na abertura.
+  const steps =
+    item.receipt_situation === "not_received"
+      ? [
+          baseSteps[0],
+          { status: "awaiting_receipt", label: "Chegada do Equipamento (Almoxarifado)" },
+          ...baseSteps.slice(1),
+        ]
+      : baseSteps;
   if (["rejected", "cancelled"].includes(item.status)) {
     return steps.map((s, i) => ({ ...s, state: i === 0 ? "done" : "todo" }));
   }
@@ -535,16 +500,10 @@ export function nextActionText(item) {
   switch (item.status) {
     case "pending_coordinator":
       return "Este item está aguardando o coordenador confirmar a tratativa (reparo, estoque, descarte ou calibração).";
-    case "pending_almoxarifado":
-      return "Este item está aguardando o recebimento pelo Almoxarifado.";
     case "awaiting_receipt":
       return `Tratativa validada pela Coordenação (GDM aberta como Não Recebido)${
         item.expected_disembark_date ? ` — previsão de desembarque: ${item.expected_disembark_date}` : ""
       }. O fluxo aguarda apenas a chegada física do equipamento ao Almoxarifado.`;
-    case "pending_disembark_confirmation":
-      return "O Almoxarifado não recebeu o item. A embarcação deve confirmar o desembarque ou informar a nova data prevista.";
-    case "disembark_rescheduled":
-      return `Desembarque reprogramado${item.expected_disembark_date ? ` para ${item.expected_disembark_date}` : ""}. Após a nova data, o item retorna ao Almoxarifado.`;
     case "received":
       return item.destination === "stock_return"
         ? "Este item está aguardando a confirmação da devolução ao estoque."
@@ -614,7 +573,6 @@ export function itemResponsibleGroup(item) {
     case "pending_coordinator":
       // Itens aguardando validação do destino / aprovação do Coordenador.
       return "coordinator";
-    case "pending_almoxarifado":
     case "awaiting_receipt":
     case "awaiting_discard_confirmation":
       return "almoxarifado";
@@ -633,11 +591,6 @@ export function itemResponsibleGroup(item) {
       return item.return_nf_url ? "almoxarifado" : "services";
     case "pending_maintenance_authorization":
       return item.destination === "certification" ? "operations" : "maintenance";
-    // Confirmação/reprogramação do desembarque é ação dos responsáveis por
-    // setor vinculados à embarcação — não pertence a nenhum setor interno.
-    case "pending_disembark_confirmation":
-    case "disembark_rescheduled":
-      return "vessel";
     case "awaiting_supplier_definition":
     case "pending_services":
     case "sent_to_supplier":

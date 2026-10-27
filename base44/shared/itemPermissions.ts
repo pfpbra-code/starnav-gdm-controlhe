@@ -152,13 +152,6 @@ export function sectorViewPermission(sector: string): string {
 // Etapa de confirmação do desembarque (ETAPA 4 do fluxo de aprovação)
 // ---------------------------------------------------------------------------
 
-/**
- * Ações da etapa de confirmação do desembarque, executadas pelos responsáveis
- * por setor vinculados à embarcação no cadastro (Configurações > Embarcações)
- * — as embarcações não possuem mais login próprio na plataforma.
- */
-export const VESSEL_STAGE_ACTIONS = ['confirm_disembark', 'reschedule_disembark'];
-
 /** E-mails dos responsáveis por setor vinculados à embarcação. */
 export function vesselResponsibleEmails(vessel: any): string[] {
   return Object.values(vessel?.sector_responsibles || {})
@@ -170,13 +163,6 @@ export function vesselResponsibleEmails(vessel: any): string[] {
 export function isVesselResponsible(user: any, vessel: any): boolean {
   if (!user?.email || !vessel) return false;
   return vesselResponsibleEmails(vessel).includes(user.email);
-}
-
-/** Só o ADM ou um responsável vinculado à embarcação pode atuar nessa etapa. */
-export function canActOnVesselItems(user: any, item: any, vessel: any): boolean {
-  if (!user || !item) return false;
-  if (user.role === 'admin') return true;
-  return isVesselResponsible(user, vessel);
 }
 
 // ---------------------------------------------------------------------------
