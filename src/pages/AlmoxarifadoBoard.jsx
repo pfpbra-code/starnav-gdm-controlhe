@@ -14,6 +14,11 @@ const CATEGORIES = [
     match: (i) => i.status === 'pending_almoxarifado',
   },
   {
+    key: 'awaiting_receipt',
+    label: 'Aguardando Recebimento (GDM aberta sem recebimento físico)',
+    match: (i) => i.status === 'awaiting_receipt',
+  },
+  {
     key: 'shipping',
     label: 'Comprovante de Envio ao Fornecedor (NF + Foto)',
     match: (i) => i.status === 'awaiting_shipping_proof',

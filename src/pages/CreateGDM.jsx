@@ -23,7 +23,8 @@ import {
   Hash,
   Loader2,
   CheckCircle,
-  Camera
+  Camera,
+  PackageCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { buildHistoryEntry } from '@/lib/gdmWorkflow';
@@ -40,6 +41,7 @@ export default function CreateGDM() {
     gdm_number: '',
     vessel_id: '',
     disembark_date: format(new Date(), 'yyyy-MM-dd'),
+    receipt_situation: 'received',
     description: '',
     photos: []
   });
@@ -142,7 +144,7 @@ export default function CreateGDM() {
         history: [buildHistoryEntry({
           action: 'created',
           user,
-          details: `GDM criada pela embarcação ${vessel?.name} com ${items.length} item(ns)`,
+          details: `GDM criada pela embarcação ${vessel?.name} com ${items.length} item(ns) — Situação de recebimento: ${data.receipt_situation === 'not_received' ? 'Não Recebido' : 'Recebido'}`,
           previousStatus: null,
           newStatus: 'pending_coordinator',
           stepName: 'Emissão da GDM (Embarcação)',
@@ -169,6 +171,7 @@ export default function CreateGDM() {
           quantity: Number(it.quantity) || 1,
           os_number: it.os_number || null,
           destination: it.destination,
+          receipt_situation: data.receipt_situation || 'received',
           status: 'pending_coordinator',
         });
         createdItems.push(createdItem);
@@ -291,6 +294,10 @@ export default function CreateGDM() {
       toast.error('Selecione a embarcação');
       return;
     }
+    if (!formData.receipt_situation) {
+      toast.error('Informe a Situação de Recebimento');
+      return;
+    }
     if (items.length === 0) {
       toast.error('Adicione pelo menos um item à GDM');
       return;
@@ -363,6 +370,31 @@ export default function CreateGDM() {
                 value={formData.disembark_date}
                 onChange={(e) => setFormData(prev => ({ ...prev, disembark_date: e.target.value }))}
               />
+            </div>
+
+            {/* Situação de Recebimento (obrigatório na abertura da GDM) */}
+            <div className="space-y-2 md:max-w-xs">
+              <Label className="flex items-center gap-2">
+                <PackageCheck className="h-4 w-4 text-slate-500" />
+                Situação de Recebimento *
+              </Label>
+              <Select
+                value={formData.receipt_situation}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, receipt_situation: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a situação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="received">Recebido</SelectItem>
+                  <SelectItem value="not_received">Não Recebido</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                {formData.receipt_situation === 'not_received'
+                  ? 'A GDM será aberta sem recebimento físico: a Coordenação valida o desembarque e a tratativa antecipadamente, e o Almoxarifado acompanha a chegada pelo status "Aguardando Recebimento".'
+                  : 'O equipamento já está fisicamente no Almoxarifado — o fluxo segue o processo atual.'}
+              </p>
             </div>
 
             {/* Itens da GDM */}

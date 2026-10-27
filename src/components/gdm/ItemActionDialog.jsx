@@ -178,8 +178,9 @@ export default function ItemActionDialog({ pending, onClose }) {
                 onChange={(e) => setExpectedDate(e.target.value)}
               />
               <p className="text-xs text-slate-500">
-                Após esta data, o item retornará automaticamente ao Almoxarifado para nova
-                confirmação de recebimento.
+                {action === 'approve'
+                  ? 'GDM aberta como "Não Recebido": o item ficará em "Aguardando Recebimento" até a chegada física do equipamento ao Almoxarifado, sem nova análise do Coordenador.'
+                  : 'Após esta data, o item retornará automaticamente ao Almoxarifado para nova confirmação de recebimento.'}
               </p>
             </div>
           )}

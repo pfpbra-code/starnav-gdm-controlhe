@@ -19,6 +19,7 @@ export const ITEM_STATUS_LABELS = {
   rejected: "Reprovado",
   cancelled: "Cancelado",
   pending_almoxarifado: "Aguardando Recebimento (Almoxarifado)",
+  awaiting_receipt: "Aguardando Recebimento (Chegada do Equipamento)",
   received: "Recebido pelo Almoxarifado",
   awaiting_supplier_definition: "Aguardando Definição de Fornecedor",
   awaiting_shipping_proof: "Aguardando Comprovante de Envio",
@@ -49,6 +50,7 @@ export const ITEM_STATUS_COLORS = {
   rejected: "bg-red-100 text-red-700",
   cancelled: "bg-slate-200 text-slate-600",
   pending_almoxarifado: "bg-amber-100 text-amber-800",
+  awaiting_receipt: "bg-amber-100 text-amber-800",
   received: "bg-sky-100 text-sky-800",
   awaiting_supplier_definition: "bg-indigo-100 text-indigo-800",
   awaiting_shipping_proof: "bg-orange-100 text-orange-800",
@@ -169,7 +171,19 @@ export function availableItemActions(item, can, user, responsibleVesselIds) {
   const actions = [];
 
   if (s === "pending_coordinator" && can("approve_gdm")) {
-    actions.push({ action: "approve", label: "Confirmar Tratativa" });
+    actions.push({
+      action: "approve",
+      label: "Confirmar Tratativa",
+      // GDM aberta sem recebimento físico: na mesma aprovação a Coordenação
+      // informa a nova previsão de desembarque.
+      ...(item.receipt_situation === "not_received" ? { askDate: true } : {}),
+    });
+  }
+
+  // GDM aberta como "Não Recebido": tratativa já validada pela Coordenação —
+  // o item aguarda apenas a chegada física, sem retornar ao Coordenador.
+  if (s === "awaiting_receipt" && can("confirm_receipt")) {
+    actions.push({ action: "confirm_receipt", label: "Confirmar Recebimento" });
   }
 
   if (s === "pending_almoxarifado") {
@@ -351,6 +365,7 @@ export function itemResponsible(item) {
     case "pending_coordinator":
       return "Coordenador";
     case "pending_almoxarifado":
+    case "awaiting_receipt":
     case "received":
     case "awaiting_discard_confirmation":
       return "Almoxarifado";
@@ -471,6 +486,7 @@ const FLOW_BY_DESTINATION = {
 const STATUS_ALIAS = {
   draft: "pending_coordinator",
   approved: "pending_almoxarifado",
+  awaiting_receipt: "pending_almoxarifado",
   pending_disembark_confirmation: "pending_almoxarifado",
   disembark_rescheduled: "pending_almoxarifado",
   pending_services: "awaiting_supplier_definition",
@@ -508,6 +524,10 @@ export function nextActionText(item) {
       return "Este item está aguardando o coordenador confirmar a tratativa (reparo, estoque, descarte ou calibração).";
     case "pending_almoxarifado":
       return "Este item está aguardando o recebimento pelo Almoxarifado.";
+    case "awaiting_receipt":
+      return `Tratativa validada pela Coordenação (GDM aberta como Não Recebido)${
+        item.expected_disembark_date ? ` — previsão de desembarque: ${item.expected_disembark_date}` : ""
+      }. O fluxo aguarda apenas a chegada física do equipamento ao Almoxarifado.`;
     case "pending_disembark_confirmation":
       return "O Almoxarifado não recebeu o item. A embarcação deve confirmar o desembarque ou informar a nova data prevista.";
     case "disembark_rescheduled":
@@ -582,6 +602,7 @@ export function itemResponsibleGroup(item) {
       // Itens aguardando validação do destino / aprovação do Coordenador.
       return "coordinator";
     case "pending_almoxarifado":
+    case "awaiting_receipt":
     case "awaiting_discard_confirmation":
       return "almoxarifado";
     case "received":

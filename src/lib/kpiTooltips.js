@@ -87,6 +87,26 @@ export const DASHBOARD_TOOLTIPS = {
     origem: ORIGEM_ITENS,
     periodicidade: TEMPO_REAL,
   },
+  equipamentosRecebidos: {
+    conceito: "Equipamentos desembarcados cuja GDM foi aberta com situação de recebimento \"Recebido\" (equipamento já fisicamente no Almoxarifado).",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
+  equipamentosNaoRecebidos: {
+    conceito: "Equipamentos de GDMs abertas como \"Não Recebido\" que ainda não tiveram a chegada física confirmada pelo Almoxarifado.",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
+  equipamentosAguardandoRecebimento: {
+    conceito: "Equipamentos com tratativa já validada pela Coordenação, aguardando apenas a chegada física ao Almoxarifado (status \"Aguardando Recebimento\").",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
+  equipamentosPendentesAnalise: {
+    conceito: "Equipamentos aguardando a análise e a confirmação da tratativa pelo Coordenador.",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
 };
 
 /* ---------- Visão geral de GDMs (GDMOverviewKpis) ---------- */
@@ -121,6 +141,31 @@ export const GDM_OVERVIEW_TOOLTIPS = {
     periodicidade: TEMPO_REAL,
   },
   completed: {
+    conceito: "GDMs em que todos os itens concluíram o fluxo (reparo, calibração, descarte ou retorno ao estoque).",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
+  receivedGdms: {
+    conceito: "GDMs abertas com situação de recebimento \"Recebido\" (equipamentos já fisicamente no Almoxarifado).",
+    origem: "Itens das GDMs e a situação de recebimento declarada na abertura.",
+    periodicidade: TEMPO_REAL,
+  },
+  notReceivedGdms: {
+    conceito: "GDMs com itens abertos como \"Não Recebido\" que ainda não tiveram a chegada física confirmada.",
+    origem: "Itens das GDMs e a situação de recebimento declarada na abertura.",
+    periodicidade: TEMPO_REAL,
+  },
+  awaitingReceiptGdms: {
+    conceito: "GDMs com tratativa já validada pela Coordenação, aguardando apenas a chegada física do equipamento ao Almoxarifado.",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
+  awaitingCoordinatorGdms: {
+    conceito: "GDMs com itens aguardando a análise da Coordenação (desembarque, tratativa e, quando aplicável, nova previsão de chegada).",
+    origem: ORIGEM_ITENS,
+    periodicidade: TEMPO_REAL,
+  },
+  completedGdms: {
     conceito: "GDMs em que todos os itens concluíram o fluxo (reparo, calibração, descarte ou retorno ao estoque).",
     origem: ORIGEM_ITENS,
     periodicidade: TEMPO_REAL,

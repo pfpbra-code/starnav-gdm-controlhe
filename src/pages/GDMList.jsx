@@ -66,6 +66,7 @@ export default function GDMList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [vesselFilter, setVesselFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [receiptFilter, setReceiptFilter] = useState('all');
   const [destinationFilter, setDestinationFilter] = useState('all');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [supplierFilter, setSupplierFilter] = useState('all');
@@ -125,7 +126,7 @@ export default function GDMList() {
 
   React.useEffect(() => {
     setPage(0);
-  }, [searchTerm, vesselFilter, statusFilter, destinationFilter, sectorFilter, supplierFilter, responsibleFilter, dateFrom, dateTo, sortDir]);
+  }, [searchTerm, vesselFilter, statusFilter, receiptFilter, destinationFilter, sectorFilter, supplierFilter, responsibleFilter, dateFrom, dateTo, sortDir]);
 
   const filteredGDMs = React.useMemo(() => {
     let list = gdmViews;
@@ -152,6 +153,27 @@ export default function GDMList() {
     }
 
     if (statusFilter !== 'all') list = list.filter((g) => g.general.key === statusFilter);
+
+    // Filtro de situação de recebimento (situação declarada na abertura da GDM).
+    if (receiptFilter !== 'all') {
+      list = list.filter((g) => {
+        const items = g.items || [];
+        switch (receiptFilter) {
+          case 'received':
+            return items.length > 0 && items.every((i) => (i.receipt_situation || 'received') === 'received');
+          case 'not_received':
+            return items.some((i) => i.receipt_situation === 'not_received' && !i.stock_received_at);
+          case 'awaiting_receipt':
+            return items.some((i) => i.status === 'awaiting_receipt');
+          case 'awaiting_coordinator':
+            return items.some((i) => i.status === 'pending_coordinator');
+          case 'completed':
+            return g.general.key === 'completed';
+          default:
+            return true;
+        }
+      });
+    }
     if (destinationFilter !== 'all') {
       list = list.filter((g) => g.items.some((i) => i.destination === destinationFilter));
     }
@@ -173,17 +195,26 @@ export default function GDMList() {
       const db = b.created_date ? new Date(b.created_date).getTime() : 0;
       return sortDir === 'desc' ? db - da : da - db;
     });
-  }, [gdmViews, searchTerm, vesselFilter, statusFilter, destinationFilter, sectorFilter, supplierFilter, responsibleFilter, dateFrom, dateTo, sortDir]);
+  }, [gdmViews, searchTerm, vesselFilter, statusFilter, receiptFilter, destinationFilter, sectorFilter, supplierFilter, responsibleFilter, dateFrom, dateTo, sortDir]);
 
   const stats = React.useMemo(
-    () => ({
-      totalGdms: filteredGDMs.length,
-      totalItems: filteredGDMs.reduce((sum, g) => sum + g.itemCount, 0),
-      inMaintenance: filteredGDMs.filter((g) => g.sectors.includes('maintenance')).length,
-      inOperations: filteredGDMs.filter((g) => g.sectors.includes('operations')).length,
-      pendingApproval: filteredGDMs.filter((g) => g.general.key === 'awaiting_approval').length,
-      completed: filteredGDMs.filter((g) => g.general.key === 'completed').length,
-    }),
+    () => {
+      const withItems = filteredGDMs.filter((g) => g.itemCount > 0);
+      return {
+        totalGdms: filteredGDMs.length,
+        totalItems: filteredGDMs.reduce((sum, g) => sum + g.itemCount, 0),
+        inMaintenance: filteredGDMs.filter((g) => g.sectors.includes('maintenance')).length,
+        inOperations: filteredGDMs.filter((g) => g.sectors.includes('operations')).length,
+        pendingApproval: filteredGDMs.filter((g) => g.general.key === 'awaiting_approval').length,
+        completed: filteredGDMs.filter((g) => g.general.key === 'completed').length,
+        // Contadores de situação de recebimento (declaração na abertura da GDM).
+        receivedGdms: withItems.filter((g) => g.items.every((i) => (i.receipt_situation || 'received') === 'received')).length,
+        notReceivedGdms: withItems.filter((g) => g.items.some((i) => i.receipt_situation === 'not_received' && !i.stock_received_at)).length,
+        awaitingReceiptGdms: withItems.filter((g) => g.items.some((i) => i.status === 'awaiting_receipt')).length,
+        awaitingCoordinatorGdms: withItems.filter((g) => g.items.some((i) => i.status === 'pending_coordinator')).length,
+        completedGdms: withItems.filter((g) => g.general.key === 'completed').length,
+      };
+    },
     [filteredGDMs],
   );
 
@@ -314,6 +345,19 @@ export default function GDMList() {
                 {GDM_STATUS_OPTIONS.map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={receiptFilter} onValueChange={setReceiptFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Situação de Recebimento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos (Recebimento)</SelectItem>
+                <SelectItem value="received">Recebidos</SelectItem>
+                <SelectItem value="not_received">Não Recebidos</SelectItem>
+                <SelectItem value="awaiting_receipt">Aguardando Recebimento</SelectItem>
+                <SelectItem value="awaiting_coordinator">Aguardando Coordenador</SelectItem>
+                <SelectItem value="completed">Concluídos</SelectItem>
               </SelectContent>
             </Select>
             <Select value={destinationFilter} onValueChange={setDestinationFilter}>

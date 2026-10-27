@@ -27,7 +27,11 @@ import {
   XCircle,
   Gauge,
   DollarSign,
-  Truck
+  Truck,
+  PackageCheck,
+  PackageX,
+  Hourglass,
+  ClipboardCheck
 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -134,6 +138,19 @@ export default function Dashboard() {
       awaitingReturn: items.filter((i) => i.status === 'awaiting_return').length,
     };
   }, [items]);
+
+  // Situação de recebimento dos equipamentos (declaração na abertura da GDM):
+  // recebidos, não recebidos (sem chegada física), aguardando recebimento
+  // (tratativa validada, aguardando chegada) e pendentes da Coordenação.
+  const receiptStats = React.useMemo(
+    () => ({
+      received: items.filter((i) => (i.receipt_situation || 'received') === 'received').length,
+      notReceived: items.filter((i) => i.receipt_situation === 'not_received' && !i.stock_received_at).length,
+      awaitingReceipt: items.filter((i) => i.status === 'awaiting_receipt').length,
+      pendingCoordinator: items.filter((i) => i.status === 'pending_coordinator').length,
+    }),
+    [items],
+  );
 
   // Dados mensais reais (últimos 6 meses)
   const monthlyData = React.useMemo(() => {
@@ -249,6 +266,14 @@ export default function Dashboard() {
               color="amber"
               tooltip={DASHBOARD_TOOLTIPS.gdmsMes}
             />
+          </div>
+
+          {/* Situação de recebimento dos equipamentos (abertura da GDM) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatsCard title="Equipamentos Recebidos" value={receiptStats.received} icon={PackageCheck} color="green" tooltip={DASHBOARD_TOOLTIPS.equipamentosRecebidos} />
+            <StatsCard title="Equipamentos Não Recebidos" value={receiptStats.notReceived} icon={PackageX} color="red" tooltip={DASHBOARD_TOOLTIPS.equipamentosNaoRecebidos} />
+            <StatsCard title="Equipamentos Aguardando Recebimento" value={receiptStats.awaitingReceipt} icon={Hourglass} color="amber" tooltip={DASHBOARD_TOOLTIPS.equipamentosAguardandoRecebimento} />
+            <StatsCard title="Pendentes de Análise da Coordenação" value={receiptStats.pendingCoordinator} icon={ClipboardCheck} color="sky" tooltip={DASHBOARD_TOOLTIPS.equipamentosPendentesAnalise} />
           </div>
 
           {/* Aguardando Coordenação: GDMs, itens e tempo médio de espera */}

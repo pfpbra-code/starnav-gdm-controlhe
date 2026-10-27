@@ -94,7 +94,20 @@ export default async function (req: Request): Promise<Response> {
       // ETAPA 2 — Coordenador confirma a tratativa do item.
       if (!can('approve_gdm')) throw new Error('Sem permissão para confirmar a tratativa');
       if (prev !== 'pending_coordinator') throw new Error('Item não está aguardando o coordenador');
-      next = 'pending_almoxarifado';
+      if (item.receipt_situation === 'not_received') {
+        // GDM aberta sem recebimento físico: a Coordenação valida o desembarque,
+        // a situação operacional, o destino e a tratativa, e informa a nova
+        // previsão de desembarque. O item retorna ao Almoxarifado no status
+        // "Aguardando Recebimento" — após a chegada física do equipamento o
+        // fluxo continua da etapa em que parou, sem nova análise do Coordenador.
+        if (!expectedDisembarkDate) {
+          throw new Error('Informe a nova previsão de desembarque');
+        }
+        next = 'awaiting_receipt';
+        extra.expected_disembark_date = expectedDisembarkDate;
+      } else {
+        next = 'pending_almoxarifado';
+      }
       if (destination && destination !== item.destination) {
         if (!VALID_DESTINATIONS.includes(destination)) {
           throw new Error('Destino inválido para o item');
@@ -113,7 +126,13 @@ export default async function (req: Request): Promise<Response> {
       // ETAPA 3 — Almoxarifado confirma recebimento. Reparo/calibração seguem
       // para Serviços aguardando a definição do fornecedor.
       if (!can('confirm_receipt')) throw new Error('Sem permissão para confirmar recebimento');
-      if (prev !== 'pending_almoxarifado') throw new Error('Item não está aguardando o almoxarifado');
+      // Aceita tanto o recebimento padrão (pós-aprovação) quanto a confirmação
+      // de chegada física de item aberto como "Não Recebido" (awaiting_receipt):
+      // nesse caso a tratativa já foi validada pela Coordenação e o fluxo segue
+      // direto para a etapa do destino, sem retornar ao Coordenador.
+      if (!['pending_almoxarifado', 'awaiting_receipt'].includes(prev)) {
+        throw new Error('Item não está aguardando o almoxarifado');
+      }
       next =
         item.destination === 'discard'
           ? 'pending_maintenance_authorization'
@@ -961,7 +980,9 @@ export default async function (req: Request): Promise<Response> {
               .map((u: any) => createNotif(u, 'Destino de item alterado pela Coordenação', msg)),
           );
         }
-        const msgNext = `A Coordenação concluiu a análise do item ${itemLabel}. O material aguarda recebimento do Almoxarifado.`;
+        const msgNext = item.receipt_situation === 'not_received'
+          ? `A Coordenação aprovou a tratativa do item ${itemLabel} (GDM aberta como Não Recebido). O item está em "Aguardando Recebimento" até a chegada física do equipamento.`
+          : `A Coordenação concluiu a análise do item ${itemLabel}. O material aguarda recebimento do Almoxarifado.`;
         await Promise.all(
           users
             .filter((u: any) => sectorsOf(u).includes('almoxarifado'))
