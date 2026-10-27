@@ -26,6 +26,7 @@ import {
   ITEM_DESTINATION_COLORS,
   ITEM_STATUS_LABELS,
   ITEM_STATUS_COLORS,
+  getItemStatusLabel,
   ITEM_ACTION_LABELS,
   availableItemActions,
   itemResponsible,
@@ -277,7 +278,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                 <span
                   className={`ml-auto text-xs px-2 py-1 rounded-full ${ITEM_STATUS_COLORS[item.status] || 'bg-slate-100 text-slate-700'}`}
                 >
-                  {ITEM_STATUS_LABELS[item.status] || item.status}
+                  {getItemStatusLabel(item)}
                 </span>
               </button>
 

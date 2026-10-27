@@ -55,6 +55,7 @@ export default function ItemActionDialog({ pending, onClose }) {
   }, [pending]);
 
   const isApproval = action === 'approve';
+  const isDisembarkApproval = isApproval && item?.receipt_situation === 'not_received';
   const destinationChanged = isApproval && destination && destination !== item?.destination;
   const needsSupplier = action === 'advance_treatment' && item?.status === 'pending_services';
   const needsDate = !!pending?.askDate;
@@ -66,6 +67,12 @@ export default function ItemActionDialog({ pending, onClose }) {
     queryKey: ['suppliers'],
     queryFn: () => base44.entities.Supplier.filter({ status: 'active' }),
     enabled: needsSupplier,
+  });
+
+  const { data: gdm } = useQuery({
+    queryKey: ['gdm', item?.gdm_id],
+    queryFn: () => base44.entities.GDM.get(item.gdm_id),
+    enabled: isDisembarkApproval,
   });
 
   const actionMutation = useMutation({
@@ -124,6 +131,28 @@ export default function ItemActionDialog({ pending, onClose }) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {isDisembarkApproval && (
+            <div className="rounded-md border bg-slate-50 p-3 text-sm space-y-1">
+              <p className="font-medium">Dados da GDM</p>
+              <p className="text-slate-600">
+                GDM {gdm?.gdm_number || '—'} · {item?.vessel_name || '—'}
+              </p>
+              <p className="text-slate-600">
+                Data prevista atual:{' '}
+                {(() => {
+                  const d = item?.expected_disembark_date || gdm?.disembark_date;
+                  return d ? d.slice(0, 10).split('-').reverse().join('/') : '—';
+                })()}
+              </p>
+              <p className="font-medium pt-1">Dados do item</p>
+              <p className="text-slate-600">
+                Item {item ? String(item.item_number).padStart(2, '0') : ''} ·{' '}
+                {item?.equipment_name} · SN {item?.serial_number || '—'} · Qtd{' '}
+                {item?.quantity || 1}
+              </p>
+            </div>
+          )}
+
           {isApproval && (
             <div className="space-y-2">
               <Label>Tratativa / destino do item</Label>

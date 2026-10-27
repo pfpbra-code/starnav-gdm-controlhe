@@ -74,6 +74,16 @@ export const ITEM_STATUS_COLORS = {
   completed: "bg-green-100 text-green-800",
 };
 
+// Rótulo de situação exibido nos cards: GDM aberta como "Não Recebido" na
+// etapa da Coordenação representa validação do desembarque, não aprovação.
+export function getItemStatusLabel(item) {
+  if (!item) return "";
+  if (item.status === "pending_coordinator" && item.receipt_situation === "not_received") {
+    return "Aguardando Confirmação de Desembarque";
+  }
+  return ITEM_STATUS_LABELS[item.status] || item.status;
+}
+
 export const ITEM_ACTION_LABELS = {
   approve: "Tratativa Confirmada pelo Coordenador",
   reject: "Reprovado pelo Coordenador",
@@ -173,9 +183,12 @@ export function availableItemActions(item, can, user, responsibleVesselIds) {
   if (s === "pending_coordinator" && can("approve_gdm")) {
     actions.push({
       action: "approve",
-      label: "Confirmar Tratativa",
-      // GDM aberta sem recebimento físico: na mesma aprovação a Coordenação
-      // informa a nova previsão de desembarque.
+      // GDM "Não Recebido": a Coordenação valida o desembarque e informa a
+      // nova previsão; GDM normal: confirmação padrão da tratativa.
+      label:
+        item.receipt_situation === "not_received"
+          ? "Confirmar Desembarque"
+          : "Confirmar Tratativa",
       ...(item.receipt_situation === "not_received" ? { askDate: true } : {}),
     });
   }
