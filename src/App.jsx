@@ -12,6 +12,7 @@ import ServicesBoard from './pages/ServicesBoard';
 import AlmoxarifadoBoard from './pages/AlmoxarifadoBoard';
 import SupplierDetail from './pages/SupplierDetail';
 import DisposalReports from './pages/DisposalReports';
+import StepReturnReports from './pages/StepReturnReports';
 import Manual from './pages/Manual';
 import RequirePermission from '@/components/RequirePermission';
 import AccountStatusGate from '@/components/AccountStatusGate';
@@ -133,6 +134,13 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="DisposalReports">
           <RequirePermission module="DisposalReports">
             <DisposalReports />
+          </RequirePermission>
+        </LayoutWrapper>
+      } />
+      <Route path="/StepReturnReports" element={
+        <LayoutWrapper currentPageName="StepReturnReports">
+          <RequirePermission module="StepReturnReports">
+            <StepReturnReports />
           </RequirePermission>
         </LayoutWrapper>
       } />

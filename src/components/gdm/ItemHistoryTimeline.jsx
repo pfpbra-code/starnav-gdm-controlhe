@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ITEM_ACTION_LABELS } from '@/lib/gdmItems';
+import { ITEM_ACTION_LABELS, ITEM_STATUS_LABELS } from '@/lib/gdmItems';
 
 /**
  * Linha do tempo completa do item: data/hora, usuário, ação e observação.
@@ -52,6 +52,12 @@ export default function ItemHistoryTimeline({ itemId }) {
           <p className="text-xs font-medium text-slate-800">
             {ITEM_ACTION_LABELS[h.action] || h.action}
           </p>
+          {h.action === 'return_step' && (
+            <p className="text-[11px] text-amber-800">
+              De: {ITEM_STATUS_LABELS[h.previous_status] || h.previous_status || '—'} → Para:{' '}
+              {ITEM_STATUS_LABELS[h.new_status] || h.new_status || '—'}
+            </p>
+          )}
           <p className="text-[11px] text-slate-500">
             {h.user_email || 'Sistema'} ·{' '}
             {h.created_date

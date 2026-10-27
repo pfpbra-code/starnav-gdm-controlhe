@@ -109,6 +109,7 @@ export const ITEM_ACTION_LABELS = {
   cancel: "Item Cancelado",
   advance_treatment: "Avanço da Tratativa",
   created: "Item Criado",
+  return_step: "Retorno de Etapa (Correção de Fluxo)",
 };
 
 // Situações padronizadas da OT (Ordem de Trabalho) do item.
@@ -326,6 +327,18 @@ export function availableItemActions(item, can, user, responsibleVesselIds) {
     }
   }
 
+  // RETORNO DE ETAPA (correção de fluxo): devolve o item à etapa imediatamente
+  // anterior, com justificativa obrigatória e auditoria completa. Exclusivo
+  // de usuários autorizados pelo ADM (permissão individual "allow_step_return").
+  // Processos concluídos e OTs encerradas: apenas o Administrador.
+  if (can("allow_step_return") && previousStatusFor(item)) {
+    const closedProcess = ["completed", "discard_approved"].includes(s);
+    const otClosed = item.ot_status === "closed";
+    if ((!closedProcess && !otClosed) || user?.role === "admin") {
+      actions.push({ action: "return_step", label: "Retornar Etapa", destructive: true });
+    }
+  }
+
   return actions;
 }
 
@@ -335,6 +348,88 @@ export const ITEM_DESTINATION_COLORS = {
   stock_return: "bg-green-100 text-green-800 border-green-200",
   discard: "bg-red-100 text-red-700 border-red-200",
 };
+
+/**
+ * Etapa imediatamente anterior do fluxo do item (null na primeira etapa).
+ * Espelha previousStatusOf de base44/shared/stepReturn.ts — alterações
+ * devem ser refletidas nos dois arquivos.
+ */
+export function previousStatusFor(item) {
+  if (!item) return null;
+  if (["pending_coordinator", "rejected", "cancelled"].includes(item.status)) return null;
+
+  if (item.destination === "stock_return") {
+    if (item.status === "received") return "pending_coordinator";
+    if (item.status === "completed") return "received";
+    return null;
+  }
+  if (item.destination === "discard") {
+    const map = {
+      pending_maintenance_authorization: "pending_coordinator",
+      awaiting_discard_confirmation: "pending_maintenance_authorization",
+      discard_approved: "awaiting_maintenance_authorization",
+      completed: "awaiting_discard_confirmation",
+    };
+    return map[item.status] || null;
+  }
+
+  // Reparo / calibração (ciclo de fornecedor)
+  if (item.status === "awaiting_receipt") return "pending_coordinator";
+  if (["pending_services", "awaiting_supplier_definition"].includes(item.status)) {
+    return item.receipt_situation === "not_received" ? "awaiting_receipt" : "pending_coordinator";
+  }
+  const map = {
+    return_confirmed: "awaiting_supplier_return",
+    awaiting_shipping_proof: "awaiting_supplier_definition",
+    sent_to_supplier: "awaiting_shipping_proof",
+    awaiting_maintenance_authorization: "sent_to_supplier",
+    discount_negotiation: "awaiting_maintenance_authorization",
+    repair_approved: "awaiting_maintenance_authorization",
+    in_treatment: "awaiting_maintenance_authorization",
+    awaiting_pwt: "awaiting_maintenance_authorization",
+    awaiting_oc_issuance:
+      item.destination === "certification" ? "awaiting_maintenance_authorization" : "awaiting_pwt",
+    awaiting_oc_approval: "awaiting_oc_issuance",
+    awaiting_return: "awaiting_oc_approval",
+    awaiting_supplier_return: "awaiting_maintenance_authorization",
+    awaiting_certificate: "awaiting_return",
+    awaiting_validity_registration: "awaiting_certificate",
+    completed:
+      item.destination === "certification" ? "awaiting_validity_registration" : "awaiting_return",
+  };
+  return map[item.status] || null;
+}
+
+/** Setor responsável por cada etapa do fluxo (notificações e relatórios). */
+export const SECTOR_OF_STATUS = {
+  pending_coordinator: "coordinator",
+  awaiting_receipt: "almoxarifado",
+  received: "almoxarifado",
+  awaiting_shipping_proof: "almoxarifado",
+  awaiting_discard_confirmation: "almoxarifado",
+  awaiting_supplier_definition: "services",
+  pending_services: "services",
+  sent_to_supplier: "services",
+  discount_negotiation: "services",
+  return_confirmed: "services",
+  awaiting_supplier_return: "services",
+  awaiting_pwt: "planejamento",
+  awaiting_oc_issuance: "services",
+  awaiting_oc_approval: "services",
+  awaiting_return: "services",
+  awaiting_certificate: "operations",
+  awaiting_validity_registration: "operations",
+  in_treatment: "services",
+  completed: "services",
+  discard_approved: "maintenance",
+};
+
+export function itemSectorOfStatus(status, destination) {
+  if (status === "pending_maintenance_authorization") {
+    return destination === "certification" ? "operations" : "maintenance";
+  }
+  return SECTOR_OF_STATUS[status] || "services";
+}
 
 /** Responsável atual pelo item, conforme a situação. */
 export function itemResponsible(item) {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import ItemActionDialog from './ItemActionDialog';
+import ReturnStepDialog from './ReturnStepDialog';
 import SupplierFlowActionDialog from './SupplierFlowActionDialog';
 import DiscardConfirmDialog from './DiscardConfirmDialog';
 import RegisterCertificateDialog from '@/components/certifications/RegisterCertificateDialog';
@@ -13,6 +14,8 @@ const DISCARD_FLOW_ACTIONS = ['confirm_discard'];
 const CERTIFICATE_FLOW_ACTIONS = ['register_certificate'];
 // A solicitação de NF de envio tem formulário próprio, auto-preenchido e auditável.
 const NF_FLOW_ACTIONS = ['request_nf'];
+// O retorno de etapa (correção de fluxo) tem diálogo próprio com justificativa.
+const RETURN_STEP_ACTIONS = ['return_step'];
 
 /**
  * Roteador de diálogos de ação de item: ações do ciclo de fornecedor usam o
@@ -38,6 +41,8 @@ export default function ItemActionRouter({ pending, onClose }) {
     pending && CERTIFICATE_FLOW_ACTIONS.includes(pending.action);
   const isNfFlow =
     pending && NF_FLOW_ACTIONS.includes(pending.action);
+  const isReturnStep =
+    pending && RETURN_STEP_ACTIONS.includes(pending.action);
   if (nfItem) {
     return (
       <NfRequestDialog
@@ -51,6 +56,9 @@ export default function ItemActionRouter({ pending, onClose }) {
   }
   if (isNfFlow) {
     return <NfRequestDialog item={pending.item} onClose={onClose} />;
+  }
+  if (isReturnStep) {
+    return <ReturnStepDialog pending={pending} onClose={onClose} />;
   }
   if (isCertificateFlow) {
     return <RegisterCertificateDialog item={pending.item} onClose={onClose} />;

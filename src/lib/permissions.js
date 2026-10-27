@@ -45,6 +45,7 @@ export const AVAILABLE_PERMISSIONS = [
   { id: "reject_gdm", label: "Rejeitar GDM", category: "GDM" },
   { id: "change_gdm_destination", label: "Alterar Destino da GDM", category: "GDM" },
   { id: "generate_gdm_pdf", label: "Gerar PDF da GDM", category: "GDM" },
+  { id: "allow_step_return", label: "Permitir Retorno de Etapas", category: "GDM" },
 
   // Recebimento (Almoxarifado)
   { id: "confirm_receipt", label: "Confirmar Recebimento", category: "Recebimento" },
@@ -161,6 +162,8 @@ const ADMIN_ONLY = [
   "manage_equipment",
   "manage_suppliers",
   "delete_gdm",
+  // Retorno de etapas: autorização individual do ADM — nunca automática por setor.
+  "allow_step_return",
 ];
 
 /**
@@ -396,6 +399,7 @@ export const MODULE_PERMISSIONS = {
   Equipment: "view_equipment",
   Suppliers: "view_suppliers",
   DisposalReports: "view_disposal_reports",
+  StepReturnReports: "view_reports",
   Manual: "view_manual",
   SupplierDetail: "view_suppliers",
   Users: "manage_users",

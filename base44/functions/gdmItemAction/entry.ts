@@ -3,9 +3,14 @@ import {
   hasPermission,
   displayNameOf,
   SECTOR_BY_DESTINATION,
-  sectorViewPermission,
   isAccountAllowed,
 } from '../../shared/itemPermissions.ts';
+import {
+  previousStatusOf,
+  flowStatusesOf,
+  sectorOfStatus,
+  STATUS_LABELS,
+} from '../../shared/stepReturn.ts';
 
 // Ações protegidas sobre itens de GDM: verificação de permissão, bloqueio de
 // saltos de etapa e registro automático no histórico (data, hora e usuário).
@@ -62,11 +67,10 @@ export default async function (req: Request): Promise<Response> {
 
     const can = (p: string) => hasPermission(user, p);
 
-    // Separação de setores: só usuários autorizados no setor do item podem agir.
+    // Cada ação valida a seguir a sua própria permissão específica — os
+    // fluxos são naturalmente multi-setor (Coordenação aprova, Almoxarifado
+    // envia, Planejamento emite PWT etc.), sem gate global de setor.
     const itemSector = SECTOR_BY_DESTINATION[item.destination] || 'maintenance';
-    if (!isVesselStage && !can(sectorViewPermission(itemSector))) {
-      throw new Error('Sem permissão para atuar em itens deste setor');
-    }
 
     const prev = item.status;
     let next: string | null = null;
@@ -894,6 +898,51 @@ export default async function (req: Request): Promise<Response> {
         ).toISOString();
       }
       next = prev;
+    } else if (action === 'return_step') {
+      // CORREÇÃO DE FLUXO — Retorno de Etapa: devolve o item à etapa
+      // imediatamente anterior com justificativa obrigatória. Autorização
+      // individual (allow_step_return), concedida apenas pelo ADM. Somente
+      // administradores podem reabrir processos concluídos, retornar com OT
+      // encerrada ou saltar múltiplas etapas (target_status). Toda devolução
+      // fica registrada no histórico (usuário, data, hora, etapas e motivo).
+      const isAdmin = user.role === 'admin';
+      if (!isAdmin && !can('allow_step_return')) {
+        throw new Error('Sem autorização para retornar etapas — concessão exclusiva do Administrador');
+      }
+      const justification = String(observation || '').trim();
+      if (!justification) throw new Error('A justificativa do retorno é obrigatória');
+      if (['rejected', 'cancelled'].includes(prev)) {
+        throw new Error('Item reprovado/cancelado não pode ser retornado');
+      }
+      const closedProcess = ['completed', 'discard_approved'].includes(prev);
+      const otClosed = item.ot_status === 'closed';
+      if (!isAdmin) {
+        if (closedProcess) throw new Error('Processo concluído — apenas o Administrador pode reabrir');
+        if (otClosed) throw new Error('OT encerrada — apenas o Administrador pode retornar');
+      }
+      const flow = flowStatusesOf(item);
+      let target: string | null = body.target_status || null;
+      if (target) {
+        if (!isAdmin) throw new Error('Apenas o Administrador pode retornar múltiplas etapas');
+        if (!flow.includes(target) || target === 'completed' || target === prev) {
+          throw new Error('Etapa de destino inválida para o fluxo deste item');
+        }
+      } else {
+        target = previousStatusOf(item);
+        if (!target) throw new Error('O item está na primeira etapa do fluxo — não há etapa anterior');
+      }
+      // Reabertura de processo concluído: limpa os dados de finalização.
+      if (closedProcess) {
+        extra.completed_at = null;
+        extra.completed_by = null;
+      }
+      // Reabertura de OT encerrada: a OT volta ao estado aberto para o novo ciclo.
+      if (otClosed) {
+        extra.ot_status = 'open';
+        extra.ot_closed_at = null;
+        extra.ot_closed_by = null;
+      }
+      next = target;
     } else if (action === 'cancel') {
       if (!can('edit_gdm') && user.role !== 'admin') throw new Error('Sem permissão para cancelar');
       if (prev === 'completed') throw new Error('Item já finalizado');
@@ -970,6 +1019,55 @@ export default async function (req: Request): Promise<Response> {
       }
     }
 
+    // RETORNO DE ETAPA: notifica o setor responsável pela etapa de destino e
+    // o usuário que executou a etapa devolvida (aviso registrado no histórico
+    // da GDM logo abaixo, na sincronização).
+    if (action === 'return_step') {
+      try {
+        const users = await base44.asServiceRole.entities.User.list();
+        const sectorsOf = (u: any) => (Array.isArray(u.sectors) ? u.sectors : (u.data?.sectors || []));
+        const labelOf = (s: string) => STATUS_LABELS[s] || s;
+        const itemLabel = `${item.equipment_name || 'Item'}${item.serial_number ? ` (SN ${item.serial_number})` : ''} da GDM`;
+        const title = 'Etapa devolvida (Retorno de Etapa)';
+        const message =
+          `A etapa do item ${itemLabel} foi devolvida de "${labelOf(prev)}" para ` +
+          `"${labelOf(next)}" por ${displayNameOf(user)}. Justificativa: ${String(observation || '').trim()}.`;
+
+        // Executor da etapa devolvida: última movimentação que levou o item
+        // à etapa atual (retornos de etapa anteriores não contam).
+        const hist = await base44.entities.GDMItemHistory.filter({ item_id: item.id }, '-created_date');
+        const executor = (hist || []).find(
+          (h: any) => h.new_status === prev && h.action !== 'return_step',
+        );
+        const targetSector = sectorOfStatus(next, item.destination);
+        const recipients = users.filter(
+          (u: any) =>
+            u.email &&
+            (sectorsOf(u).includes(targetSector) ||
+              (executor?.user_email &&
+                u.email.toLowerCase() === String(executor.user_email).toLowerCase())),
+        );
+        await Promise.all(
+          recipients.map((u: any) =>
+            base44.asServiceRole.entities.Notification.create({
+              user_id: u.id,
+              user_email: u.email,
+              type: 'system_alert',
+              title,
+              message,
+              link: '/GDMList',
+              link_text: 'Ver GDMs',
+              priority: 'high',
+              related_entity_type: 'GDMItem',
+              related_entity_id: item.id,
+            }),
+          ),
+        );
+      } catch {
+        // Falha na notificação não invalida o retorno da etapa
+      }
+    }
+
     // Sincroniza o status da GDM com a situação consolidada dos itens
     try {
       const siblings = await base44.entities.GDMItem.filter({ gdm_id: item.gdm_id });
@@ -984,26 +1082,48 @@ export default async function (req: Request): Promise<Response> {
         if (allClosed) {
           if (statuses.includes('completed')) target = 'completed';
           else if (statuses.every((s: string) => s === 'rejected')) target = 'rejected';
-        } else if (!waiting && gdm.status === 'pending_coordinator') {
+        } else if (!waiting && ['pending_coordinator', 'completed'].includes(gdm.status)) {
+          // pending_coordinator: Coordenador concluiu a análise dos itens.
+          // completed: um item concluído foi reaberto (Retorno de Etapa do ADM).
           target = 'pending_services';
         }
-        if (target && target !== gdm.status && gdm.status !== 'rejected') {
-          await base44.asServiceRole.entities.GDM.update(gdm.id, {
-            status: target,
-            history: [
-              ...(gdm.history || []),
-              {
-                action: 'status_synced_from_items',
+        const returnEntry =
+          action === 'return_step'
+            ? {
+                action: 'return_step',
                 user: user.email,
                 user_name: displayNameOf(user),
                 role: user.role,
                 timestamp: new Date().toISOString(),
-                details: `Status da GDM atualizado automaticamente a partir dos itens (${target}).`,
-                previous_status: gdm.status,
-                new_status: target,
-                step_name: 'Sincronização dos itens',
-                observation: `Item ${item.item_number}: ${prev} → ${next}`,
-              },
+                details: `Etapa do item ${item.item_number} devolvida de "${STATUS_LABELS[prev] || prev}" para "${STATUS_LABELS[next] || next}". Justificativa: ${String(observation || '').trim()}`,
+                previous_status: prev,
+                new_status: next,
+                step_name: 'Retorno de Etapa',
+                observation: String(observation || '').trim(),
+              }
+            : null;
+        const shouldUpdateStatus = !!target && target !== gdm.status && gdm.status !== 'rejected';
+        if (shouldUpdateStatus || returnEntry) {
+          await base44.asServiceRole.entities.GDM.update(gdm.id, {
+            ...(shouldUpdateStatus ? { status: target } : {}),
+            history: [
+              ...(gdm.history || []),
+              ...(returnEntry
+                ? [returnEntry]
+                : [
+                    {
+                      action: 'status_synced_from_items',
+                      user: user.email,
+                      user_name: displayNameOf(user),
+                      role: user.role,
+                      timestamp: new Date().toISOString(),
+                      details: `Status da GDM atualizado automaticamente a partir dos itens (${target}).`,
+                      previous_status: gdm.status,
+                      new_status: target,
+                      step_name: 'Sincronização dos itens',
+                      observation: `Item ${item.item_number}: ${prev} → ${next}`,
+                    },
+                  ]),
             ],
           });
         }

@@ -8,7 +8,7 @@ const ALL_IDS: string[] = [
   'view_dashboard', 'view_dashboard_gerencial', 'view_reliability', 'view_certifications',
   // GDM
   'view_gdm', 'view_all_gdms', 'create_gdm', 'edit_gdm', 'delete_gdm', 'approve_gdm',
-  'reject_gdm', 'change_gdm_destination', 'generate_gdm_pdf',
+  'reject_gdm', 'change_gdm_destination', 'generate_gdm_pdf', 'allow_step_return',
   // Recebimento
   'confirm_receipt',
   // Descarte
@@ -44,7 +44,7 @@ const ADMIN_ONLY: string[] = [
   'manage_users', 'edit_users', 'suspend_users', 'reset_user_access', 'manage_permissions',
   'view_audit_logs', 'export_audit_logs', 'system_settings',
   'import_equipment', 'import_spreadsheet',
-  'manage_equipment', 'manage_suppliers', 'delete_gdm',
+  'manage_equipment', 'manage_suppliers', 'delete_gdm', 'allow_step_return',
 ];
 
 // Dashboards (incluindo o Controle de OT): liberados exclusivamente pela
