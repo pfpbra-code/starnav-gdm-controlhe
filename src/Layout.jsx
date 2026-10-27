@@ -19,7 +19,6 @@ const pageTitles = {
   Equipment: "Equipamentos",
   Suppliers: "Fornecedores",
   DisposalReports: "Relatórios de Descarte",
-  StepReturnReports: "Relatório de Devoluções",
   Manual: "Manual de Procedimentos",
   AuditLogs: "Logs de Auditoria",
   Settings: "Configurações",

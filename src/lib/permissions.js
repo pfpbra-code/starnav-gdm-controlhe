@@ -399,7 +399,6 @@ export const MODULE_PERMISSIONS = {
   Equipment: "view_equipment",
   Suppliers: "view_suppliers",
   DisposalReports: "view_disposal_reports",
-  StepReturnReports: "view_reports",
   Manual: "view_manual",
   SupplierDetail: "view_suppliers",
   Users: "manage_users",
