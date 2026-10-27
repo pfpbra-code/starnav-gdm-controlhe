@@ -31,7 +31,7 @@ export const ITEM_STATUS_LABELS = {
   awaiting_validity_registration: "Aguardando Cadastro da Validade",
   pending_maintenance_authorization: "Aguardando Aprovação da Manutenção",
   repair_approved: "Reparo Aprovado",
-  awaiting_pwt: "Aguardando PWT (Planejamento)",
+  awaiting_pwt: "Aguardando Emissão de PWT (Planejamento)",
   awaiting_oc_issuance: "Aguardando Emissão da OC (Serviços)",
   awaiting_oc_approval: "Aguardando Aprovação da OC",
   discount_negotiation: "Negociação de Desconto",
@@ -376,6 +376,8 @@ export function previousStatusFor(item) {
   // Reparo / calibração (ciclo de fornecedor)
   if (item.status === "awaiting_receipt") return "pending_coordinator";
   if (["pending_services", "awaiting_supplier_definition"].includes(item.status)) {
+    // Reparo: a definição do fornecedor só ocorre após o PWT do Planejamento.
+    if (item.destination === "repair") return "awaiting_pwt";
     return item.receipt_situation === "not_received" ? "awaiting_receipt" : "pending_coordinator";
   }
   const map = {
@@ -386,9 +388,14 @@ export function previousStatusFor(item) {
     discount_negotiation: "awaiting_maintenance_authorization",
     repair_approved: "awaiting_maintenance_authorization",
     in_treatment: "awaiting_maintenance_authorization",
-    awaiting_pwt: "awaiting_maintenance_authorization",
-    awaiting_oc_issuance:
-      item.destination === "certification" ? "awaiting_maintenance_authorization" : "awaiting_pwt",
+    // PWT: novo fluxo (após validação da Coordenação + recebimento) ou legado
+    // em andamento (cotação aprovada, aguardando PWT antes da OC).
+    awaiting_pwt: item.supplier_id
+      ? "awaiting_maintenance_authorization"
+      : item.receipt_situation === "not_received"
+        ? "awaiting_receipt"
+        : "pending_coordinator",
+    awaiting_oc_issuance: "awaiting_maintenance_authorization",
     awaiting_oc_approval: "awaiting_oc_issuance",
     awaiting_return: "awaiting_oc_approval",
     awaiting_supplier_return: "awaiting_maintenance_authorization",
@@ -511,11 +518,11 @@ export const OVERALL_LABELS = {
 const FLOW_BY_DESTINATION = {
   repair: [
     { status: "pending_coordinator", label: "Aprovação do Coordenador" },
+    { status: "awaiting_pwt", label: "Emissão do PWT (Planejamento)" },
     { status: "awaiting_supplier_definition", label: "Definição do Fornecedor (Serviços)" },
     { status: "awaiting_shipping_proof", label: "Comprovante de Envio (Almoxarifado)" },
     { status: "sent_to_supplier", label: "Enviado — Aguardando Cotação (Serviços)" },
     { status: "awaiting_maintenance_authorization", label: "Aprovação da Manutenção" },
-    { status: "awaiting_pwt", label: "Emissão do PWT (Planejamento)" },
     { status: "awaiting_oc_issuance", label: "Emissão da OC (Serviços)" },
     { status: "awaiting_oc_approval", label: "Aprovação e Envio da OC (Serviços)" },
     { status: "awaiting_return", label: "Aguardando Retorno do Fornecedor" },
@@ -578,9 +585,10 @@ export function itemFlow(item) {
     return steps.map((s, i) => ({ ...s, state: i === 0 ? "done" : "todo" }));
   }
   let current = STATUS_ALIAS[item.status] || item.status;
-  // Itens aprovados antes das etapas de PWT/OC: exibem a etapa que os substitui.
-  if (item.status === "repair_approved") {
-    current = item.destination === "certification" ? "awaiting_oc_issuance" : "awaiting_pwt";
+  // Itens legados em andamento (fornecedor já definido, cotação aprovada sem
+  // PWT): o PWT pendente aparece na etapa da OC, emitida só após o PWT.
+  if (item.status === "repair_approved" || (item.status === "awaiting_pwt" && item.supplier_id)) {
+    current = "awaiting_oc_issuance";
   }
   const idx = steps.findIndex((s) => s.status === current);
   return steps.map((s, i) => ({
@@ -605,7 +613,9 @@ export function nextActionText(item) {
         : "Este item foi recebido pelo Almoxarifado e segue para a próxima etapa.";
     case "awaiting_supplier_definition":
     case "pending_services":
-      return "Serviços deve selecionar o fornecedor, informar observações e a previsão de envio.";
+      return item.destination === "repair"
+        ? "PWT emitido pelo Planejamento. Serviços deve selecionar o fornecedor, informar observações e a previsão de envio."
+        : "Serviços deve selecionar o fornecedor, informar observações e a previsão de envio.";
     case "awaiting_shipping_proof":
       return "Almoxarifado deve anexar obrigatoriamente a foto do equipamento expedido, a NF assinada ou o comprovante de coleta.";
     case "sent_to_supplier":
@@ -615,7 +625,9 @@ export function nextActionText(item) {
     case "repair_approved":
       return "Cotação aprovada. O item segue para a emissão do PWT (Planejamento) — itens de calibração vão direto para a OC.";
     case "awaiting_pwt":
-      return "Cotação aprovada. O Planejamento deve emitir o PWT e registrar o número.";
+      return item.supplier_id
+        ? "Cotação aprovada. O Planejamento deve emitir o PWT e registrar o número."
+        : "Tratativa validada pela Coordenação e equipamento recebido pelo Almoxarifado. O Planejamento deve emitir o PWT para liberar a definição do fornecedor.";
     case "awaiting_oc_issuance":
       return item.destination === "certification"
         ? "Cotação aprovada. Serviços deve emitir a Ordem de Compra (OC)."

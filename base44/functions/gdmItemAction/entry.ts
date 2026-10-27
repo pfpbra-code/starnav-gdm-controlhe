@@ -15,9 +15,11 @@ import {
 // Ações protegidas sobre itens de GDM: verificação de permissão, bloqueio de
 // saltos de etapa e registro automático no histórico (data, hora e usuário).
 // Fluxo do ciclo de fornecedor (reparo/calibração), executado sempre por item:
-//   Almoxarifado recebe → Serviços define fornecedor → Almoxarifado anexa
-//   comprovante de envio → Serviços anexa cotação → Manutenção decide
-//   (aprovar / desconto / reprovar com troca de fornecedor ou descarte).
+//   Almoxarifado recebe → Planejamento emite PWT (reparo) → Serviços define
+//   fornecedor → Almoxarifado anexa comprovante de envio → Serviços anexa
+//   cotação → Manutenção decide (aprovar / desconto / reprovar com troca de
+//   fornecedor ou descarte). O PWT é etapa obrigatória do reparo: emitido
+//   somente após a validação da Coordenação e o recebimento do equipamento.
 // Todo ciclo, cotação e decisão permanece registrado (nunca excluído).
 
 const VALID_DESTINATIONS = ['repair', 'certification', 'stock_return', 'discard'];
@@ -98,12 +100,17 @@ export default async function (req: Request): Promise<Response> {
         // pela Coordenação avança direto para a etapa do destino, sem nova
         // confirmação de recebimento (etapa exclusiva de GDMs "Não Recebido").
         const finalDestination = destination || item.destination;
+        // PWT (Planejamento) é etapa obrigatória dos itens de reparo, emitida
+        // após a validação da tratativa pela Coordenação e com o equipamento
+        // já recebido — antes da definição do fornecedor por Serviços.
         next =
           finalDestination === 'discard'
             ? 'pending_maintenance_authorization'
             : finalDestination === 'stock_return'
               ? 'received'
-              : 'awaiting_supplier_definition';
+              : finalDestination === 'repair'
+                ? 'awaiting_pwt'
+                : 'awaiting_supplier_definition';
         if (!item.stock_received_at) {
           extra.stock_received_at = now;
           extra.stock_received_by = user.id;
@@ -131,12 +138,16 @@ export default async function (req: Request): Promise<Response> {
       if (prev !== 'awaiting_receipt') {
         throw new Error('Item não está aguardando a chegada do equipamento');
       }
+      // Itens de reparo seguem para a emissão do PWT pelo Planejamento
+      // (etapa obrigatória antes da definição do fornecedor).
       next =
         item.destination === 'discard'
           ? 'pending_maintenance_authorization'
           : item.destination === 'stock_return'
             ? 'received'
-            : 'awaiting_supplier_definition';
+            : item.destination === 'repair'
+              ? 'awaiting_pwt'
+              : 'awaiting_supplier_definition';
       extra.stock_received_at = now;
       extra.stock_received_by = user.id;
     } else if (action === 'confirm_stock_return') {
@@ -424,10 +435,11 @@ export default async function (req: Request): Promise<Response> {
           quotes[quotes.length - 1] = lastQuote;
           extra.quotes_history = quotes;
         }
-        // Após a aprovação: reparo aguarda o PWT (Planejamento); calibração
-        // (Operações) não exige PWT e vai direto para a emissão da OC.
+        // Após a aprovação da cotação: itens de reparo com PWT já emitido
+        // (novo fluxo) seguem direto para a OC; itens legados em andamento
+        // sem PWT aguardam a emissão pelo Planejamento antes da OC.
         next =
-          item.destination === 'certification'
+          item.destination === 'certification' || item.pwt_number
             ? 'awaiting_oc_issuance'
             : 'awaiting_pwt';
       } else if (decision === 'discount') {
@@ -617,7 +629,10 @@ export default async function (req: Request): Promise<Response> {
       extra.pwt_number = pwtNumber;
       extra.pwt_issued_at = now;
       extra.pwt_issued_by = user.email;
-      next = 'awaiting_oc_issuance';
+      // Novo fluxo (PWT antes do fornecedor): libera a definição do
+      // fornecedor por Serviços. Itens legados em andamento (fornecedor já
+      // definido, PWT emitido após a aprovação da cotação) seguem para a OC.
+      next = item.supplier_id ? 'awaiting_oc_issuance' : 'awaiting_supplier_definition';
 
       await mirrorGdm(base44, item.gdm_id, {
         pwt_number: pwtNumber,
@@ -1005,14 +1020,48 @@ export default async function (req: Request): Promise<Response> {
             ? 'almoxarifado'
             : finalDestination === 'discard'
               ? 'maintenance'
-              : 'services';
+              : finalDestination === 'repair'
+                ? 'planejamento'
+                : 'services';
         const msgNext = item.receipt_situation === 'not_received'
           ? `A Coordenação aprovou a tratativa do item ${itemLabel} (GDM aberta como Não Recebido). O item está em "Aguardando Recebimento" até a chegada física do equipamento.`
-          : `A Coordenação confirmou a tratativa do item ${itemLabel}. Como a GDM foi criada como Recebido, o item seguiu direto para a próxima etapa do processo.`;
+          : finalDestination === 'repair'
+            ? `A Coordenação confirmou a tratativa do item ${itemLabel} e o equipamento já está no Almoxarifado. O item está em "Aguardando Emissão de PWT" — o Planejamento deve emitir o PWT.`
+            : `A Coordenação confirmou a tratativa do item ${itemLabel}. Como a GDM foi criada como Recebido, o item seguiu direto para a próxima etapa do processo.`;
         await Promise.all(
           users
             .filter((u: any) => sectorsOf(u).includes(notifySector))
             .map((u: any) => createNotif(u, 'Item aprovado pela Coordenação', msgNext)),
+        );
+      } catch {
+        // Falha na notificação não invalida a ação do item
+      }
+    }
+
+    // RECEBIMENTO CONFIRMADO (GDM "Não Recebido"): itens de reparo seguem para
+    // a emissão do PWT — o Planejamento é notificado da chegada do equipamento.
+    if (action === 'confirm_receipt' && item.destination === 'repair') {
+      try {
+        const users = await base44.asServiceRole.entities.User.list();
+        const sectorsOf = (u: any) => (Array.isArray(u.sectors) ? u.sectors : (u.data?.sectors || []));
+        const itemLabel = `${item.equipment_name || 'Item'}${item.serial_number ? ` (SN ${item.serial_number})` : ''} da GDM`;
+        await Promise.all(
+          users
+            .filter((u: any) => sectorsOf(u).includes('planejamento'))
+            .map((u: any) =>
+              base44.asServiceRole.entities.Notification.create({
+                user_id: u.id,
+                user_email: u.email,
+                type: 'system_alert',
+                title: 'Equipamento recebido — Aguardando Emissão de PWT',
+                message: `A chegada do equipamento do item ${itemLabel} foi confirmada pelo Almoxarifado. O item está em "Aguardando Emissão de PWT" — o Planejamento deve emitir o PWT.`,
+                link: '/GDMList',
+                link_text: 'Ver GDMs',
+                priority: 'high',
+                related_entity_type: 'GDMItem',
+                related_entity_id: item.id,
+              }),
+            ),
         );
       } catch {
         // Falha na notificação não invalida a ação do item

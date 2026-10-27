@@ -31,7 +31,7 @@ const RESPONSIBLE_FILTERS = [
   { key: 'maintenance', label: 'Aguardando Manutenção' },
   { key: 'almoxarifado', label: 'Aguardando Almoxarifado' },
   { key: 'services', label: 'Aguardando Serviços' },
-  { key: 'planejamento', label: 'Aguardando Planejamento' },
+  { key: 'planejamento', label: 'Aguardando PWT (Planejamento)' },
   { key: 'coordinator', label: 'Aguardando Coordenador' },
   { key: 'completed', label: 'Concluídos' },
 ];

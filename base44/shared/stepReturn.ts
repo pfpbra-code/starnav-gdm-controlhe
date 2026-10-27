@@ -6,11 +6,11 @@
 export const FLOW_BY_DESTINATION: Record<string, string[]> = {
   repair: [
     'pending_coordinator',
+    'awaiting_pwt',
     'awaiting_supplier_definition',
     'awaiting_shipping_proof',
     'sent_to_supplier',
     'awaiting_maintenance_authorization',
-    'awaiting_pwt',
     'awaiting_oc_issuance',
     'awaiting_oc_approval',
     'awaiting_return',
@@ -70,6 +70,8 @@ export function previousStatusOf(item: any): string | null {
   // Reparo / calibração (ciclo de fornecedor)
   if (item.status === 'awaiting_receipt') return 'pending_coordinator';
   if (['pending_services', 'awaiting_supplier_definition'].includes(item.status)) {
+    // Reparo: a definição do fornecedor só ocorre após o PWT do Planejamento.
+    if (item.destination === 'repair') return 'awaiting_pwt';
     return item.receipt_situation === 'not_received' ? 'awaiting_receipt' : 'pending_coordinator';
   }
   const map: Record<string, string> = {
@@ -80,8 +82,14 @@ export function previousStatusOf(item: any): string | null {
     discount_negotiation: 'awaiting_maintenance_authorization',
     repair_approved: 'awaiting_maintenance_authorization',
     in_treatment: 'awaiting_maintenance_authorization',
-    awaiting_pwt: 'awaiting_maintenance_authorization',
-    awaiting_oc_issuance: item.destination === 'certification' ? 'awaiting_maintenance_authorization' : 'awaiting_pwt',
+    // PWT: novo fluxo (após validação da Coordenação + recebimento) ou legado
+    // em andamento (cotação aprovada, aguardando PWT antes da OC).
+    awaiting_pwt: item.supplier_id
+      ? 'awaiting_maintenance_authorization'
+      : item.receipt_situation === 'not_received'
+        ? 'awaiting_receipt'
+        : 'pending_coordinator',
+    awaiting_oc_issuance: 'awaiting_maintenance_authorization',
     awaiting_oc_approval: 'awaiting_oc_issuance',
     awaiting_return: 'awaiting_oc_approval',
     awaiting_supplier_return: 'awaiting_maintenance_authorization',
@@ -144,7 +152,7 @@ export const STATUS_LABELS: Record<string, string> = {
   awaiting_validity_registration: 'Aguardando Cadastro da Validade',
   pending_maintenance_authorization: 'Aguardando Aprovação da Manutenção',
   repair_approved: 'Reparo Aprovado',
-  awaiting_pwt: 'Aguardando PWT (Planejamento)',
+  awaiting_pwt: 'Aguardando Emissão de PWT (Planejamento)',
   awaiting_oc_issuance: 'Aguardando Emissão da OC (Serviços)',
   awaiting_oc_approval: 'Aguardando Aprovação da OC',
   discount_negotiation: 'Negociação de Desconto',
