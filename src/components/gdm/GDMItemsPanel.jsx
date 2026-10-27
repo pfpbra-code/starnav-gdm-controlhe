@@ -288,6 +288,12 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                 {item.pwt_number && (
                   <Field icon={ClipboardList} label="PWT (Planejamento)" value={item.pwt_number} />
                 )}
+                {item.oc_number && (
+                  <Field icon={ClipboardList} label="OC (Serviços)" value={item.oc_number} />
+                )}
+                {item.ot_number && (
+                  <Field icon={ClipboardList} label="OT (Serviços)" value={item.ot_number} />
+                )}
                 <Field icon={User2} label="Responsável atual" value={itemResponsible(item)} />
                 <Field label="Fornecedor" value={item.supplier_name || '—'} />
               </div>
