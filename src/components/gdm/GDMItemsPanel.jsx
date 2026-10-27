@@ -285,6 +285,9 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                 <Field icon={Hash} label="Número de série" value={item.serial_number} />
                 <Field icon={ClipboardList} label="OS" value={item.os_number} />
+                {item.pwt_number && (
+                  <Field icon={ClipboardList} label="PWT (Planejamento)" value={item.pwt_number} />
+                )}
                 <Field icon={User2} label="Responsável atual" value={itemResponsible(item)} />
                 <Field label="Fornecedor" value={item.supplier_name || '—'} />
               </div>
