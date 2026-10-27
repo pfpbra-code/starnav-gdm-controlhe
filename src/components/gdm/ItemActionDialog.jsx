@@ -61,7 +61,7 @@ export default function ItemActionDialog({ pending, onClose }) {
   const needsDate = !!pending?.askDate;
   const needsReturnNumber = !!pending?.askReturnNumber;
   const reasonRequired =
-    action === 'reject' || action === 'reschedule_disembark' || destinationChanged;
+    action === 'reject' || destinationChanged;
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers'],
@@ -227,11 +227,7 @@ export default function ItemActionDialog({ pending, onClose }) {
 
           <div className="space-y-2">
             <Label>
-              {action === 'reschedule_disembark'
-                ? 'Justificativa da reprogramação *'
-                : reasonRequired
-                  ? 'Motivo *'
-                  : 'Observação'}
+              {reasonRequired ? 'Motivo *' : 'Observação'}
             </Label>
             <Textarea
               value={observation}

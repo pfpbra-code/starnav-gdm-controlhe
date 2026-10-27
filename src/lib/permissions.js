@@ -48,7 +48,6 @@ export const AVAILABLE_PERMISSIONS = [
 
   // Recebimento (Almoxarifado)
   { id: "confirm_receipt", label: "Confirmar Recebimento", category: "Recebimento" },
-  { id: "report_not_received", label: "Informar Não Recebimento", category: "Recebimento" },
 
   // Descarte
   { id: "confirm_disposal", label: "Confirmar descarte", category: "Descarte" },
@@ -208,7 +207,6 @@ export const SECTOR_BASE_PERMISSIONS = {
     "create_gdm",
     "generate_gdm_pdf",
     "confirm_receipt",
-    "report_not_received",
     "confirm_disposal",
     "upload_disposal_evidence",
     "view_disposal_reports",

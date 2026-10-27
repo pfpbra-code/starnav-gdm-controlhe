@@ -301,7 +301,7 @@ export function equipmentRanking(items = [], equipmentByCode = {}, limit = 10) {
   return { ranking: rows.slice(0, limit), manufacturers: manufacturerRows, reincidences, total };
 }
 
-const AWAITING_RECEIPT_STATUSES = ['pending_disembark_confirmation', 'pending_almoxarifado'];
+const AWAITING_RECEIPT_STATUSES = ['awaiting_receipt'];
 const APPROVAL_STATUSES = ['pending_coordinator', 'pending_maintenance_authorization', 'awaiting_discard_confirmation'];
 const FINAL_STATUSES = ['completed', 'cancelled', 'rejected', 'discard_approved'];
 

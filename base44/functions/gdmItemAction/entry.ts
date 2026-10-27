@@ -139,7 +139,7 @@ export default async function (req: Request): Promise<Response> {
       if (!can('confirm_receipt')) throw new Error('Sem permissão para confirmar devolução');
       if (item.destination !== 'stock_return') throw new Error('Item não é de retorno ao estoque');
       if (item.stock_return_confirmed) throw new Error('Devolução já confirmada');
-      if (!['received', 'pending_almoxarifado'].includes(prev)) {
+      if (prev !== 'received') {
         throw new Error('Item não está disponível para devolução');
       }
       next = 'completed';

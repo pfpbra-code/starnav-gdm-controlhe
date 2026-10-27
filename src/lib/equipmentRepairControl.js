@@ -51,14 +51,12 @@ export const CONTROL_CATEGORIES = [
     color: '#0ea5e9',
     statuses: [
       'draft',
-      'pending_almoxarifado',
+      'awaiting_receipt',
       'received',
       'awaiting_supplier_definition',
       'pending_services',
       'awaiting_shipping_proof',
       'return_confirmed',
-      'pending_disembark_confirmation',
-      'disembark_rescheduled',
     ],
   },
   {

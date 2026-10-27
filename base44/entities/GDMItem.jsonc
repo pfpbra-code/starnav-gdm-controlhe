@@ -51,7 +51,7 @@
         "not_received"
       ],
       "default": "received",
-      "description": "Situa\u00e7\u00e3o de recebimento declarada pelo Almoxarifado na abertura da GDM: Recebido (equipamento j\u00e1 est\u00e1 fisicamente no Almoxarifado) ou N\u00e3o Recebido (GDM aberta antecipadamente \u2014 ap\u00f3s a valida\u00e7\u00e3o da Coordena\u00e7\u00e3o, o item fica em Aguardando Recebimento at\u00e9 a chegada f\u00edsica)"
+      "description": "Situa\u00e7\u00e3o de recebimento declarada pelo Almoxarifado na abertura da GDM: Recebido (equipamento j\u00e1 est\u00e1 fisicamente no Almoxarifado \u2014 ap\u00f3s a confirma\u00e7\u00e3o da tratativa pela Coordena\u00e7\u00e3o o item segue direto para a etapa do destino, sem nova confirma\u00e7\u00e3o de recebimento) ou N\u00e3o Recebido (GDM aberta antecipadamente \u2014 ap\u00f3s a valida\u00e7\u00e3o da Coordena\u00e7\u00e3o, o item fica em Aguardando Recebimento at\u00e9 a chegada f\u00edsica)"
     },
     "destination": {
       "type": "string",
@@ -72,7 +72,6 @@
         "approved",
         "rejected",
         "cancelled",
-        "pending_almoxarifado",
         "awaiting_receipt",
         "received",
         "pending_services",
@@ -93,12 +92,10 @@
         "discount_negotiation",
         "awaiting_discard_confirmation",
         "discard_approved",
-        "pending_disembark_confirmation",
-        "disembark_rescheduled",
         "completed"
       ],
       "default": "pending_coordinator",
-      "description": "Situa\u00e7\u00e3o do item (fluxo pr\u00f3prio por destino, com situa\u00e7\u00e3o de recebimento declarada na abertura \u2014 awaiting_receipt \u00e9 o estado de GDM aberta sem recebimento f\u00edsico, j\u00e1 validada pela Coordena\u00e7\u00e3o \u2014, confirma\u00e7\u00e3o de desembarque, ciclo completo de fornecedor, PWT e OC; itens de calibra\u00e7\u00e3o/certifica\u00e7\u00e3o s\u00f3 finalizam ap\u00f3s o certificado e a validade registrados pela Opera\u00e7\u00f5es)"
+      "description": "Situa\u00e7\u00e3o do item (fluxo pr\u00f3prio por destino, com situa\u00e7\u00e3o de recebimento declarada na abertura \u2014 awaiting_receipt \u00e9 a \u00fanica etapa de recebimento do fluxo, exclusiva de GDMs abertas como N\u00e3o Recebido e j\u00e1 validadas pela Coordena\u00e7\u00e3o; GDMs criadas como Recebido seguem da confirma\u00e7\u00e3o da tratativa direto para a etapa do destino; ciclo completo de fornecedor, PWT e OC; itens de calibra\u00e7\u00e3o/certifica\u00e7\u00e3o s\u00f3 finalizam ap\u00f3s o certificado e a validade registrados pela Opera\u00e7\u00f5es)"
     },
     "supplier_id": {
       "type": "string",
@@ -460,38 +457,16 @@
     "stock_received_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Data/hora do recebimento pelo almoxarifado"
+      "description": "Data/hora do recebimento: na confirma\u00e7\u00e3o da chegada f\u00edsica (GDM N\u00e3o Recebido) ou na confirma\u00e7\u00e3o da tratativa de item j\u00e1 recebido na abertura (GDM Recebido)"
     },
     "stock_received_by": {
       "type": "string",
       "description": "ID de quem confirmou o recebimento"
     },
-    "not_received_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "Data/hora do registro de n\u00e3o recebimento pelo almoxarifado"
-    },
-    "not_received_by": {
-      "type": "string",
-      "description": "Email de quem registrou o n\u00e3o recebimento"
-    },
-    "disembark_confirmed_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "Data/hora da confirma\u00e7\u00e3o de desembarque pelo respons\u00e1vel vinculado \u00e0 embarca\u00e7\u00e3o"
-    },
-    "disembark_confirmed_by": {
-      "type": "string",
-      "description": "Email de quem confirmou o desembarque"
-    },
     "expected_disembark_date": {
       "type": "string",
       "format": "date",
-      "description": "Nova data prevista de desembarque (informada pela Coordena\u00e7\u00e3o na valida\u00e7\u00e3o de GDM aberta sem recebimento f\u00edsico, ou pelo respons\u00e1vel vinculado \u00e0 embarca\u00e7\u00e3o na reprograma\u00e7\u00e3o)"
-    },
-    "reschedule_justification": {
-      "type": "string",
-      "description": "Justificativa da reprograma\u00e7\u00e3o do desembarque"
+      "description": "Nova data prevista de desembarque (informada pela Coordena\u00e7\u00e3o na valida\u00e7\u00e3o de GDM aberta sem recebimento f\u00edsico)"
     },
     "stock_return_confirmed": {
       "type": "boolean",

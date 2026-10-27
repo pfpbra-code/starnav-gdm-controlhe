@@ -9,11 +9,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 // A ação tomada retira o item da pendência ativa, sem excluir dados da GDM.
 const CATEGORIES = [
   {
-    key: 'receipt',
-    label: 'Recebimento Inicial de Materiais Desembarcados',
-    match: (i) => i.status === 'pending_almoxarifado',
-  },
-  {
     key: 'awaiting_receipt',
     label: 'Aguardando Recebimento (GDM aberta sem recebimento físico)',
     match: (i) => i.status === 'awaiting_receipt',

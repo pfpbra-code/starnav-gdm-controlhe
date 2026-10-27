@@ -10,7 +10,7 @@ const ALL_IDS: string[] = [
   'view_gdm', 'view_all_gdms', 'create_gdm', 'edit_gdm', 'delete_gdm', 'approve_gdm',
   'reject_gdm', 'change_gdm_destination', 'generate_gdm_pdf',
   // Recebimento
-  'confirm_receipt', 'report_not_received',
+  'confirm_receipt',
   // Descarte
   'confirm_disposal', 'upload_disposal_evidence', 'view_disposal_reports', 'generate_disposal_report',
   // Serviços / OC
@@ -69,7 +69,7 @@ export const SECTOR_BASE: Record<string, string[]> = {
   ],
   almoxarifado: [
     'view_gdm', 'view_all_gdms', 'create_gdm',
-    'generate_gdm_pdf', 'confirm_receipt', 'report_not_received', 'confirm_disposal',
+    'generate_gdm_pdf', 'confirm_receipt', 'confirm_disposal',
     'upload_disposal_evidence', 'view_disposal_reports', 'generate_disposal_report',
     'confirm_return',
   ],
