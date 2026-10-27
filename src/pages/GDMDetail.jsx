@@ -206,8 +206,20 @@ export default function GDMDetail() {
                         <Package className="h-5 w-5 text-purple-600" />
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500">Equipamento</p>
-                        <p className="font-medium">{gdm.equipment_name || '-'}</p>
+                        <p className="text-sm text-slate-500">
+                          Equipamento{gdmItems.length > 1 ? ` (${gdmItems.length} itens)` : ''}
+                        </p>
+                        {gdmItems.length > 0 ? (
+                          <ul className="font-medium space-y-0.5">
+                            {gdmItems.map((it) => (
+                              <li key={it.id}>
+                                {String(it.item_number).padStart(2, '0')} · {it.equipment_name || '-'}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="font-medium">{gdm.equipment_name || '-'}</p>
+                        )}
                       </div>
                     </div>
 
@@ -231,7 +243,17 @@ export default function GDMDetail() {
                       </div>
                       <div>
                         <p className="text-sm text-slate-500">Número de Série</p>
-                        <p className="font-medium">{gdm.serial_number || '-'}</p>
+                        {gdmItems.length > 0 ? (
+                          <ul className="font-medium space-y-0.5">
+                            {gdmItems.map((it) => (
+                              <li key={it.id}>
+                                {String(it.item_number).padStart(2, '0')} · {it.serial_number || '-'}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="font-medium">{gdm.serial_number || '-'}</p>
+                        )}
                       </div>
                     </div>
                   </div>
