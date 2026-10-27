@@ -294,6 +294,17 @@ export default async function (req: Request): Promise<Response> {
       extra.ot_closed_at = null;
       extra.ot_closed_by = null;
       extra.ot_alerts_sent = [];
+      // Novo ciclo: a OC e o prazo de retorno do ciclo anterior são limpos —
+      // a previsão de retorno só existe após a nova emissão da OC (Serviços),
+      // nunca antes da formalização junto ao fornecedor.
+      extra.oc_number = null;
+      extra.oc_issued_at = null;
+      extra.oc_issued_by = null;
+      extra.oc_approval_confirmed_at = null;
+      extra.oc_approval_confirmed_by = null;
+      extra.return_deadline_days = null;
+      extra.expected_return_date = null;
+      extra.return_deadline_alerts = [];
       next = 'awaiting_shipping_proof';
 
       await mirrorGdm(base44, item.gdm_id, {
@@ -303,8 +314,10 @@ export default async function (req: Request): Promise<Response> {
       });
     } else if (action === 'attach_shipping_proof') {
       // Almoxarifado anexa a NF assinada e a foto do envio (ambas obrigatórias)
-      // e registra a data de envio + prazo de retorno (dias ou data prevista,
-      // calculado automaticamente quando informado em dias).
+      // e registra a data de envio, a transportadora (quando aplicável) e
+      // observações. O prazo de retorno NÃO é informado nesta etapa: ele só
+      // existe após a emissão da Ordem de Compra, quando Serviços registra a
+      // previsão informada pelo fornecedor (emissão da OC / set_return_deadline).
       if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
         throw new Error('Este item não segue o fluxo de fornecedor');
       }
@@ -318,29 +331,15 @@ export default async function (req: Request): Promise<Response> {
           ? body.sent_date
           : now.slice(0, 10);
       const sentAt = new Date(`${sentDate}T12:00:00`).toISOString();
-      const deadlineDays = Math.round(Number(body.return_deadline_days));
-      let expectedReturn: string | null =
-        typeof body.expected_return_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.expected_return_date)
-          ? body.expected_return_date
-          : null;
-      if (!expectedReturn && deadlineDays > 0) {
-        const due = new Date(`${sentDate}T12:00:00`);
-        due.setDate(due.getDate() + deadlineDays);
-        expectedReturn = due.toISOString().slice(0, 10);
-      }
-      if (!expectedReturn) {
-        throw new Error('Informe o prazo de retorno em dias ou a data prevista de retorno');
-      }
+      const carrier = String(body.carrier || '').trim() || null;
 
       extra.shipping_proof_url = body.nf_url;
       extra.shipping_photo_url = body.photo_url;
       extra.shipping_proof_at = now;
       extra.shipping_proof_by = user.email;
+      extra.shipping_carrier = carrier;
       extra.sent_to_supplier_at = sentAt;
       extra.sent_by = user.email;
-      if (deadlineDays > 0) extra.return_deadline_days = deadlineDays;
-      extra.expected_return_date = expectedReturn;
-      extra.return_deadline_alerts = [];
       extra.quote_due_at = new Date(Date.now() + THREE_DAYS_MS).toISOString();
       extra.quote_followup_notified_at = null;
       next = 'sent_to_supplier';
@@ -399,7 +398,6 @@ export default async function (req: Request): Promise<Response> {
       await mirrorGdm(base44, item.gdm_id, {
         quote_value: quoteValue,
         quote_document_url: body.quote_document_url,
-        expected_return_date: body.quote_deadline,
         maintenance_decision: null,
         maintenance_decided_by: null,
         maintenance_decided_at: null,
@@ -640,7 +638,10 @@ export default async function (req: Request): Promise<Response> {
         pwt_issued_at: now,
       });
     } else if (action === 'issue_oc') {
-      // Serviços emite a Ordem de Compra e registra o número da OC.
+      // Serviços emite a Ordem de Compra: número, data de emissão e, quando
+      // já informado pelo fornecedor, o prazo de retorno (dias ou data —
+      // o prazo em dias é calculado a partir da data de emissão da OC).
+      // O prazo de retorno NUNCA é solicitado antes deste ponto do fluxo.
       if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
         throw new Error('Este item não segue o fluxo de fornecedor');
       }
@@ -650,16 +651,38 @@ export default async function (req: Request): Promise<Response> {
       }
       const ocNumber = String(body.oc_number || body.ocNumber || '').trim();
       if (!ocNumber) throw new Error('Informe o número da OC');
+      const ocDate =
+        typeof body.oc_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.oc_date)
+          ? body.oc_date
+          : now.slice(0, 10);
+      const ocAt = new Date(`${ocDate}T12:00:00`).toISOString();
+
+      const deadlineDays = Math.round(Number(body.return_deadline_days));
+      let expectedReturn: string | null =
+        typeof body.expected_return_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.expected_return_date)
+          ? body.expected_return_date
+          : null;
+      if (!expectedReturn && deadlineDays > 0) {
+        const due = new Date(`${ocDate}T12:00:00`);
+        due.setDate(due.getDate() + deadlineDays);
+        expectedReturn = due.toISOString().slice(0, 10);
+      }
 
       extra.oc_number = ocNumber;
-      extra.oc_issued_at = now;
+      extra.oc_issued_at = ocAt;
       extra.oc_issued_by = user.email;
+      if (expectedReturn) {
+        if (deadlineDays > 0) extra.return_deadline_days = deadlineDays;
+        extra.expected_return_date = expectedReturn;
+        extra.return_deadline_alerts = [];
+      }
       next = 'awaiting_oc_approval';
 
       await mirrorGdm(base44, item.gdm_id, {
         oc_number: ocNumber,
         oc_issued_by: user.email,
-        oc_issued_at: now,
+        oc_issued_at: ocAt,
+        ...(expectedReturn ? { expected_return_date: expectedReturn } : {}),
       });
     } else if (action === 'confirm_oc_approved') {
       // Usuário autorizado de Serviços confirma que a OC foi aprovada e
@@ -913,6 +936,49 @@ export default async function (req: Request): Promise<Response> {
         ).toISOString();
       }
       next = prev;
+    } else if (action === 'set_return_deadline') {
+      // PREVISÃO DE RETORNO (Serviços) — registrada exclusivamente após a
+      // emissão da Ordem de Compra. Aceita data prevista direta ou prazo em
+      // dias (calculado a partir da data de emissão da OC). Alterações
+      // posteriores exigem justificativa; prazo anterior, novo prazo,
+      // responsável, data e motivo ficam registrados no histórico da GDM.
+      if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
+        throw new Error('Este item não segue o fluxo de fornecedor');
+      }
+      if (!can('send_to_supplier')) {
+        throw new Error('Sem permissão para definir a previsão de retorno');
+      }
+      if (!item.oc_number) {
+        throw new Error('A previsão de retorno só pode ser registrada após a emissão da Ordem de Compra (OC)');
+      }
+      if (['completed', 'cancelled', 'rejected', 'discard_approved'].includes(prev)) {
+        throw new Error('Processo encerrado — a previsão de retorno não pode ser alterada');
+      }
+      const justification = String(observation || '').trim();
+      if (item.expected_return_date && !justification) {
+        throw new Error('Informe a justificativa da alteração do prazo de retorno');
+      }
+      const deadlineDays = Math.round(Number(body.return_deadline_days));
+      let expectedReturn: string | null =
+        typeof body.expected_return_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.expected_return_date)
+          ? body.expected_return_date
+          : null;
+      if (!expectedReturn && deadlineDays > 0) {
+        const baseDate = (item.oc_issued_at || now).slice(0, 10);
+        const due = new Date(`${baseDate}T12:00:00`);
+        due.setDate(due.getDate() + deadlineDays);
+        expectedReturn = due.toISOString().slice(0, 10);
+      }
+      if (!expectedReturn) {
+        throw new Error('Informe o prazo de retorno em dias ou a data prevista de retorno');
+      }
+
+      extra.expected_return_date = expectedReturn;
+      if (deadlineDays > 0) extra.return_deadline_days = deadlineDays;
+      extra.return_deadline_alerts = [];
+      next = prev;
+
+      await mirrorGdm(base44, item.gdm_id, { expected_return_date: expectedReturn });
     } else if (action === 'return_step') {
       // CORREÇÃO DE FLUXO — Retorno de Etapa: devolve o item à etapa
       // imediatamente anterior com justificativa obrigatória. Autorização
@@ -1151,14 +1217,32 @@ export default async function (req: Request): Promise<Response> {
                 observation: String(observation || '').trim(),
               }
             : null;
+        // Alteração de previsão de retorno: registrada no histórico da GDM
+        // com prazo anterior, novo prazo, responsável, data e justificativa.
+        const deadlineEntry =
+          action === 'set_return_deadline'
+            ? {
+                action: 'set_return_deadline',
+                user: user.email,
+                user_name: displayNameOf(user),
+                role: user.role,
+                timestamp: new Date().toISOString(),
+                details: `Alteração de Prazo de Retorno do item ${item.item_number} — OC ${item.oc_number}. Prazo anterior: ${item.expected_return_date || 'não informado'}. Novo prazo: ${extra.expected_return_date}. Motivo: ${String(observation || '').trim() || 'registro inicial da previsão de retorno'}`,
+                previous_status: prev,
+                new_status: next,
+                step_name: 'Alteração de Prazo de Retorno',
+                observation: String(observation || '').trim(),
+              }
+            : null;
+        const specialEntry = returnEntry || deadlineEntry;
         const shouldUpdateStatus = !!target && target !== gdm.status && gdm.status !== 'rejected';
-        if (shouldUpdateStatus || returnEntry) {
+        if (shouldUpdateStatus || specialEntry) {
           await base44.asServiceRole.entities.GDM.update(gdm.id, {
             ...(shouldUpdateStatus ? { status: target } : {}),
             history: [
               ...(gdm.history || []),
-              ...(returnEntry
-                ? [returnEntry]
+              ...(specialEntry
+                ? [specialEntry]
                 : [
                     {
                       action: 'status_synced_from_items',

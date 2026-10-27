@@ -1,8 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 
 // ALERTAS DE PRAZO DE RETORNO — controle automático por equipamento, a partir
-// da data prevista de retorno registrada no envio ao fornecedor
-// (expected_return_date, com fallback para o prazo da cotação, quote_deadline).
+// da data prevista de retorno registrada por Serviços APÓS a emissão da Ordem
+// de Compra (expected_return_date) — nunca antes da formalização com o
+// fornecedor (a contagem inicia na emissão da OC + previsão de retorno).
 // Executado diariamente pelo workflow "Alerta de Prazos de Retorno".
 // Marcos notificados, cada um uma única vez por ciclo (return_deadline_alerts):
 //   15d     — faltam até 15 dias para o vencimento
@@ -57,7 +58,7 @@ export default async function (req: Request): Promise<Response> {
 
     for (const item of items || []) {
       if (!MONITORED_STATUSES.includes(item.status)) continue;
-      const due = item.expected_return_date || item.quote_deadline;
+      const due = item.expected_return_date;
       if (!due) continue;
       const diffDays = (new Date(`${due}T23:59:59`).getTime() - now.getTime()) / 86400000;
 

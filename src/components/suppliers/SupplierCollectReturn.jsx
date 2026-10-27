@@ -67,7 +67,9 @@ export default function SupplierCollectReturn({ items, gdms }) {
             <span className="font-semibold text-red-700">{buckets[0].rows.length}</span> atrasados
           </span>
           {noDeadline > 0 && (
-            <span className="text-slate-400">{noDeadline} sem prazo informado no envio</span>
+            <span className="text-slate-400">
+              {noDeadline} aguardando previsão de retorno (pós-OC)
+            </span>
           )}
         </CardContent>
       </Card>
@@ -94,6 +96,7 @@ export default function SupplierCollectReturn({ items, gdms }) {
                       <TableHead>Equipamento</TableHead>
                       <TableHead>SN</TableHead>
                       <TableHead>Data de envio</TableHead>
+                      <TableHead>OC</TableHead>
                       <TableHead>Prazo acordado</TableHead>
                       <TableHead>{key === 'overdue' ? 'Dias em atraso' : 'Dias restantes'}</TableHead>
                       <TableHead>Responsável interno</TableHead>
@@ -106,6 +109,18 @@ export default function SupplierCollectReturn({ items, gdms }) {
                         <TableCell>{r.equipment}</TableCell>
                         <TableCell className="text-slate-500">{r.serialNumber}</TableCell>
                         <TableCell>{formatDateBR(r.sentAt)}</TableCell>
+                        <TableCell>
+                          {r.ocNumber ? (
+                            <span>
+                              {r.ocNumber}
+                              <span className="block text-xs text-slate-500">
+                                {formatDateBR(r.ocDate)}
+                              </span>
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
                         <TableCell>{formatDateBR(r.dueDate)}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={meta.badge}>
@@ -119,7 +134,7 @@ export default function SupplierCollectReturn({ items, gdms }) {
                     ))}
                     {bucketRows.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-16 text-center text-slate-500">
+                        <TableCell colSpan={8} className="h-16 text-center text-slate-500">
                           Nenhum equipamento nesta categoria.
                         </TableCell>
                       </TableRow>

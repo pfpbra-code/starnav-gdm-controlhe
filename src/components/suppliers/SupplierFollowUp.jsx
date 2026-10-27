@@ -18,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Truck, Search } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Truck, Search, History } from 'lucide-react';
 import {
   possessionItems,
   followUpRow,
@@ -29,10 +30,11 @@ import {
 } from '@/lib/supplierControl';
 
 /**
- * Follow-up de Fornecedores — todos os equipamentos em posse dos fornecedores,
- * com dias em posse, dias restantes e situação automática de prazo.
+ * Follow-up de Fornecedores — equipamentos em posse dos fornecedores, com OC,
+ * previsão de retorno (registrada exclusivamente após a emissão da OC),
+ * dias restantes/atraso e histórico de alterações de prazo.
  */
-export default function SupplierFollowUp({ items, gdms }) {
+export default function SupplierFollowUp({ items, gdms, histories = [] }) {
   const [supplierF, setSupplierF] = useState('all');
   const [vesselF, setVesselF] = useState('all');
   const [statusF, setStatusF] = useState('all');
@@ -45,6 +47,21 @@ export default function SupplierFollowUp({ items, gdms }) {
     const gdmById = new Map((gdms || []).map((g) => [g.id, g]));
     return possessionItems(items).map((i) => followUpRow(i, gdmById.get(i.gdm_id)));
   }, [items, gdms]);
+
+  // Histórico de alterações de previsão de retorno por item (ação Serviços).
+  const deadlineChangesByItem = useMemo(() => {
+    const map = new Map();
+    (histories || [])
+      .filter((h) => h.action === 'set_return_deadline' && h.item_id)
+      .forEach((h) => {
+        if (!map.has(h.item_id)) map.set(h.item_id, []);
+        map.get(h.item_id).push(h);
+      });
+    map.forEach((list) =>
+      list.sort((a, b) => new Date(a.created_date) - new Date(b.created_date)),
+    );
+    return map;
+  }, [histories]);
 
   const supplierOptions = useMemo(
     () => [...new Set(rows.map((r) => r.supplierName))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
@@ -168,7 +185,8 @@ export default function SupplierFollowUp({ items, gdms }) {
             )}
           </div>
           <p className="text-xs text-slate-500">
-            Período filtra pela data de envio ao fornecedor. {filtered.length} equipamento(s) em
+            Período filtra pela data de envio ao fornecedor. A previsão de retorno e a contagem
+            de prazo iniciam somente após a emissão da OC. {filtered.length} equipamento(s) em
             posse de fornecedores.
           </p>
         </CardContent>
@@ -186,16 +204,20 @@ export default function SupplierFollowUp({ items, gdms }) {
                 <TableHead>GDM</TableHead>
                 <TableHead>Embarcação</TableHead>
                 <TableHead>Envio</TableHead>
-                <TableHead>Prazo prometido</TableHead>
+                <TableHead>OC</TableHead>
+                <TableHead>Data da OC</TableHead>
+                <TableHead>Prazo (dias)</TableHead>
                 <TableHead>Retorno previsto</TableHead>
                 <TableHead>Status atual</TableHead>
                 <TableHead>Dias em posse</TableHead>
                 <TableHead>Dias restantes</TableHead>
+                <TableHead>Alterações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((r) => {
                 const ds = DEADLINE_STATES[r.deadlineKey];
+                const changes = deadlineChangesByItem.get(r.item.id) || [];
                 return (
                   <TableRow key={r.item.id} className="hover:bg-slate-50">
                     <TableCell className="font-medium">{r.supplierName}</TableCell>
@@ -204,7 +226,9 @@ export default function SupplierFollowUp({ items, gdms }) {
                     <TableCell>{r.gdmNumber}</TableCell>
                     <TableCell className="text-slate-500">{r.vesselName}</TableCell>
                     <TableCell>{formatDateBR(r.sentAt)}</TableCell>
-                    <TableCell>{formatDateBR(r.promisedDeadline)}</TableCell>
+                    <TableCell className="font-medium">{r.ocNumber || '—'}</TableCell>
+                    <TableCell>{formatDateBR(r.ocDate)}</TableCell>
+                    <TableCell>{r.prazoDays ? `${r.prazoDays} dias` : '—'}</TableCell>
                     <TableCell>{formatDateBR(r.expectedReturn)}</TableCell>
                     <TableCell>
                       {r.statusKey ? (
@@ -231,7 +255,45 @@ export default function SupplierFollowUp({ items, gdms }) {
                           {ds.emoji} {r.daysRemaining} dias
                         </Badge>
                       ) : (
-                        <span className="text-slate-400">Sem prazo</span>
+                        <span className="text-slate-400">Sem previsão</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {changes.length > 0 ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+                              <History className="h-3 w-3 mr-1" />
+                              {changes.length}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 p-3" align="start">
+                            <p className="text-xs font-semibold text-slate-700 mb-2">
+                              Histórico de alterações de prazo
+                            </p>
+                            {changes.map((h) => (
+                              <div
+                                key={h.id}
+                                className="text-xs border-b border-slate-100 last:border-0 py-1.5"
+                              >
+                                <p className="font-medium text-slate-700">
+                                  {formatDateBR(h.created_date)} — {h.user_email}
+                                </p>
+                                <p className="text-slate-500">
+                                  Novo prazo: {h.data?.expected_return_date || '—'}
+                                  {h.data?.return_deadline_days
+                                    ? ` (${h.data.return_deadline_days} dias)`
+                                    : ''}
+                                </p>
+                                {h.observation && (
+                                  <p className="text-slate-500 italic">“{h.observation}”</p>
+                                )}
+                              </div>
+                            ))}
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <span className="text-slate-400">—</span>
                       )}
                     </TableCell>
                   </TableRow>
@@ -239,7 +301,7 @@ export default function SupplierFollowUp({ items, gdms }) {
               })}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-32 text-center">
+                  <TableCell colSpan={14} className="h-32 text-center">
                     <Truck className="h-8 w-8 mx-auto text-slate-300 mb-2" />
                     <p className="text-slate-500">
                       Nenhum equipamento em posse de fornecedores com os filtros atuais.

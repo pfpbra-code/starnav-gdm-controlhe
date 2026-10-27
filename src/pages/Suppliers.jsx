@@ -461,7 +461,7 @@ export default function Suppliers() {
         </TabsContent>
 
         <TabsContent value="followup" className="mt-4">
-          <SupplierFollowUp items={items} gdms={gdms} />
+          <SupplierFollowUp items={items} gdms={gdms} histories={histories} />
         </TabsContent>
 
         <TabsContent value="collect" className="mt-4">

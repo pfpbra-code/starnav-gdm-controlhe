@@ -163,7 +163,7 @@ export function buildSupplierStats({ suppliers, items, gdms, histories, certific
         returnSpans.push(
           Math.max(0, Math.floor((new Date(backAt) - new Date(sentAt)) / 86400000)),
         );
-        const due = i.expected_return_date || i.quote_deadline;
+        const due = i.expected_return_date;
         if (due) onTimeReturns.push(new Date(backAt) <= new Date(`${due}T23:59:59`));
         const m = new Date(backAt);
         if (m.getMonth() === now.getMonth() && m.getFullYear() === now.getFullYear()) {
@@ -263,9 +263,13 @@ export const formatDateBR = (value) =>
 
 const endOfDay = (dateStr) => new Date(`${dateStr}T23:59:59`).getTime();
 
-/** Data prevista de retorno do item (registrada no envio ao fornecedor). */
+/**
+ * Data prevista de retorno do item — registrada por Serviços exclusivamente
+ * após a emissão da Ordem de Compra (regra do fluxo: nenhum prazo antes da
+ * formalização com o fornecedor; a contagem inicia na emissão da OC).
+ */
 export function itemDueDate(item) {
-  return item.expected_return_date || item.quote_deadline || null;
+  return item.expected_return_date || null;
 }
 
 /**
@@ -316,6 +320,9 @@ export function followUpRow(item, gdm, now = new Date()) {
     gdmNumber: gdm?.gdm_number || "—",
     vesselName: item.vessel_name || gdm?.vessel_name || "—",
     sentAt: item.sent_to_supplier_at,
+    ocNumber: item.oc_number || null,
+    ocDate: item.oc_issued_at || null,
+    prazoDays: item.return_deadline_days || null,
     promisedDeadline: item.quote_deadline || null,
     expectedReturn: item.expected_return_date || null,
     statusKey: supplierItemStatusKey(item, gdm),

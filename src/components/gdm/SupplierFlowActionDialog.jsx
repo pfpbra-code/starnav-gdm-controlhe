@@ -45,6 +45,8 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
   const [nfUrl, setNfUrl] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
   const [sentDate, setSentDate] = useState('');
+  const [carrier, setCarrier] = useState('');
+  const [ocDate, setOcDate] = useState('');
   const [deadlineMode, setDeadlineMode] = useState('days');
   const [deadlineDays, setDeadlineDays] = useState('');
   const [expectedReturnDate, setExpectedReturnDate] = useState('');
@@ -77,6 +79,8 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
     setNfUrl('');
     setPhotoUrl('');
     setSentDate(new Date().toISOString().slice(0, 10));
+    setCarrier('');
+    setOcDate(new Date().toISOString().slice(0, 10));
     setDeadlineMode('days');
     setDeadlineDays('');
     setExpectedReturnDate('');
@@ -155,11 +159,7 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
       payload.nf_url = nfUrl;
       payload.photo_url = photoUrl;
       payload.sent_date = sentDate;
-      if (deadlineMode === 'days') {
-        payload.return_deadline_days = Number(deadlineDays);
-      } else {
-        payload.expected_return_date = expectedReturnDate;
-      }
+      if (carrier.trim()) payload.carrier = carrier.trim();
     } else if (action === 'attach_quote' || action === 'renegotiate_quote') {
       payload.quote_value = Number(quoteValue);
       if (quoteUrl) payload.quote_document_url = quoteUrl;
@@ -181,6 +181,20 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
       payload.pwt_number = pwtNumber.trim();
     } else if (action === 'issue_oc') {
       payload.oc_number = ocNumber.trim();
+      if (ocDate) payload.oc_date = ocDate;
+      if (deadlineMode === 'days' ? Number(deadlineDays) > 0 : !!expectedReturnDate) {
+        if (deadlineMode === 'days') {
+          payload.return_deadline_days = Number(deadlineDays);
+        } else {
+          payload.expected_return_date = expectedReturnDate;
+        }
+      }
+    } else if (action === 'set_return_deadline') {
+      if (deadlineMode === 'days') {
+        payload.return_deadline_days = Number(deadlineDays);
+      } else {
+        payload.expected_return_date = expectedReturnDate;
+      }
     } else if (action === 'register_return_dispatch') {
       if (dispatchDate) payload.dispatch_date = dispatchDate;
     } else if (action === 'issue_ot') {
@@ -199,11 +213,7 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
     actionMutation.isPending ||
     !signatureChecked ||
     (needsSupplier && (!supplierId || !expectedShipDate)) ||
-    (action === 'attach_shipping_proof' &&
-      (!nfUrl ||
-        !photoUrl ||
-        !sentDate ||
-        (deadlineMode === 'days' ? !Number(deadlineDays) : !expectedReturnDate))) ||
+    (action === 'attach_shipping_proof' && (!nfUrl || !photoUrl || !sentDate)) ||
     (action === 'attach_quote' && (!quoteUrl || !quoteValue || !quoteDeadline || !warrantyDays)) ||
     (action === 'renegotiate_quote' && !quoteValue) ||
     (action === 'update_warranty' && (!warrantyDays || Number(warrantyDays) <= 0)) ||
@@ -211,7 +221,10 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
       (!decision || (decision === 'reject' && (!rejectOutcome || !observation.trim())))) ||
     (action === 'register_supplier_return' && (!returnNfUrl || !returnProofUrl)) ||
     (action === 'issue_pwt' && !pwtNumber.trim()) ||
-    (action === 'issue_oc' && !ocNumber.trim()) ||
+    (action === 'issue_oc' && (!ocNumber.trim() || !ocDate)) ||
+    (action === 'set_return_deadline' &&
+      ((deadlineMode === 'days' ? !Number(deadlineDays) : !expectedReturnDate) ||
+        (!!item?.expected_return_date && !observation.trim()))) ||
     (action === 'issue_ot' && !otNumber.trim()) ||
     (action === 'confirm_return_receipt' &&
       (!receiptNfUrl ||
@@ -220,13 +233,17 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
           item?.ot_status !== 'closed' &&
           !otDecision)));
 
-  // Prévia da data prevista de retorno: dias → cálculo automático (envio + prazo).
+  // Prévia da data prevista de retorno: dias → cálculo automático a partir da
+  // data de emissão da OC (issue_oc / set_return_deadline — o prazo nunca é
+  // solicitado na etapa de envio ao fornecedor).
   const expectedReturnPreview = (() => {
-    if (action !== 'attach_shipping_proof') return '';
+    if (!['issue_oc', 'set_return_deadline'].includes(action)) return '';
     if (deadlineMode === 'date') return expectedReturnDate || '';
     const days = Number(deadlineDays);
-    if (sentDate && days > 0) {
-      const d = new Date(`${sentDate}T12:00:00`);
+    const baseDate =
+      ocDate || item?.oc_issued_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+    if (days > 0) {
+      const d = new Date(`${baseDate}T12:00:00`);
       d.setDate(d.getDate() + days);
       return d.toISOString().slice(0, 10);
     }
@@ -337,67 +354,20 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Prazo de retorno *</Label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setDeadlineMode('days')}
-                      className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
-                        deadlineMode === 'days'
-                          ? 'border-sky-500 bg-sky-50 text-sky-700 font-medium'
-                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      Prazo (dias)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeadlineMode('date')}
-                      className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
-                        deadlineMode === 'date'
-                          ? 'border-sky-500 bg-sky-50 text-sky-700 font-medium'
-                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      Data prevista
-                    </button>
-                  </div>
+                  <Label>Transportadora</Label>
+                  <Input
+                    value={carrier}
+                    onChange={(e) => setCarrier(e.target.value)}
+                    placeholder="Quando aplicável"
+                  />
                 </div>
               </div>
-              {deadlineMode === 'days' ? (
-                <div className="space-y-2">
-                  <Label>Prazo de retorno acordado (dias) *</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={deadlineDays}
-                    onChange={(e) => setDeadlineDays(e.target.value)}
-                    placeholder="Ex: 30"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Data prevista de retorno *</Label>
-                  <Input
-                    type="date"
-                    value={expectedReturnDate}
-                    onChange={(e) => setExpectedReturnDate(e.target.value)}
-                  />
-                </div>
-              )}
-              {expectedReturnPreview && (
-                <p className="text-xs text-slate-600 bg-sky-50 border border-sky-200 rounded p-2">
-                  Data prevista de retorno:{' '}
-                  <strong>{expectedReturnLabel}</strong>. O sistema passa a monitorar o prazo e
-                  atualizar automaticamente a situação do item (próximo do prazo, atenção e
-                  atrasado), com alertas para Serviços e Administradores.
-                </p>
-              )}
               <p className="text-xs text-slate-500">
                 Ambos os anexos são obrigatórios: sem a NF assinada e a foto do envio o item não
                 pode ser marcado como enviado ao fornecedor. A foto pode ser tirada pela câmera
-                do celular ou escolhida da galeria.
+                do celular ou escolhida da galeria. O prazo de retorno NÃO é informado nesta
+                etapa: ele é registrado por Serviços somente após a emissão da Ordem de Compra
+                (OC).
               </p>
             </>
           )}
@@ -675,17 +645,116 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
 
           {action === 'issue_oc' && (
             <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Número da Ordem de Compra (OC) *</Label>
+                  <Input
+                    value={ocNumber}
+                    onChange={(e) => setOcNumber(e.target.value)}
+                    placeholder="Ex: OC-00456"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data de emissão da OC *</Label>
+                  <Input
+                    type="date"
+                    value={ocDate}
+                    onChange={(e) => setOcDate(e.target.value)}
+                  />
+                </div>
+              </div>
               <div className="space-y-2">
-                <Label>Número da Ordem de Compra (OC) *</Label>
-                <Input
-                  value={ocNumber}
-                  onChange={(e) => setOcNumber(e.target.value)}
-                  placeholder="Ex: OC-00456"
+                <Label>Previsão de retorno informada pelo fornecedor (opcional)</Label>
+                <DeadlineModeToggle mode={deadlineMode} onChange={setDeadlineMode} />
+                <DeadlineInput
+                  mode={deadlineMode}
+                  days={deadlineDays}
+                  onDaysChange={setDeadlineDays}
+                  date={expectedReturnDate}
+                  onDateChange={setExpectedReturnDate}
+                />
+                {expectedReturnPreview && (
+                  <p className="text-xs text-slate-600 bg-sky-50 border border-sky-200 rounded p-2">
+                    Data prevista de retorno:{' '}
+                    <strong>{expectedReturnLabel}</strong>. A contagem do prazo inicia na emissão
+                    da OC — Serviços pode alterar a previsão posteriormente com justificativa.
+                  </p>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                A previsão de retorno só existe a partir da emissão da OC — nunca antes. Após a
+                emissão, o item aguarda a confirmação de aprovação e envio da OC ao fornecedor.
+              </p>
+            </>
+          )}
+
+          {action === 'set_return_deadline' && (
+            <>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm space-y-1">
+                <p className="flex justify-between">
+                  <span className="text-slate-500">OC:</span>
+                  <span className="font-medium">{item?.oc_number || '—'}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-slate-500">Emissão da OC:</span>
+                  <span className="font-medium">
+                    {item?.oc_issued_at
+                      ? new Date(item.oc_issued_at).toLocaleDateString('pt-BR')
+                      : '—'}
+                  </span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-slate-500">Previsão atual:</span>
+                  <span className="font-medium">
+                    {item?.expected_return_date
+                      ? new Date(
+                          `${item.expected_return_date}T12:00:00`,
+                        ).toLocaleDateString('pt-BR')
+                      : 'Não registrada'}
+                  </span>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  {item?.expected_return_date
+                    ? 'Nova previsão de retorno *'
+                    : 'Previsão de retorno *'}
+                </Label>
+                <DeadlineModeToggle mode={deadlineMode} onChange={setDeadlineMode} />
+                <DeadlineInput
+                  mode={deadlineMode}
+                  days={deadlineDays}
+                  onDaysChange={setDeadlineDays}
+                  date={expectedReturnDate}
+                  onDateChange={setExpectedReturnDate}
+                />
+                {expectedReturnPreview && (
+                  <p className="text-xs text-slate-600 bg-sky-50 border border-sky-200 rounded p-2">
+                    Data prevista de retorno: <strong>{expectedReturnLabel}</strong>
+                    {deadlineMode === 'days' && ' (contada a partir da emissão da OC)'}.
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  {item?.expected_return_date
+                    ? 'Justificativa da alteração *'
+                    : 'Observações'}
+                </Label>
+                <Textarea
+                  value={observation}
+                  onChange={(e) => setObservation(e.target.value)}
+                  rows={3}
+                  placeholder={
+                    item?.expected_return_date
+                      ? 'Ex: Fornecedor solicitou extensão para conclusão do reparo'
+                      : 'Opcional'
+                  }
                 />
               </div>
               <p className="text-xs text-slate-500">
-                Após a emissão, o item aguarda a confirmação de aprovação e envio da OC ao
-                fornecedor.
+                Toda alteração fica registrada no histórico da GDM: prazo anterior, novo prazo,
+                responsável, data e justificativa.
               </p>
             </>
           )}
@@ -825,7 +894,7 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
             </>
           )}
 
-          {action !== 'maintenance_decision' && (
+          {!['maintenance_decision', 'set_return_deadline'].includes(action) && (
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea
@@ -860,4 +929,40 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
 
 function Label({ children }) {
   return <span className="text-sm font-medium text-slate-700">{children}</span>;
+}
+
+/** Alternância de forma de informar a previsão de retorno: prazo em dias ou data. */
+function DeadlineModeToggle({ mode, onChange }) {
+  const buttonClass = (active) =>
+    `flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
+      active
+        ? 'border-sky-500 bg-sky-50 text-sky-700 font-medium'
+        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+    }`;
+  return (
+    <div className="flex gap-2">
+      <button type="button" onClick={() => onChange('days')} className={buttonClass(mode === 'days')}>
+        Prazo (dias)
+      </button>
+      <button type="button" onClick={() => onChange('date')} className={buttonClass(mode === 'date')}>
+        Data prevista
+      </button>
+    </div>
+  );
+}
+
+/** Campo da previsão de retorno conforme a forma escolhida (dias ou data). */
+function DeadlineInput({ mode, days, onDaysChange, date, onDateChange }) {
+  return mode === 'days' ? (
+    <Input
+      type="number"
+      min="1"
+      step="1"
+      value={days}
+      onChange={(e) => onDaysChange(e.target.value)}
+      placeholder="Ex: 30"
+    />
+  ) : (
+    <Input type="date" value={date} onChange={(e) => onDateChange(e.target.value)} />
+  );
 }

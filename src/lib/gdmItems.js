@@ -96,6 +96,7 @@ export const ITEM_ACTION_LABELS = {
   issue_pwt: "PWT Emitido (Planejamento)",
   issue_oc: "OC Emitida (Serviços)",
   confirm_oc_approved: "OC Aprovada e Enviada ao Fornecedor (Serviços)",
+  set_return_deadline: "Previsão de Retorno Definida/Alterada (Serviços)",
   issue_ot: "OT Emitida (Serviços)",
   close_ot: "OT Fechada (Almoxarifado)",
   request_nf: "Solicitação de Emissão de NF (Serviços)",
@@ -270,6 +271,21 @@ export function availableItemActions(item, can, user, responsibleVesselIds) {
       actions.push({
         action: "confirm_oc_approved",
         label: "OC aprovada e enviada ao fornecedor",
+      });
+    }
+
+    // Previsão de retorno (Serviços): registrada/alterada exclusivamente após
+    // a emissão da OC — nunca na criação, na definição do fornecedor ou no envio.
+    if (
+      item.oc_number &&
+      ["awaiting_oc_approval", "awaiting_return", "in_treatment", "awaiting_supplier_return"].includes(s) &&
+      can("send_to_supplier")
+    ) {
+      actions.push({
+        action: "set_return_deadline",
+        label: item.expected_return_date
+          ? "Alterar previsão de retorno"
+          : "Definir previsão de retorno",
       });
     }
 
@@ -633,7 +649,7 @@ export function nextActionText(item) {
         ? "Cotação aprovada. Serviços deve emitir a Ordem de Compra (OC)."
         : "PWT emitido. Serviços deve emitir a Ordem de Compra (OC).";
     case "awaiting_oc_approval":
-      return "OC emitida. Aguardando a confirmação de que a OC foi aprovada e enviada ao fornecedor.";
+      return "OC emitida. Serviços pode registrar a previsão de retorno informada pelo fornecedor e deve confirmar quando a OC for aprovada e enviada.";
     case "awaiting_return":
       return item.return_dispatched_at
         ? "Material saiu para entrega. O Almoxarifado deve confirmar o recebimento anexando a NF e o laudo."
@@ -733,13 +749,15 @@ export function sortItemsByPriority(items, can, user, responsibleVesselIds) {
 }
 
 /**
- * Alerta de prazo de retorno por item, controlado individualmente pelo prazo
- * informado na cotação do fornecedor (quote_deadline). O alerta desaparece
- * quando o item é recebido ou o fluxo é finalizado (status fora da lista).
+ * Alerta de prazo de retorno por item, controlado individualmente pela
+ * previsão de retorno registrada por Serviços APÓS a emissão da Ordem de
+ * Compra (expected_return_date) — nunca antes da formalização com o
+ * fornecedor. O alerta desaparece quando o item é recebido ou o fluxo é
+ * finalizado (status fora da lista).
  * Retorna 'overdue' (vencido), 'near' (próximo), 'ok' (no prazo) ou null.
  */
 export function returnDeadlineState(item) {
-  if (!item?.quote_deadline) return null;
+  if (!item?.expected_return_date) return null;
   const IN_FLOW = [
     "awaiting_maintenance_authorization",
     "discount_negotiation",
@@ -750,7 +768,7 @@ export function returnDeadlineState(item) {
     "in_treatment",
   ];
   if (!IN_FLOW.includes(item.status)) return null;
-  const deadline = new Date(`${item.quote_deadline}T23:59:59`);
+  const deadline = new Date(`${item.expected_return_date}T23:59:59`);
   const diffDays = (deadline - new Date()) / 86400000;
   if (diffDays < 0) return "overdue";
   if (diffDays <= 3) return "near";
@@ -796,6 +814,7 @@ export const SUPPLIER_FLOW_ACTIONS = [
   "issue_pwt",
   "issue_oc",
   "confirm_oc_approved",
+  "set_return_deadline",
   "register_return_dispatch",
   "confirm_return_receipt",
   "update_warranty",

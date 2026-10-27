@@ -124,7 +124,7 @@ export function isOpenProcess(category) {
   return !['finished', 'stock_returned', 'discarded', 'cancelled'].includes(category);
 }
 
-/** Prazo de retorno vencido (marcação sobreposta, via quote_deadline). */
+/** Prazo de retorno vencido (marcação sobreposta, via expected_return_date — prazo pós-OC). */
 export function isOverdue(item) {
   return returnDeadlineState(item) === 'overdue';
 }
@@ -247,7 +247,9 @@ export function controlRowMeta({ item }) {
   const daysOpen = created
     ? Math.max(0, Math.floor((Date.now() - created.getTime()) / 86400000))
     : null;
-  const deadline = item?.quote_deadline ? new Date(`${item.quote_deadline}T23:59:59`) : null;
+  const deadline = item?.expected_return_date
+    ? new Date(`${item.expected_return_date}T23:59:59`)
+    : null;
   const overdue = isOverdue(item);
   const daysLate = overdue
     ? Math.max(1, Math.ceil((Date.now() - deadline.getTime()) / 86400000))
