@@ -7,8 +7,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PhotoEvidenceGrid from '@/components/gdm/PhotoEvidenceGrid';
-import PublicAttachmentsPanel from '@/components/gdm/PublicAttachmentsPanel';
-import { buildItemDocuments } from '@/lib/itemDocuments';
 import {
   Package,
   Ship,
@@ -85,13 +83,6 @@ export default function ItemPublic() {
   const photoHistory = Array.isArray(data.photo_history)
     ? data.photo_history.filter((p) => p.gdm_item_id !== item.id)
     : [];
-  const documents = buildItemDocuments({
-    item,
-    gdm: gdm || {},
-    photos: itemPhotos,
-    certifications: Array.isArray(data.certifications) ? data.certifications : [],
-  });
-
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200">
@@ -143,10 +134,9 @@ export default function ItemPublic() {
         </div>
 
         <Tabs defaultValue="consulta" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger value="consulta">Consultar</TabsTrigger>
             <TabsTrigger value="evidencias">Evidências</TabsTrigger>
-            <TabsTrigger value="anexos">Anexos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="consulta" className="space-y-6">
@@ -326,10 +316,6 @@ export default function ItemPublic() {
                 </CardContent>
               </Card>
             )}
-          </TabsContent>
-
-          <TabsContent value="anexos" className="space-y-6">
-            <PublicAttachmentsPanel documents={documents} />
           </TabsContent>
         </Tabs>
 

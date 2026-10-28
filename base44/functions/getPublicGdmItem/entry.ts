@@ -130,32 +130,9 @@ export default async function (req: Request): Promise<Response> {
         created_date: item.created_date,
         updated_date: item.updated_date,
         completed_at: item.completed_at,
-        // Documentos do processo consultáveis pelo QR Code (URLs públicas)
-        quote_document_url: item.quote_document_url || null,
-        quote_attached_at: item.quote_attached_at || null,
-        quote_attached_by: item.quote_attached_by || null,
-        quote_proposal_number: item.quote_proposal_number || null,
-        quotes_history: Array.isArray(item.quotes_history)
-          ? item.quotes_history.map((q: any) => ({
-              quote_document_url: q.quote_document_url || null,
-              quote_proposal_number: q.quote_proposal_number || null,
-              outcome: q.outcome || null,
-              registered_at: q.registered_at || null,
-              registered_by: q.registered_by || null,
-            }))
-          : [],
-        shipping_proof_url: item.shipping_proof_url || null,
-        shipping_photo_url: item.shipping_photo_url || null,
-        shipping_proof_at: item.shipping_proof_at || null,
-        shipping_proof_by: item.shipping_proof_by || null,
-        return_receipt_nf_url: item.return_receipt_nf_url || null,
-        return_laudo_url: item.return_laudo_url || null,
-        return_nf_url: item.return_nf_url || null,
-        return_proof_url: item.return_proof_url || null,
-        return_received_at: item.return_received_at || null,
-        return_received_by: item.return_received_by || null,
-        return_registered_at: item.return_registered_at || null,
-        return_registered_by: item.return_registered_by || null,
+        // Anexos e documentos (cotações, notas fiscais, laudos, comprovantes)
+        // NÃO são expostos na consulta pública: podem conter informação
+        // sigilosa e o link do QR Code é acessível a qualquer pessoa.
       },
       gdm: {
         gdm_number: gdm.gdm_number,
@@ -184,8 +161,6 @@ export default async function (req: Request): Promise<Response> {
         certificate_date: c.certificate_date,
         certifying_company: c.certifying_company,
         expires_at: c.expires_at,
-        document_url: c.document_url || null,
-        image_url: c.image_url || null,
         registered_at: c.registered_at,
       })),
     });
