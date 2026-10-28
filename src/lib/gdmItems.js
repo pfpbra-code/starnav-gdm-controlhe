@@ -31,11 +31,13 @@ export const ITEM_STATUS_LABELS = {
   awaiting_validity_registration: "Aguardando Cadastro da Validade",
   pending_maintenance_authorization: "Aguardando Aprovação da Manutenção",
   awaiting_maintenance_authorization: "Aguardando Aprovação da Manutenção",
+  awaiting_services_analysis: "Aguardando Análise de Serviços",
   repair_approved: "Reparo Aprovado",
   awaiting_pwt: "Aguardando Emissão de PWT (Planejamento)",
   awaiting_oc_issuance: "Aguardando Emissão da OC (Serviços)",
   awaiting_oc_approval: "Aguardando Aprovação da OC",
-  discount_negotiation: "Negociação de Desconto",
+  awaiting_discount: "Aguardando Desconto (Fornecedor)",
+  discount_negotiation: "Aguardando Desconto (Fornecedor)",
   awaiting_discard_confirmation: "Aguardando Confirmação do Descarte",
   discard_approved: "Descarte Aprovado",
   completed: "Finalizado",
@@ -60,10 +62,12 @@ export const ITEM_STATUS_COLORS = {
   awaiting_validity_registration: "bg-amber-100 text-amber-800",
   pending_maintenance_authorization: "bg-orange-100 text-orange-800",
   awaiting_maintenance_authorization: "bg-orange-100 text-orange-800",
+  awaiting_services_analysis: "bg-amber-100 text-amber-800",
   repair_approved: "bg-emerald-100 text-emerald-800",
   awaiting_pwt: "bg-cyan-100 text-cyan-800",
   awaiting_oc_issuance: "bg-indigo-100 text-indigo-800",
   awaiting_oc_approval: "bg-orange-100 text-orange-800",
+  awaiting_discount: "bg-violet-100 text-violet-800",
   discount_negotiation: "bg-violet-100 text-violet-800",
   awaiting_discard_confirmation: "bg-orange-100 text-orange-800",
   discard_approved: "bg-slate-200 text-slate-600",
@@ -90,8 +94,9 @@ export const ITEM_ACTION_LABELS = {
   select_supplier: "Fornecedor Definido (Serviços)",
   attach_shipping_proof: "Comprovante de Envio Anexado (Almoxarifado)",
   attach_quote: "Cotação Anexada (Serviços)",
-  maintenance_decision: "Decisão da Manutenção sobre a Cotação",
-  renegotiate_quote: "Nova Proposta Inserida (Serviços)",
+  maintenance_decision: "Análise Técnica da Cotação (Manutenção)",
+  services_discount_decision: "Análise de Desconto (Serviços)",
+  renegotiate_quote: "Nova Proposta Registrada (Serviços)",
   register_supplier_return: "NF de Retorno e Comprovante Registrados (Serviços)",
   confirm_supplier_return: "Retorno do Fornecedor Confirmado (Almoxarifado)",
   start_repair: "Reparo Iniciado no Fornecedor",
@@ -138,6 +143,8 @@ const NF_REQUEST_STATUSES = [
   "awaiting_shipping_proof",
   "sent_to_supplier",
   "awaiting_maintenance_authorization",
+  "awaiting_services_analysis",
+  "awaiting_discount",
   "discount_negotiation",
   "repair_approved",
   "in_treatment",
@@ -151,6 +158,8 @@ const NF_REQUEST_STATUSES = [
 const OT_ISSUE_STATUSES = [
   "sent_to_supplier",
   "awaiting_maintenance_authorization",
+  "awaiting_services_analysis",
+  "awaiting_discount",
   "discount_negotiation",
   "repair_approved",
   "in_treatment",
@@ -246,8 +255,17 @@ export function availableItemActions(item, can, user, responsibleVesselIds) {
       }
     }
 
-    if (s === "discount_negotiation" && can("send_to_supplier")) {
-      actions.push({ action: "renegotiate_quote", label: "Inserir nova proposta" });
+    // Cotação aprovada pela Manutenção: Serviços decide se solicita desconto
+    // ao fornecedor ou segue direto para a emissão da OC.
+    if (s === "awaiting_services_analysis" && can("send_to_supplier")) {
+      actions.push({
+        action: "services_discount_decision",
+        label: "Solicitar desconto ou emitir OC",
+      });
+    }
+
+    if (["awaiting_discount", "discount_negotiation"].includes(s) && can("send_to_supplier")) {
+      actions.push({ action: "renegotiate_quote", label: "Registrar nova proposta" });
     }
 
     if (s === "awaiting_supplier_return") {
@@ -403,7 +421,9 @@ export function previousStatusFor(item) {
     awaiting_shipping_proof: "awaiting_supplier_definition",
     sent_to_supplier: "awaiting_shipping_proof",
     awaiting_maintenance_authorization: "sent_to_supplier",
-    discount_negotiation: "awaiting_maintenance_authorization",
+    awaiting_services_analysis: "awaiting_maintenance_authorization",
+    awaiting_discount: "awaiting_services_analysis",
+    discount_negotiation: "awaiting_services_analysis",
     repair_approved: "awaiting_maintenance_authorization",
     in_treatment: "awaiting_maintenance_authorization",
     // PWT: novo fluxo (após validação da Coordenação + recebimento) ou legado
@@ -413,7 +433,7 @@ export function previousStatusFor(item) {
       : item.receipt_situation === "not_received"
         ? "awaiting_receipt"
         : "pending_coordinator",
-    awaiting_oc_issuance: "awaiting_maintenance_authorization",
+    awaiting_oc_issuance: "awaiting_services_analysis",
     awaiting_oc_approval: "awaiting_oc_issuance",
     awaiting_return: "awaiting_oc_approval",
     awaiting_supplier_return: "awaiting_maintenance_authorization",
