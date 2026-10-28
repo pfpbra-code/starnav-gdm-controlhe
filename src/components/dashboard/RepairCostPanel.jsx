@@ -52,25 +52,28 @@ export default function RepairCostPanel() {
     queryFn: () => base44.entities.GDMItem.list('-created_date', 500),
   });
 
+  // Custo do reparo: valor efetivamente contratado na OC; sem OC, o valor cotado.
+  const repairCost = (i) => Number(i.oc_value ?? i.quote_value ?? 0);
+
   const repairItems = React.useMemo(
     () =>
       items.filter(
         (i) =>
           i.destination === 'repair' &&
           COST_STATUSES.includes(i.status) &&
-          Number(i.quote_value) > 0,
+          Number(i.oc_value ?? i.quote_value) > 0,
       ),
     [items],
   );
 
-  const totalCost = repairItems.reduce((sum, i) => sum + (i.quote_value || 0), 0);
+  const totalCost = repairItems.reduce((sum, i) => sum + repairCost(i), 0);
 
   // Per equipment
   const perEquipment = React.useMemo(() => {
     const map = {};
     repairItems.forEach((i) => {
       const key = i.equipment_name || 'Não informado';
-      map[key] = (map[key] || 0) + (i.quote_value || 0);
+      map[key] = (map[key] || 0) + repairCost(i);
     });
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
@@ -114,7 +117,7 @@ export default function RepairCostPanel() {
         const ref = costDate(i);
         return ref && new Date(ref) >= start;
       })
-      .reduce((s, i) => s + (i.quote_value || 0), 0);
+      .reduce((s, i) => s + repairCost(i), 0);
 
   const monthCost = sumSince(monthStart);
   const quarterCost = sumSince(quarterStart);
