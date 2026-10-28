@@ -13,6 +13,7 @@ export const SUPPLIER_ITEM_STATUS = {
   awaiting_quote: "Aguardando Cotação",
   quote_received: "Cotação Recebida",
   quote_analysis: "Em Análise (Manutenção)",
+  services_analysis: "Em Análise (Serviços)",
   negotiating: "Negociação de Desconto",
   repair_approved: "Reparo Aprovado",
   in_repair: "Em Reparo",
@@ -30,6 +31,7 @@ export const SUPPLIER_ITEM_STATUS_COLORS = {
   awaiting_quote: "bg-amber-100 text-amber-800 border-amber-200",
   quote_received: "bg-sky-100 text-sky-800 border-sky-200",
   quote_analysis: "bg-violet-100 text-violet-800 border-violet-200",
+  services_analysis: "bg-amber-100 text-amber-800 border-amber-200",
   negotiating: "bg-violet-100 text-violet-800 border-violet-200",
   repair_approved: "bg-emerald-100 text-emerald-800 border-emerald-200",
   in_repair: "bg-blue-100 text-blue-800 border-blue-200",
@@ -62,7 +64,10 @@ export function supplierItemStatusKey(item, gdm) {
       return hasQuote ? "quote_received" : "awaiting_quote";
     case "awaiting_maintenance_authorization":
       return "quote_analysis";
+    case "awaiting_services_analysis":
+      return "services_analysis";
     case "discount_negotiation":
+    case "awaiting_discount":
       return "negotiating";
     case "repair_approved":
       return "repair_approved";
@@ -224,6 +229,8 @@ export function buildSupplierStats({ suppliers, items, gdms, histories, certific
 export const POSSESSION_STATUSES = [
   "sent_to_supplier",
   "awaiting_maintenance_authorization",
+  "awaiting_services_analysis",
+  "awaiting_discount",
   "discount_negotiation",
   "repair_approved",
   "in_treatment",

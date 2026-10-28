@@ -337,6 +337,15 @@ export default function RepairControlPanel() {
                     const initialValue = cycleQuotes.length
                       ? cycleQuotes[0].quote_value
                       : null;
+                    // Valor final contratado: o valor da OC quando emitida; na
+                    // falta dela, a proposta revisada da negociação.
+                    const finalValue =
+                      item.oc_value ?? item.revised_quote_value ?? item.quote_value;
+                    const discountValue =
+                      item.discount_value ??
+                      (initialValue && finalValue && initialValue > finalValue
+                        ? initialValue - finalValue
+                        : 0);
                     const ocStatus = item.oc_approval_confirmed_at
                       ? 'Aprovada e enviada'
                       : item.oc_number
@@ -386,12 +395,12 @@ export default function RepairControlPanel() {
                             Inicial: {currency(initialValue)}
                           </span>
                           <span className="block text-xs text-slate-500">
-                            {item.discount_percentage
-                              ? `Desconto solicitado: ${item.discount_percentage}%`
+                            {discountValue > 0
+                              ? `Desconto obtido: ${currency(discountValue)}`
                               : 'Sem desconto'}
                           </span>
                           <span className="block text-xs font-medium text-slate-700">
-                            Final: {currency(item.quote_value)}
+                            Final: {currency(finalValue)}
                           </span>
                         </TableCell>
                         <TableCell>

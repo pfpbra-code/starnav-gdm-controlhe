@@ -35,6 +35,8 @@ export const CONTROL_CATEGORIES = [
       'pending_coordinator',
       'pending_maintenance_authorization',
       'awaiting_maintenance_authorization',
+      'awaiting_services_analysis',
+      'awaiting_discount',
       'discount_negotiation',
       'repair_approved',
       'awaiting_pwt',

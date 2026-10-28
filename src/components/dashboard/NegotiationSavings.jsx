@@ -127,6 +127,7 @@ export default function NegotiationSavings({ gdms = [] }) {
       // renegociada ou mais de uma proposta do mesmo fornecedor.
       const hadDiscount =
         cycleQuotes.length > 1 ||
+        (typeof item.discount_value === 'number' && item.discount_value > 0) ||
         (typeof item.discount_percentage === 'number' && item.discount_percentage > 0) ||
         cycleQuotes.some(
           (q) => q.outcome === 'discount_requested' || q.outcome === 'renegotiated',
@@ -134,10 +135,16 @@ export default function NegotiationSavings({ gdms = [] }) {
       if (!hadDiscount) return;
 
       const initial = cycleQuotes[0].quote_value;
+      // Valor final: o valor efetivamente contratado na OC; na falta dele, a
+      // proposta revisada da negociação e, por último, a cotação vigente.
       const final =
-        item.quote_value != null
-          ? item.quote_value
-          : cycleQuotes[cycleQuotes.length - 1].quote_value;
+        item.oc_value != null
+          ? item.oc_value
+          : item.revised_quote_value != null
+            ? item.revised_quote_value
+            : item.quote_value != null
+              ? item.quote_value
+              : cycleQuotes[cycleQuotes.length - 1].quote_value;
       if (!initial || !final || final >= initial) return;
 
       rows.push({

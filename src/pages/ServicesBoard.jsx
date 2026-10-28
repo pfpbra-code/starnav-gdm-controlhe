@@ -21,9 +21,14 @@ const CATEGORIES = [
     match: (i) => i.status === 'sent_to_supplier',
   },
   {
+    key: 'services_analysis',
+    label: 'Análise da Cotação Aprovada (solicitar desconto ou emitir OC)',
+    match: (i) => i.status === 'awaiting_services_analysis',
+  },
+  {
     key: 'negotiation',
-    label: 'Inserir Nova Proposta (negociação de desconto)',
-    match: (i) => i.status === 'discount_negotiation',
+    label: 'Negociação de Desconto (inserir a nova proposta)',
+    match: (i) => ['awaiting_discount', 'discount_negotiation'].includes(i.status),
   },
   {
     key: 'oc',

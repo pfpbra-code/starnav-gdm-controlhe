@@ -87,6 +87,9 @@
         "pending_maintenance_authorization",
         "repair_approved",
         "awaiting_pwt",
+        "awaiting_maintenance_authorization",
+        "awaiting_services_analysis",
+        "awaiting_discount",
         "awaiting_oc_issuance",
         "awaiting_oc_approval",
         "discount_negotiation",
@@ -95,7 +98,7 @@
         "completed"
       ],
       "default": "pending_coordinator",
-      "description": "Situa\u00e7\u00e3o do item (fluxo pr\u00f3prio por destino, com situa\u00e7\u00e3o de recebimento declarada na abertura \u2014 awaiting_receipt \u00e9 a \u00fanica etapa de recebimento do fluxo, exclusiva de GDMs abertas como N\u00e3o Recebido e j\u00e1 validadas pela Coordena\u00e7\u00e3o; GDMs criadas como Recebido seguem da confirma\u00e7\u00e3o da tratativa direto para a etapa do destino; ciclo completo de fornecedor, PWT e OC; itens de calibra\u00e7\u00e3o/certifica\u00e7\u00e3o s\u00f3 finalizam ap\u00f3s o certificado e a validade registrados pela Opera\u00e7\u00f5es)"
+      "description": "Situa\u00e7\u00e3o do item (fluxo pr\u00f3prio por destino, com situa\u00e7\u00e3o de recebimento declarada na abertura \u2014 awaiting_receipt \u00e9 a \u00fanica etapa de recebimento do fluxo, exclusiva de GDMs abertas como N\u00e3o Recebido e j\u00e1 validadas pela Coordena\u00e7\u00e3o; GDMs criadas como Recebido seguem da confirma\u00e7\u00e3o da tratativa direto para a etapa do destino; ciclo completo de fornecedor, com an\u00e1lise t\u00e9cnica da Manuten\u00e7\u00e3o, decis\u00e3o comercial de Servi\u00e7os (desconto ou OC), PWT e OC; itens de calibra\u00e7\u00e3o/certifica\u00e7\u00e3o s\u00f3 finalizam ap\u00f3s o certificado e a validade registrados pela Opera\u00e7\u00f5es)"
     },
     "supplier_id": {
       "type": "string",
@@ -275,7 +278,7 @@
         "discount_requested",
         "rejected"
       ],
-      "description": "Decis\u00e3o da Ger\u00eancia de Manuten\u00e7\u00e3o sobre a cota\u00e7\u00e3o atual"
+      "description": "Decis\u00e3o da Ger\u00eancia de Manuten\u00e7\u00e3o sobre a cota\u00e7\u00e3o atual (aprovar ou reprovar)"
     },
     "maintenance_reject_outcome": {
       "type": "string",
@@ -292,9 +295,26 @@
       "type": "string",
       "format": "date-time"
     },
+    "maintenance_observation": {
+      "type": "string",
+      "description": "Parecer t\u00e9cnico da Manuten\u00e7\u00e3o registrado na an\u00e1lise da cota\u00e7\u00e3o"
+    },
     "discount_percentage": {
       "type": "number",
-      "description": "Percentual de desconto solicitado pela Manuten\u00e7\u00e3o"
+      "description": "Percentual de desconto solicitado pelo setor de Servi\u00e7os ao fornecedor"
+    },
+    "discount_requested_by": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio de Servi\u00e7os que solicitou o desconto ao fornecedor"
+    },
+    "discount_requested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora da solicita\u00e7\u00e3o de desconto ao fornecedor"
+    },
+    "revised_quote_value": {
+      "type": "number",
+      "description": "Valor da proposta revisada registrada por Servi\u00e7os ap\u00f3s a negocia\u00e7\u00e3o de desconto"
     },
     "pwt_number": {
       "type": "string",
@@ -321,6 +341,18 @@
     "oc_issued_by": {
       "type": "string",
       "description": "Email de quem emitiu a OC"
+    },
+    "oc_value": {
+      "type": "number",
+      "description": "Valor final da Ordem de Compra (OC) \u2014 valor efetivamente contratado, informado por Servi\u00e7os na emiss\u00e3o"
+    },
+    "discount_value": {
+      "type": "number",
+      "description": "Desconto obtido em reais: diferen\u00e7a entre a cota\u00e7\u00e3o aprovada e o valor final da OC (calculado automaticamente)"
+    },
+    "discount_percent": {
+      "type": "number",
+      "description": "Desconto obtido em percentual sobre a cota\u00e7\u00e3o aprovada (calculado automaticamente na emiss\u00e3o da OC)"
     },
     "oc_approval_confirmed_at": {
       "type": "string",

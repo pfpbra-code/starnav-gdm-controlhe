@@ -16,6 +16,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 const MONITORED_STATUSES = [
   'sent_to_supplier',
   'awaiting_maintenance_authorization',
+  'awaiting_services_analysis',
+  'awaiting_discount',
   'discount_negotiation',
   'repair_approved',
   'in_treatment',

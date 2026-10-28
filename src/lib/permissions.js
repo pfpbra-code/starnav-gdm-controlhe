@@ -76,7 +76,7 @@ export const AVAILABLE_PERMISSIONS = [
 
   // Manutenção
   { id: "quote_analysis", label: "Análise de Cotação", category: "Manutenção" },
-  { id: "request_discount", label: "Solicitar Desconto", category: "Manutenção" },
+  { id: "request_discount", label: "Solicitar Desconto ao Fornecedor", category: "Serviços" },
   { id: "request_new_quote", label: "Solicitar Nova Cotação", category: "Manutenção" },
   { id: "approve_maintenance", label: "Aprovar Manutenção", category: "Manutenção" },
 
@@ -185,7 +185,6 @@ export const SECTOR_BASE_PERMISSIONS = {
     "view_maintenance_quotes",
     "approve_maintenance_quote",
     "quote_analysis",
-    "request_discount",
     "request_new_quote",
     "approve_maintenance",
   ],

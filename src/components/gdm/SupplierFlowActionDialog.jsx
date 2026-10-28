@@ -56,7 +56,8 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
   const [warrantyDays, setWarrantyDays] = useState('');
   const [proposalNumber, setProposalNumber] = useState('');
   const [decision, setDecision] = useState('');
-  const [discountPercentage, setDiscountPercentage] = useState('');
+  const [servicesDecision, setServicesDecision] = useState('');
+  const [ocValue, setOcValue] = useState('');
   const [rejectOutcome, setRejectOutcome] = useState('');
   const [returnNfUrl, setReturnNfUrl] = useState('');
   const [returnProofUrl, setReturnProofUrl] = useState('');
@@ -90,7 +91,8 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
     setWarrantyDays('');
     setProposalNumber('');
     setDecision('');
-    setDiscountPercentage('');
+    setServicesDecision('');
+    setOcValue('');
     setRejectOutcome('');
     setReturnNfUrl('');
     setReturnProofUrl('');
@@ -172,8 +174,9 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
       payload.warranty_days = Number(warrantyDays);
     } else if (action === 'maintenance_decision') {
       payload.decision = decision;
-      if (discountPercentage) payload.discount_percentage = Number(discountPercentage);
       if (decision === 'reject') payload.reject_outcome = rejectOutcome;
+    } else if (action === 'services_discount_decision') {
+      payload.decision = servicesDecision;
     } else if (action === 'register_supplier_return') {
       payload.return_nf_url = returnNfUrl;
       payload.return_proof_url = returnProofUrl;
@@ -181,6 +184,7 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
       payload.pwt_number = pwtNumber.trim();
     } else if (action === 'issue_oc') {
       payload.oc_number = ocNumber.trim();
+      payload.oc_value = Number(ocValue);
       if (ocDate) payload.oc_date = ocDate;
       if (deadlineMode === 'days' ? Number(deadlineDays) > 0 : !!expectedReturnDate) {
         if (deadlineMode === 'days') {
@@ -219,9 +223,10 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
     (action === 'update_warranty' && (!warrantyDays || Number(warrantyDays) <= 0)) ||
     (action === 'maintenance_decision' &&
       (!decision || (decision === 'reject' && (!rejectOutcome || !observation.trim())))) ||
+    (action === 'services_discount_decision' && !servicesDecision) ||
     (action === 'register_supplier_return' && (!returnNfUrl || !returnProofUrl)) ||
     (action === 'issue_pwt' && !pwtNumber.trim()) ||
-    (action === 'issue_oc' && (!ocNumber.trim() || !ocDate)) ||
+    (action === 'issue_oc' && (!ocNumber.trim() || !ocDate || !Number(ocValue))) ||
     (action === 'set_return_deadline' &&
       ((deadlineMode === 'days' ? !Number(deadlineDays) : !expectedReturnDate) ||
         (!!item?.expected_return_date && !observation.trim()))) ||
@@ -252,6 +257,16 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
   const expectedReturnLabel = expectedReturnPreview
     ? new Date(`${expectedReturnPreview}T12:00:00`).toLocaleDateString('pt-BR')
     : '';
+
+  // Prévia do desconto obtido: diferença entre a cotação e o valor final da OC.
+  const ocDiscountPreview = (() => {
+    if (action !== 'issue_oc') return null;
+    const base = Number(item?.quote_value || 0);
+    const final = Number(ocValue);
+    if (!base || !Number.isFinite(final) || final <= 0) return null;
+    const value = Math.max(0, base - final);
+    return { value, percent: ((value / base) * 100).toFixed(1).replace('.', ',') };
+  })();
 
   const decisionOption = (value, icon, title, hint) => (
     <button
@@ -469,13 +484,7 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
                   'approve',
                   <CheckCircle2 className="h-4 w-4 text-green-600" />,
                   'Aprovar cotação',
-                  'Reparo aprovado — o item retorna para Serviços.',
-                )}
-                {decisionOption(
-                  'discount',
-                  <Percent className="h-4 w-4 text-amber-600" />,
-                  'Solicitar desconto',
-                  'Negociação de desconto — Serviços negocia e envia nova proposta.',
+                  'Reparo aprovado — o item segue para a análise de Serviços (desconto / OC).',
                 )}
                 {decisionOption(
                   'reject',
@@ -484,16 +493,14 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
                   'Exige motivo e a escolha do desfecho abaixo.',
                 )}
               </div>
-              {decision === 'discount' && (
+              {decision === 'approve' && (
                 <div className="space-y-2">
-                  <Label>Percentual de desconto (%)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={discountPercentage}
-                    onChange={(e) => setDiscountPercentage(e.target.value)}
-                    placeholder="Ex: 10"
+                  <Label>Observação da Manutenção</Label>
+                  <Textarea
+                    value={observation}
+                    onChange={(e) => setObservation(e.target.value)}
+                    rows={3}
+                    placeholder="Parecer técnico sobre a cotação (registrado no histórico da GDM)"
                   />
                 </div>
               )}
@@ -547,10 +554,71 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
             </>
           )}
 
+          {action === 'services_discount_decision' && (
+            <>
+              {item && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm space-y-1">
+                  <p className="flex justify-between">
+                    <span className="text-slate-500">Fornecedor:</span>
+                    <span className="font-medium">{item.supplier_name || '—'}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-slate-500">Valor cotado:</span>
+                    <span className="font-medium">{formatBrl(item.quote_value)}</span>
+                  </p>
+                  {item.maintenance_observation && (
+                    <p className="text-xs text-slate-600 border-t border-slate-200 pt-1 mt-1">
+                      Observação da Manutenção: {item.maintenance_observation}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Decisão de Serviços *</Label>
+                <button
+                  type="button"
+                  onClick={() => setServicesDecision('request_discount')}
+                  className={`w-full text-left rounded-lg border p-3 transition-colors ${
+                    servicesDecision === 'request_discount'
+                      ? 'border-amber-500 bg-amber-50'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="flex items-center gap-2 font-medium text-sm text-slate-800">
+                    <Percent className="h-4 w-4 text-amber-600" />
+                    Solicitar desconto ao fornecedor
+                  </span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    O item fica em "Aguardando Desconto" até Serviços registrar a proposta
+                    revisada. O desconto final é calculado automaticamente na emissão da OC.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setServicesDecision('issue_oc')}
+                  className={`w-full text-left rounded-lg border p-3 transition-colors ${
+                    servicesDecision === 'issue_oc'
+                      ? 'border-sky-500 bg-sky-50'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="flex items-center gap-2 font-medium text-sm text-slate-800">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    Seguir para a emissão da OC
+                  </span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    O valor cotado é aceito e o item segue direto para a emissão da Ordem de
+                    Compra.
+                  </span>
+                </button>
+              </div>
+            </>
+          )}
+
           {action === 'renegotiate_quote' && (
             <>
               <div className="space-y-2">
-                <Label>Novo valor negociado (R$) *</Label>
+                <Label>Valor da proposta revisada (R$) *</Label>
                 <Input
                   type="number"
                   min="0"
@@ -662,6 +730,24 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
                     onChange={(e) => setOcDate(e.target.value)}
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor final da OC (R$) *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={ocValue}
+                  onChange={(e) => setOcValue(e.target.value)}
+                  placeholder="0,00"
+                />
+                {ocDiscountPreview && (
+                  <p className="text-xs text-slate-600 bg-emerald-50 border border-emerald-200 rounded p-2">
+                    Valor cotado: <strong>{formatBrl(item?.quote_value)}</strong> · Desconto
+                    obtido: <strong>{formatBrl(ocDiscountPreview.value)}</strong> (
+                    {ocDiscountPreview.percent}%)
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Previsão de retorno informada pelo fornecedor (opcional)</Label>
@@ -894,7 +980,9 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
             </>
           )}
 
-          {!['maintenance_decision', 'set_return_deadline'].includes(action) && (
+          {!['maintenance_decision', 'services_discount_decision', 'set_return_deadline'].includes(
+            action,
+          ) && (
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea
@@ -930,6 +1018,10 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
 function Label({ children }) {
   return <span className="text-sm font-medium text-slate-700">{children}</span>;
 }
+
+/** Formata um valor em reais. */
+const formatBrl = (value) =>
+  Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 /** Alternância de forma de informar a previsão de retorno: prazo em dias ou data. */
 function DeadlineModeToggle({ mode, onChange }) {

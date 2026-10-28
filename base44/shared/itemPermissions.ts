@@ -60,7 +60,7 @@ export const SECTOR_BASE: Record<string, string[]> = {
     'view_gdm', 'view_all_gdms', 'generate_gdm_pdf',
     'view_disposal_reports', 'generate_disposal_report',
     'view_maintenance', 'view_maintenance_quotes', 'approve_maintenance_quote',
-    'quote_analysis', 'request_discount', 'request_new_quote', 'approve_maintenance',
+    'quote_analysis', 'request_new_quote', 'approve_maintenance',
   ],
   operations: [
     'view_gdm', 'view_all_gdms', 'generate_gdm_pdf',
