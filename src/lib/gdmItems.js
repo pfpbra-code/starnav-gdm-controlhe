@@ -455,6 +455,8 @@ export const SECTOR_OF_STATUS = {
   awaiting_supplier_definition: "services",
   pending_services: "services",
   sent_to_supplier: "services",
+  awaiting_services_analysis: "services",
+  awaiting_discount: "services",
   discount_negotiation: "services",
   return_confirmed: "services",
   awaiting_supplier_return: "services",
@@ -491,6 +493,8 @@ export function itemResponsible(item) {
     case "awaiting_supplier_definition":
     case "pending_services":
     case "sent_to_supplier":
+    case "awaiting_services_analysis":
+    case "awaiting_discount":
     case "discount_negotiation":
     case "return_confirmed":
       return "Serviços";
@@ -562,6 +566,7 @@ const FLOW_BY_DESTINATION = {
     { status: "awaiting_shipping_proof", label: "Comprovante de Envio (Almoxarifado)" },
     { status: "sent_to_supplier", label: "Enviado — Aguardando Cotação (Serviços)" },
     { status: "awaiting_maintenance_authorization", label: "Aprovação da Manutenção" },
+    { status: "awaiting_services_analysis", label: "Análise de Serviços (Desconto / OC)" },
     { status: "awaiting_oc_issuance", label: "Emissão da OC (Serviços)" },
     { status: "awaiting_oc_approval", label: "Aprovação e Envio da OC (Serviços)" },
     { status: "awaiting_return", label: "Aguardando Retorno do Fornecedor" },
@@ -573,6 +578,7 @@ const FLOW_BY_DESTINATION = {
     { status: "awaiting_shipping_proof", label: "Comprovante de Envio (Almoxarifado)" },
     { status: "sent_to_supplier", label: "Enviado — Aguardando Cotação (Serviços)" },
     { status: "awaiting_maintenance_authorization", label: "Aprovação da Operações" },
+    { status: "awaiting_services_analysis", label: "Análise de Serviços (Desconto / OC)" },
     { status: "awaiting_oc_issuance", label: "Emissão da OC (Serviços)" },
     { status: "awaiting_oc_approval", label: "Aprovação e Envio da OC (Serviços)" },
     { status: "awaiting_return", label: "Aguardando Retorno do Fornecedor" },
@@ -597,7 +603,8 @@ const FLOW_BY_DESTINATION = {
 const STATUS_ALIAS = {
   draft: "pending_coordinator",
   pending_services: "awaiting_supplier_definition",
-  discount_negotiation: "awaiting_maintenance_authorization",
+  awaiting_discount: "awaiting_services_analysis",
+  discount_negotiation: "awaiting_services_analysis",
   in_treatment: "awaiting_return",
   awaiting_supplier_return: "awaiting_shipping_proof",
   return_confirmed: "awaiting_supplier_definition",
@@ -627,7 +634,7 @@ export function itemFlow(item) {
   // Itens legados em andamento (fornecedor já definido, cotação aprovada sem
   // PWT): o PWT pendente aparece na etapa da OC, emitida só após o PWT.
   if (item.status === "repair_approved" || (item.status === "awaiting_pwt" && item.supplier_id)) {
-    current = "awaiting_oc_issuance";
+    current = "awaiting_services_analysis";
   }
   const idx = steps.findIndex((s) => s.status === current);
   return steps.map((s, i) => ({
@@ -660,7 +667,11 @@ export function nextActionText(item) {
     case "sent_to_supplier":
       return "Equipamento enviado ao fornecedor. Serviços deve anexar a cotação (valor e prazo informados pelo fornecedor).";
     case "awaiting_maintenance_authorization":
-      return "Cotação anexada. Aguardando a decisão da Gerência (aprovar, solicitar desconto ou reprovar).";
+      return "Cotação anexada. Aguardando a análise técnica da Manutenção (aprovar ou reprovar a cotação).";
+    case "awaiting_services_analysis":
+      return "Cotação aprovada pela Manutenção. Serviços deve decidir: solicitar desconto ao fornecedor ou seguir para a emissão da OC.";
+    case "awaiting_discount":
+      return "Desconto solicitado por Serviços. Aguardando a proposta revisada do fornecedor — Serviços registra o novo valor e segue para a OC.";
     case "repair_approved":
       return "Cotação aprovada. O item segue para a emissão do PWT (Planejamento) — itens de calibração vão direto para a OC.";
     case "awaiting_pwt":
@@ -678,7 +689,7 @@ export function nextActionText(item) {
         ? "Material saiu para entrega. O Almoxarifado deve confirmar o recebimento anexando a NF e o laudo."
         : "OC aprovada e enviada ao fornecedor. Serviços deve registrar a saída para entrega quando o material for despachado.";
     case "discount_negotiation":
-      return "A Gerência solicitou desconto. Serviços deve negociar, inserir o novo valor e anexar a nova proposta.";
+      return "Desconto solicitado por Serviços. Registre o novo valor da proposta revisada do fornecedor para seguir à emissão da OC.";
     case "awaiting_supplier_return":
       return item.return_nf_url
         ? "NF e comprovante de devolução registrados. Almoxarifado deve confirmar o recebimento do retorno."
@@ -740,6 +751,8 @@ export function itemResponsibleGroup(item) {
     case "awaiting_supplier_definition":
     case "pending_services":
     case "sent_to_supplier":
+    case "awaiting_services_analysis":
+    case "awaiting_discount":
     case "discount_negotiation":
     case "return_confirmed":
       return "services";
@@ -783,6 +796,8 @@ export function returnDeadlineState(item) {
   if (!item?.expected_return_date) return null;
   const IN_FLOW = [
     "awaiting_maintenance_authorization",
+    "awaiting_services_analysis",
+    "awaiting_discount",
     "discount_negotiation",
     "awaiting_pwt",
     "awaiting_oc_issuance",
@@ -830,6 +845,7 @@ export const SUPPLIER_FLOW_ACTIONS = [
   "attach_shipping_proof",
   "attach_quote",
   "maintenance_decision",
+  "services_discount_decision",
   "renegotiate_quote",
   "register_supplier_return",
   "confirm_supplier_return",

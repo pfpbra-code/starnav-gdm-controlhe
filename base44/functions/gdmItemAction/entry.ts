@@ -279,6 +279,15 @@ export default async function (req: Request): Promise<Response> {
       extra.maintenance_reject_outcome = null;
       extra.maintenance_decided_by = null;
       extra.maintenance_decided_at = null;
+      extra.maintenance_observation = null;
+      // Novo ciclo: a negociação, o valor final da OC e o desconto calculado
+      // do ciclo anterior são limpos (o histórico permanece intacto).
+      extra.discount_requested_by = null;
+      extra.discount_requested_at = null;
+      extra.revised_quote_value = null;
+      extra.oc_value = null;
+      extra.discount_value = null;
+      extra.discount_percent = null;
       extra.return_nf_url = null;
       extra.return_proof_url = null;
       extra.return_registered_at = null;
@@ -403,8 +412,11 @@ export default async function (req: Request): Promise<Response> {
         maintenance_decided_at: null,
       });
     } else if (action === 'maintenance_decision') {
-      // Gerência de Manutenção: aprovar, solicitar desconto ou reprovar
-      // (com escolha obrigatória: outro fornecedor ou descarte do equipamento).
+      // ANÁLISE TÉCNICA DA COTAÇÃO (Manutenção / Operações): aprovar ou
+      // reprovar (com escolha obrigatória: outro fornecedor ou descarte).
+      // A negociação comercial NÃO é feita pela Manutenção — o desconto passou
+      // a ser solicitado por Serviços após a aprovação técnica e é calculado
+      // automaticamente pela diferença entre a cotação e o valor final da OC.
       if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
         throw new Error('Este item não segue o fluxo de fornecedor');
       }
@@ -415,12 +427,16 @@ export default async function (req: Request): Promise<Response> {
       }
 
       const decision = body.decision;
-      if (!['approve', 'discount', 'reject'].includes(decision)) {
+      if (!['approve', 'reject'].includes(decision)) {
         throw new Error('Selecione uma decisão');
       }
 
       const quotes = Array.isArray(item.quotes_history) ? [...item.quotes_history] : [];
       const lastQuote = quotes.length ? { ...quotes[quotes.length - 1] } : null;
+
+      // Observação Técnica da Manutenção (opcional) — registrada no item, no
+      // histórico do item, no histórico da GDM e nas tratativas.
+      extra.maintenance_observation = observation ? String(observation).trim() : null;
 
       if (decision === 'approve') {
         extra.maintenance_decision = 'approved';
@@ -433,27 +449,13 @@ export default async function (req: Request): Promise<Response> {
           quotes[quotes.length - 1] = lastQuote;
           extra.quotes_history = quotes;
         }
-        // Após a aprovação da cotação: itens de reparo com PWT já emitido
-        // (novo fluxo) seguem direto para a OC; itens legados em andamento
-        // sem PWT aguardam a emissão pelo Planejamento antes da OC.
+        // Aprovação TÉCNICA: a cotação segue para Serviços decidir sobre o
+        // desconto ou seguir direto para a emissão da OC. Itens de reparo
+        // legados sem PWT passam antes pelo Planejamento.
         next =
-          item.destination === 'certification' || item.pwt_number
-            ? 'awaiting_oc_issuance'
-            : 'awaiting_pwt';
-      } else if (decision === 'discount') {
-        extra.maintenance_decision = 'discount_requested';
-        extra.maintenance_decided_by = user.email;
-        extra.maintenance_decided_at = now;
-        if (body.discount_percentage) extra.discount_percentage = Number(body.discount_percentage);
-        if (lastQuote) {
-          lastQuote.outcome = 'discount_requested';
-          lastQuote.reason = observation || 'Desconto solicitado pela Manutenção';
-          lastQuote.decided_by = user.email;
-          lastQuote.decided_at = now;
-          quotes[quotes.length - 1] = lastQuote;
-          extra.quotes_history = quotes;
-        }
-        next = 'discount_negotiation';
+          item.destination === 'repair' && !item.pwt_number
+            ? 'awaiting_pwt'
+            : 'awaiting_services_analysis';
       } else {
         // Reprovação: motivo obrigatório + desfecho obrigatório.
         if (!observation || !String(observation).trim()) {
@@ -493,21 +495,50 @@ export default async function (req: Request): Promise<Response> {
         maintenance_decided_by: user.email,
         maintenance_decided_at: now,
         maintenance_notes: observation || null,
-        ...(body.discount_percentage ? { discount_percentage: Number(body.discount_percentage) } : {}),
       });
-    } else if (action === 'renegotiate_quote') {
-      // Serviços negocia: insere novo valor e anexa nova proposta.
+    } else if (action === 'services_discount_decision') {
+      // ANÁLISE DE SERVIÇOS (negociação comercial): após a aprovação técnica
+      // da cotação, Serviços decide solicitar desconto ao fornecedor ou seguir
+      // direto para a emissão da Ordem de Compra.
       if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
         throw new Error('Este item não segue o fluxo de fornecedor');
       }
-      if (!can('send_to_supplier')) throw new Error('Sem permissão para negociar cotação');
-      if (prev !== 'discount_negotiation') throw new Error('Item não está em negociação de desconto');
+      if (!can('send_to_supplier')) throw new Error('Sem permissão para analisar a cotação aprovada');
+      if (prev !== 'awaiting_services_analysis') {
+        throw new Error('Item não está aguardando a análise de Serviços');
+      }
+      const decision = body.decision;
+      if (!['request_discount', 'proceed_oc'].includes(decision)) {
+        throw new Error('Escolha: solicitar desconto ou seguir para a emissão da OC');
+      }
+
+      if (decision === 'request_discount') {
+        extra.discount_requested_by = user.email;
+        extra.discount_requested_at = now;
+        next = 'awaiting_discount';
+      } else {
+        next =
+          item.destination === 'repair' && !item.pwt_number
+            ? 'awaiting_pwt'
+            : 'awaiting_oc_issuance';
+      }
+    } else if (action === 'renegotiate_quote') {
+      // Serviços registra a proposta revisada do fornecedor após o pedido de
+      // desconto. A cotação original permanece como base do cálculo do
+      // desconto obtido (cotação − valor final da OC).
+      if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
+        throw new Error('Este item não segue o fluxo de fornecedor');
+      }
+      if (!can('send_to_supplier')) throw new Error('Sem permissão para registrar a proposta');
+      if (!['awaiting_discount', 'discount_negotiation'].includes(prev)) {
+        throw new Error('Item não está aguardando a proposta revisada do fornecedor');
+      }
       if (body.quote_value === undefined || body.quote_value === null || Number(body.quote_value) <= 0) {
-        throw new Error('Informe o novo valor negociado');
+        throw new Error('Informe o valor da proposta revisada');
       }
 
       const quoteValue = Number(body.quote_value);
-      extra.quote_value = quoteValue;
+      extra.revised_quote_value = quoteValue;
       extra.quote_attached_at = now;
       extra.quote_attached_by = user.email;
       // Garantia pode ser ajustada na renegociação (opcional; sempre no histórico).
@@ -538,15 +569,10 @@ export default async function (req: Request): Promise<Response> {
         reason: observation || 'Nova proposta após solicitação de desconto',
       });
       extra.quotes_history = quotes;
-      next = 'awaiting_maintenance_authorization';
-
-      await mirrorGdm(base44, item.gdm_id, {
-        quote_value: quoteValue,
-        ...(body.quote_document_url ? { quote_document_url: body.quote_document_url } : {}),
-        maintenance_decision: null,
-        maintenance_decided_by: null,
-        maintenance_decided_at: null,
-      });
+      next =
+        item.destination === 'repair' && !item.pwt_number
+          ? 'awaiting_pwt'
+          : 'awaiting_oc_issuance';
     } else if (action === 'register_supplier_return') {
       // Serviços solicita devolução: NF de retorno + comprovante + observações.
       if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
@@ -629,8 +655,9 @@ export default async function (req: Request): Promise<Response> {
       extra.pwt_issued_by = user.email;
       // Novo fluxo (PWT antes do fornecedor): libera a definição do
       // fornecedor por Serviços. Itens legados em andamento (fornecedor já
-      // definido, PWT emitido após a aprovação da cotação) seguem para a OC.
-      next = item.supplier_id ? 'awaiting_oc_issuance' : 'awaiting_supplier_definition';
+      // definido, PWT emitido após a aprovação da cotação) seguem para a
+      // análise de Serviços (desconto / OC).
+      next = item.supplier_id ? 'awaiting_services_analysis' : 'awaiting_supplier_definition';
 
       await mirrorGdm(base44, item.gdm_id, {
         pwt_number: pwtNumber,
@@ -657,6 +684,17 @@ export default async function (req: Request): Promise<Response> {
           : now.slice(0, 10);
       const ocAt = new Date(`${ocDate}T12:00:00`).toISOString();
 
+      // VALOR FINAL DA OC (obrigatório): valor efetivamente aprovado e
+      // contratado. O desconto obtido é calculado automaticamente pela
+      // diferença entre o valor da cotação e este valor.
+      const ocValue = Number(body.oc_value ?? body.ocValue);
+      if (!Number.isFinite(ocValue) || ocValue <= 0) {
+        throw new Error('Informe o valor final da OC');
+      }
+      const quoteBase = Number(item.quote_value || 0);
+      const discountValue = quoteBase > 0 ? Math.max(0, quoteBase - ocValue) : 0;
+      const discountPercent = quoteBase > 0 ? (discountValue / quoteBase) * 100 : 0;
+
       const deadlineDays = Math.round(Number(body.return_deadline_days));
       let expectedReturn: string | null =
         typeof body.expected_return_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.expected_return_date)
@@ -671,6 +709,9 @@ export default async function (req: Request): Promise<Response> {
       extra.oc_number = ocNumber;
       extra.oc_issued_at = ocAt;
       extra.oc_issued_by = user.email;
+      extra.oc_value = ocValue;
+      extra.discount_value = discountValue;
+      extra.discount_percent = discountPercent;
       if (expectedReturn) {
         if (deadlineDays > 0) extra.return_deadline_days = deadlineDays;
         extra.expected_return_date = expectedReturn;
@@ -1234,7 +1275,46 @@ export default async function (req: Request): Promise<Response> {
                 observation: String(observation || '').trim(),
               }
             : null;
-        const specialEntry = returnEntry || deadlineEntry;
+        // Análise da cotação e decisões comerciais: cada etapa auditável é
+        // registrada no histórico da GDM com usuário, data, valores e observação.
+        const baseEntry = (actionKey: string, stepName: string, details: string) => ({
+          action: actionKey,
+          user: user.email,
+          user_name: displayNameOf(user),
+          role: user.role,
+          timestamp: new Date().toISOString(),
+          details,
+          previous_status: prev,
+          new_status: next,
+          step_name: stepName,
+          observation: String(observation || '').trim(),
+        });
+        const decisionEntry =
+          action === 'maintenance_decision'
+            ? baseEntry(
+                'maintenance_decision',
+                'Análise da Cotação (Manutenção)',
+                `Análise técnica da cotação do item ${item.item_number}: ${extra.maintenance_decision === 'approved' ? 'aprovada' : 'reprovada'}. Valor cotado: ${item.quote_value ?? '—'}. Observação da Manutenção: ${String(observation || '').trim() || 'não informada'}.`,
+              )
+            : null;
+        const servicesEntry =
+          action === 'services_discount_decision'
+            ? baseEntry(
+                'services_discount_decision',
+                'Análise de Serviços (Desconto / OC)',
+                `Item ${item.item_number}: ${next === 'awaiting_discount' ? 'desconto solicitado ao fornecedor' : 'seguiu para a emissão da OC sem solicitação de desconto'}. Observação: ${String(observation || '').trim() || 'não informada'}.`,
+              )
+            : null;
+        const ocEntry =
+          action === 'issue_oc'
+            ? baseEntry(
+                'issue_oc',
+                'Emissão da OC',
+                `OC ${extra.oc_number} emitida. Valor cotado: ${item.quote_value ?? '—'}. Valor final da OC: ${extra.oc_value}. Desconto obtido: ${extra.discount_value} (${Number(extra.discount_percent || 0).toFixed(1)}%).`,
+              )
+            : null;
+        const specialEntry =
+          returnEntry || deadlineEntry || decisionEntry || servicesEntry || ocEntry;
         const shouldUpdateStatus = !!target && target !== gdm.status && gdm.status !== 'rejected';
         if (shouldUpdateStatus || specialEntry) {
           await base44.asServiceRole.entities.GDM.update(gdm.id, {
