@@ -9,6 +9,7 @@ const ALL_IDS: string[] = [
   // GDM
   'view_gdm', 'view_all_gdms', 'create_gdm', 'edit_gdm', 'delete_gdm', 'approve_gdm',
   'reject_gdm', 'change_gdm_destination', 'generate_gdm_pdf', 'allow_step_return',
+  'view_item_attachments',
   // Recebimento
   'confirm_receipt',
   // Descarte
@@ -61,22 +62,26 @@ export const SECTOR_BASE: Record<string, string[]> = {
     'view_disposal_reports', 'generate_disposal_report',
     'view_maintenance', 'view_maintenance_quotes', 'approve_maintenance_quote',
     'quote_analysis', 'request_new_quote', 'approve_maintenance',
+    'view_item_attachments',
   ],
   operations: [
     'view_gdm', 'view_all_gdms', 'generate_gdm_pdf',
     'view_disposal_reports', 'generate_disposal_report',
     'view_operations', 'view_operations_quotes',
+    'view_item_attachments',
   ],
   almoxarifado: [
     'view_gdm', 'view_all_gdms', 'create_gdm',
     'generate_gdm_pdf', 'confirm_receipt', 'confirm_disposal',
     'upload_disposal_evidence', 'view_disposal_reports', 'generate_disposal_report',
     'confirm_return',
+    'view_item_attachments',
   ],
   planejamento: [
     'view_gdm', 'generate_gdm_pdf', 'view_disposal_reports',
     'generate_disposal_report', 'view_maintenance', 'issue_pwt',
     'view_equipment', 'view_analytics',
+    'view_item_attachments',
   ],
   services: ALL_IDS.filter(
     (id) => !ADMIN_ONLY.includes(id) && !DASHBOARD_PERMISSIONS.includes(id),
@@ -86,6 +91,7 @@ export const SECTOR_BASE: Record<string, string[]> = {
   coordinator: [
     'view_gdm', 'view_all_gdms', 'approve_gdm',
     'change_gdm_destination', 'view_disposal_reports', 'generate_disposal_report',
+    'view_item_attachments',
   ],
 };
 

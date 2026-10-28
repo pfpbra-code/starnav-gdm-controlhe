@@ -13,6 +13,7 @@ import {
 } from '@/lib/gdmItems';
 import ItemActionRouter from './ItemActionRouter';
 import ItemHistoryTimeline from './ItemHistoryTimeline';
+import ItemAttachmentsButton from './ItemAttachmentsButton';
 import { useResponsibleVesselIds } from '@/hooks/useResponsibleVesselIds';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -97,6 +98,14 @@ export default function SectorItemCard({ item, gdm, hasPermission, user }) {
           <HistoryIcon className="h-3 w-3" />
           {showHistory ? 'Ocultar histórico' : 'Histórico'}
         </button>
+        <ItemAttachmentsButton
+          item={item}
+          gdm={gdm}
+          user={user}
+          variant="ghost"
+          size="sm"
+          className="text-xs h-7 text-slate-600"
+        />
         <Link
           to={createPageUrl(`GDMDetail?id=${gdm.id}`)}
           className="flex items-center gap-1 text-xs text-sky-600 hover:underline"

@@ -39,6 +39,7 @@ import {
   OVERALL_LABELS,
 } from '@/lib/gdmItems';
 import GDMItemQrCode from './GDMItemQrCode';
+import ItemAttachmentsButton from './ItemAttachmentsButton';
 import ItemPhotoGallery from './ItemPhotoGallery';
 import GDMItemPdfButton from './GDMItemPdfButton';
 import DiscardReportButton from './DiscardReportButton';
@@ -336,6 +337,7 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                         Alterar garantia
                       </Button>
                     )}
+                  <ItemAttachmentsButton item={item} gdm={gdm} user={user} />
                   <GDMItemQrCode item={item} gdm={gdm} variant="outline" size="sm" />
                   <GDMItemPdfButton item={item} gdm={gdm} variant="outline" size="sm" />
                   {item.destination === 'discard' &&

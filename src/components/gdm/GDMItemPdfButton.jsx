@@ -14,6 +14,7 @@ import {
 } from '@/lib/gdmItems';
 import { itemQrImageUrl, itemPublicUrl } from './GDMItemQrCode';
 import { drawPhotoEvidence } from '@/lib/pdfImage';
+import { buildItemDocuments } from '@/lib/itemDocuments';
 
 const loadImageAsDataURL = (url, fmt = 'jpeg', quality = 0.82) =>
   new Promise((resolve, reject) => {
@@ -59,6 +60,11 @@ export default function GDMItemPdfButton({
         { gdm_item_id: item.id },
         'taken_at',
       ).catch(() => []);
+
+      const [attachments, certifications] = await Promise.all([
+        base44.entities.GDMAttachment.filter({ gdm_item_id: item.id }).catch(() => []),
+        base44.entities.Certification.filter({ item_id: item.id }).catch(() => []),
+      ]);
 
       const doc = new jsPDF();
       const pageW = doc.internal.pageSize.getWidth();
@@ -228,25 +234,37 @@ export default function GDMItemPdfButton({
         y += 4;
       }
 
-      // Documentação vinculada
-      const docs = [
-        ['Documento da cotação', gdm?.quote_document_url],
-        ['Laudo técnico', gdm?.technical_report_url],
-        ['Proposta comercial', gdm?.commercial_proposal_url],
-        ['Nota fiscal de retorno', gdm?.return_nf_url],
-      ].filter(([, v]) => !!v);
-      if (docs.length) {
-        section('DOCUMENTAÇÃO VINCULADA');
-        docs.forEach(([labelTxt, url]) => {
-          ensure(5);
-          doc.setFont('helvetica', 'normal');
+      // Anexos relacionados ao processo — repositório completo do item
+      // (as imagens já foram incorporadas na seção de evidências fotográficas)
+      const itemDocs = buildItemDocuments({
+        item,
+        gdm: gdm || {},
+        photos,
+        attachments,
+        certifications,
+      }).filter((d) => d.category !== 'foto');
+      if (itemDocs.length) {
+        section(`ANEXOS RELACIONADOS AO PROCESSO (${itemDocs.length})`);
+        itemDocs.forEach((d) => {
+          ensure(11);
+          doc.setFont('helvetica', 'bold');
           doc.setFontSize(8);
+          doc.setTextColor(15, 23, 42);
+          const titleLines = doc.splitTextToSize(
+            `${d.type}${d.versionCount > 1 ? ` (v${d.version}/${d.versionCount})` : ''}`,
+            pageW - margin * 2 - 8,
+          );
+          doc.text(titleLines, margin + 2, y);
+          y += titleLines.length * 3.8;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
           doc.setTextColor(100, 116, 139);
-          doc.text(`${labelTxt}:`, margin + 2, y);
-          doc.setTextColor(2, 132, 199);
-          const lines = doc.splitTextToSize(String(url), pageW - margin * 2 - 45);
-          doc.text(lines, margin + 42, y);
-          y += Math.max(5, lines.length * 4);
+          doc.text(
+            `${fmtDate(d.date)} · ${d.user || 'Sistema'} · ${d.fileName}`,
+            margin + 2,
+            y,
+          );
+          y += 5.5;
         });
         y += 3;
       }

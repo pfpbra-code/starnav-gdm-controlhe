@@ -46,6 +46,7 @@ export const AVAILABLE_PERMISSIONS = [
   { id: "change_gdm_destination", label: "Alterar Destino da GDM", category: "GDM" },
   { id: "generate_gdm_pdf", label: "Gerar PDF da GDM", category: "GDM" },
   { id: "allow_step_return", label: "Permitir Retorno de Etapas", category: "GDM" },
+  { id: "view_item_attachments", label: "Visualizar Anexos do Item", category: "GDM" },
 
   // Recebimento (Almoxarifado)
   { id: "confirm_receipt", label: "Confirmar Recebimento", category: "Recebimento" },
@@ -187,6 +188,7 @@ export const SECTOR_BASE_PERMISSIONS = {
     "quote_analysis",
     "request_new_quote",
     "approve_maintenance",
+    "view_item_attachments",
   ],
   // Operações: GDMs, descarte e aba Operações (pendências e cotações).
   // Dashboards — operacional, gerencial e certificações — exigem
@@ -199,6 +201,7 @@ export const SECTOR_BASE_PERMISSIONS = {
     "generate_disposal_report",
     "view_operations",
     "view_operations_quotes",
+    "view_item_attachments",
   ],
   // Almoxarifado: criar GDM, GDMs, aba Almoxarifado, descarte e controle de
   // recebimento/movimentação (incluindo fechar OT). Dashboards — operacional,
@@ -214,6 +217,7 @@ export const SECTOR_BASE_PERMISSIONS = {
     "view_disposal_reports",
     "generate_disposal_report",
     "confirm_return",
+    "view_item_attachments",
   ],
   // Planejamento: descarte, aba Manutenção (consulta), emissão de PWT,
   // consulta de equipamentos e indicadores. Dashboards e cotações ficam
@@ -227,6 +231,7 @@ export const SECTOR_BASE_PERMISSIONS = {
     "issue_pwt",
     "view_equipment",
     "view_analytics",
+    "view_item_attachments",
   ],
   // Serviços: todas as funcionalidades operacionais da plataforma, exceto as
   // funções exclusivas do Administrador e os dashboards (autorização ADM).
@@ -244,6 +249,7 @@ export const SECTOR_BASE_PERMISSIONS = {
     "change_gdm_destination",
     "view_disposal_reports",
     "generate_disposal_report",
+    "view_item_attachments",
   ],
 };
 
