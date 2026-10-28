@@ -30,6 +30,7 @@ export const ITEM_STATUS_LABELS = {
   awaiting_certificate: "Aguardando Certificado (Operações)",
   awaiting_validity_registration: "Aguardando Cadastro da Validade",
   pending_maintenance_authorization: "Aguardando Aprovação da Manutenção",
+  awaiting_maintenance_authorization: "Aguardando Aprovação da Manutenção",
   repair_approved: "Reparo Aprovado",
   awaiting_pwt: "Aguardando Emissão de PWT (Planejamento)",
   awaiting_oc_issuance: "Aguardando Emissão da OC (Serviços)",
@@ -58,6 +59,7 @@ export const ITEM_STATUS_COLORS = {
   awaiting_certificate: "bg-orange-100 text-orange-800",
   awaiting_validity_registration: "bg-amber-100 text-amber-800",
   pending_maintenance_authorization: "bg-orange-100 text-orange-800",
+  awaiting_maintenance_authorization: "bg-orange-100 text-orange-800",
   repair_approved: "bg-emerald-100 text-emerald-800",
   awaiting_pwt: "bg-cyan-100 text-cyan-800",
   awaiting_oc_issuance: "bg-indigo-100 text-indigo-800",
@@ -448,7 +450,7 @@ export const SECTOR_OF_STATUS = {
 };
 
 export function itemSectorOfStatus(status, destination) {
-  if (status === "pending_maintenance_authorization") {
+  if (["pending_maintenance_authorization", "awaiting_maintenance_authorization"].includes(status)) {
     return destination === "certification" ? "operations" : "maintenance";
   }
   return SECTOR_OF_STATUS[status] || "services";
@@ -482,6 +484,7 @@ export function itemResponsible(item) {
     case "awaiting_supplier_return":
       return item.return_nf_url ? "Almoxarifado" : "Serviços";
     case "pending_maintenance_authorization":
+    case "awaiting_maintenance_authorization":
       return item.destination === "certification" ? "Operações" : "Gestor de Manutenção";
     case "repair_approved":
       return item.destination === "certification" ? "Serviços" : "Planejamento";
