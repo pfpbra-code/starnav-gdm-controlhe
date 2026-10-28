@@ -65,6 +65,9 @@ export default function Suppliers() {
   const { data: items = [] } = useQuery({
     queryKey: ['gdmItems'],
     queryFn: () => base44.entities.GDMItem.list('-updated_date', 500),
+    // Revalidação periódica: o status atual acompanha o andamento do item
+    // mesmo que o evento em tempo real não chegue ao navegador.
+    refetchInterval: 30000,
   });
 
   const { data: gdms = [] } = useQuery({

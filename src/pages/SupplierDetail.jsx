@@ -35,6 +35,7 @@ export default function SupplierDetail() {
   const { data: allItems = [] } = useQuery({
     queryKey: ['gdmItems'],
     queryFn: () => base44.entities.GDMItem.list('-updated_date', 500),
+    refetchInterval: 30000,
   });
 
   const { data: gdms = [] } = useQuery({

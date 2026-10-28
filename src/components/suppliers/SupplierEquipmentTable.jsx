@@ -15,12 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, ChevronRight, FileText } from 'lucide-react';
-import {
-  SUPPLIER_ITEM_STATUS,
-  SUPPLIER_ITEM_STATUS_COLORS,
-  supplierItemStatusKey,
-  formatBRL,
-} from '@/lib/supplierControl';
+import { formatBRL } from '@/lib/supplierControl';
+import { ITEM_STATUS_LABELS, ITEM_STATUS_COLORS } from '@/lib/gdmItems';
 
 const fmtDateTime = (value) =>
   value ? format(new Date(value), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '—';
@@ -183,7 +179,6 @@ export default function SupplierEquipmentTable({ items, gdms }) {
         <TableBody>
           {items.map((item) => {
             const gdm = gdmById.get(item.gdm_id);
-            const statusKey = supplierItemStatusKey(item, gdm);
             const expanded = expandedId === item.id;
             const quoteValue = item.quote_value ?? gdm?.quote_value;
             const quoteDeadline = item.quote_deadline ?? gdm?.expected_return_date;
@@ -215,11 +210,9 @@ export default function SupplierEquipmentTable({ items, gdms }) {
                     {fmtDateTime(item.sent_to_supplier_at)}
                   </TableCell>
                   <TableCell>
-                    {statusKey && (
-                      <Badge className={SUPPLIER_ITEM_STATUS_COLORS[statusKey]}>
-                        {SUPPLIER_ITEM_STATUS[statusKey]}
-                      </Badge>
-                    )}
+                    <Badge className={ITEM_STATUS_COLORS[item.status] || 'bg-slate-100 text-slate-700'}>
+                      {ITEM_STATUS_LABELS[item.status] || item.status}
+                    </Badge>
                   </TableCell>
                   <TableCell>{quoteValue ? formatBRL(quoteValue) : '—'}</TableCell>
                   <TableCell className="whitespace-nowrap">{quoteDeadline ? fmtDate(quoteDeadline) : '—'}</TableCell>

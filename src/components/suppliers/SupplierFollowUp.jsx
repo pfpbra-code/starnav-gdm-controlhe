@@ -25,9 +25,8 @@ import {
   followUpRow,
   formatDateBR,
   DEADLINE_STATES,
-  SUPPLIER_ITEM_STATUS,
-  SUPPLIER_ITEM_STATUS_COLORS,
 } from '@/lib/supplierControl';
+import { ITEM_STATUS_LABELS, ITEM_STATUS_COLORS } from '@/lib/gdmItems';
 
 /**
  * Follow-up de Fornecedores — equipamentos em posse dos fornecedores, com OC,
@@ -71,8 +70,10 @@ export default function SupplierFollowUp({ items, gdms, histories = [] }) {
     () => [...new Set(rows.map((r) => r.vesselName))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
     [rows],
   );
+  // Status exibidos: o próprio status do item (fonte única do fluxo), sempre
+  // refletindo a etapa real do processo.
   const statusOptions = useMemo(
-    () => [...new Set(rows.map((r) => r.statusKey).filter(Boolean))],
+    () => [...new Set(rows.map((r) => r.item.status).filter(Boolean))],
     [rows],
   );
 
@@ -82,7 +83,7 @@ export default function SupplierFollowUp({ items, gdms, histories = [] }) {
     return rows.filter((r) => {
       if (supplierF !== 'all' && r.supplierName !== supplierF) return false;
       if (vesselF !== 'all' && r.vesselName !== vesselF) return false;
-      if (statusF !== 'all' && r.statusKey !== statusF) return false;
+      if (statusF !== 'all' && r.item.status !== statusF) return false;
       if (eq && !`${r.equipment} ${r.serialNumber}`.toLowerCase().includes(eq)) return false;
       if (gn && !r.gdmNumber.toLowerCase().includes(gn)) return false;
       if (fromDate && (!r.sentAt || r.sentAt.slice(0, 10) < fromDate)) return false;
@@ -160,7 +161,7 @@ export default function SupplierFollowUp({ items, gdms, histories = [] }) {
                 <SelectItem value="all">Todos os status</SelectItem>
                 {statusOptions.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {SUPPLIER_ITEM_STATUS[s] || s}
+                    {ITEM_STATUS_LABELS[s] || s}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -231,16 +232,12 @@ export default function SupplierFollowUp({ items, gdms, histories = [] }) {
                     <TableCell>{r.prazoDays ? `${r.prazoDays} dias` : '—'}</TableCell>
                     <TableCell>{formatDateBR(r.expectedReturn)}</TableCell>
                     <TableCell>
-                      {r.statusKey ? (
-                        <Badge
-                          variant="outline"
-                          className={SUPPLIER_ITEM_STATUS_COLORS[r.statusKey] || ''}
-                        >
-                          {SUPPLIER_ITEM_STATUS[r.statusKey] || r.statusKey}
-                        </Badge>
-                      ) : (
-                        r.item.status
-                      )}
+                      <Badge
+                        variant="outline"
+                        className={ITEM_STATUS_COLORS[r.item.status] || ''}
+                      >
+                        {ITEM_STATUS_LABELS[r.item.status] || r.item.status}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {r.daysInPossession === null ? '—' : `${r.daysInPossession} dias`}
