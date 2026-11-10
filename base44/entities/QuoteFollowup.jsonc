@@ -1,0 +1,124 @@
+{
+  "name": "QuoteFollowup",
+  "type": "object",
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "ID do item da GDM cuja cota\u00e7\u00e3o est\u00e1 sendo cobrada"
+    },
+    "gdm_id": {
+      "type": "string",
+      "description": "ID da GDM do item"
+    },
+    "vessel_id": {
+      "type": "string",
+      "description": "ID da embarca\u00e7\u00e3o (denormalizado para escopo de acesso)"
+    },
+    "vessel_name": {
+      "type": "string",
+      "description": "Nome da embarca\u00e7\u00e3o (denormalizado)"
+    },
+    "supplier_id": {
+      "type": "string",
+      "description": "ID do fornecedor cobrado"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Nome do fornecedor cobrado"
+    },
+    "equipment_name": {
+      "type": "string",
+      "description": "Equipamento do item"
+    },
+    "serial_number": {
+      "type": "string",
+      "description": "N\u00famero de s\u00e9rie (SN) do equipamento"
+    },
+    "contact_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do contato com o fornecedor"
+    },
+    "contact_channel": {
+      "type": "string",
+      "enum": [
+        "email",
+        "phone",
+        "whatsapp",
+        "meeting",
+        "other"
+      ],
+      "description": "Meio de contato utilizado na cobran\u00e7a"
+    },
+    "responsible": {
+      "type": "string",
+      "description": "Respons\u00e1vel pelo contato com o fornecedor"
+    },
+    "observation": {
+      "type": "string",
+      "description": "Observa\u00e7\u00e3o registrada no follow-up (ex.: retorno prometido para 14/11)"
+    },
+    "waiting_days": {
+      "type": "number",
+      "description": "Dias de espera da cota\u00e7\u00e3o no momento do follow-up"
+    },
+    "registered_by": {
+      "type": "string",
+      "description": "E-mail do usu\u00e1rio que registrou o follow-up"
+    },
+    "registered_by_name": {
+      "type": "string",
+      "description": "Nome de exibi\u00e7\u00e3o do usu\u00e1rio que registrou o follow-up"
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora do registro do follow-up"
+    }
+  },
+  "required": [
+    "item_id",
+    "contact_channel",
+    "observation"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

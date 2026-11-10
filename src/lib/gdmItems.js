@@ -94,6 +94,8 @@ export const ITEM_ACTION_LABELS = {
   select_supplier: "Fornecedor Definido (Serviços)",
   attach_shipping_proof: "Comprovante de Envio Anexado (Almoxarifado)",
   attach_quote: "Cotação Anexada (Serviços)",
+  quote_followup: "Follow-up de Cotação Registrado (Serviços)",
+  quote_alert: "Alerta Automático de Cotação Pendente",
   maintenance_decision: "Análise Técnica da Cotação (Manutenção)",
   services_discount_decision: "Análise de Desconto (Serviços)",
   renegotiate_quote: "Nova Proposta Registrada (Serviços)",

@@ -4,6 +4,7 @@ import PendingBoard from '@/components/gdm/PendingBoard';
 import RepairControlPanel from '@/components/gdm/RepairControlPanel';
 import ServicesKpis from '@/components/gdm/ServicesKpis';
 import EquipmentControlDashboard from '@/components/services/EquipmentControlDashboard';
+import QuoteFollowUpPanel from '@/components/services/QuoteFollowUpPanel';
 import WorkOrderDashboard from '@/components/ot/WorkOrderDashboard';
 import { usePermissions } from '@/hooks/usePermissions';
 
@@ -57,6 +58,7 @@ export default function ServicesBoard() {
     <Tabs defaultValue="pending" className="space-y-6">
       <TabsList>
         <TabsTrigger value="pending">Pendências do Setor</TabsTrigger>
+        <TabsTrigger value="followup">Follow-up de Cotações</TabsTrigger>
         <TabsTrigger value="control">Controle de Reparos e Certificações</TabsTrigger>
         {canViewEquipment && <TabsTrigger value="equipment">Dados por Equipamento</TabsTrigger>}
         {canViewOt && <TabsTrigger value="ot">Controle de OT</TabsTrigger>}
@@ -71,6 +73,9 @@ export default function ServicesBoard() {
           showCategoryFilter
           headerExtra={<ServicesKpis />}
         />
+      </TabsContent>
+      <TabsContent value="followup">
+        <QuoteFollowUpPanel />
       </TabsContent>
       <TabsContent value="control">
         <RepairControlPanel />

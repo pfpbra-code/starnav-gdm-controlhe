@@ -25,6 +25,14 @@ import {
 const VALID_DESTINATIONS = ['repair', 'certification', 'stock_return', 'discard'];
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const SUPPLIER_DESTINATIONS = ['repair', 'certification'];
+const QUOTE_CHANNELS = ['email', 'phone', 'whatsapp', 'meeting', 'other'];
+const QUOTE_CHANNEL_LABELS: Record<string, string> = {
+  email: 'E-mail',
+  phone: 'Telefone',
+  whatsapp: 'WhatsApp',
+  meeting: 'Reunião',
+  other: 'Outro',
+};
 
 /** Espelha dados do item na GDM (Dashboard e relatórios legados). */
 async function mirrorGdm(base44: any, gdmId: string, patch: Record<string, any>) {
@@ -78,6 +86,8 @@ export default async function (req: Request): Promise<Response> {
     let next: string | null = null;
     const now = new Date().toISOString();
     const extra: Record<string, any> = {};
+    // Dados de auditoria que NÃO são gravados no item (apenas histórico).
+    const auditExtras: Record<string, any> = {};
 
     if (action === 'approve') {
       // ETAPA 2 — Coordenador confirma a tratativa do item.
@@ -411,6 +421,61 @@ export default async function (req: Request): Promise<Response> {
         maintenance_decided_by: null,
         maintenance_decided_at: null,
       });
+    } else if (action === 'register_quote_followup') {
+      // AÇÃO RÁPIDA — Serviços registra a cobrança da cotação junto ao
+      // fornecedor. Não altera a etapa do item: a contagem de dias continua
+      // correndo desde a data de envio ao fornecedor. Todo contato é gravado
+      // no histórico do item, no histórico da GDM e na entidade de follow-ups.
+      if (!SUPPLIER_DESTINATIONS.includes(item.destination)) {
+        throw new Error('Este item não segue o fluxo de fornecedor');
+      }
+      if (!can('send_to_supplier') && user.role !== 'admin') {
+        throw new Error('Sem permissão para registrar follow-up de cotação');
+      }
+      if (prev !== 'sent_to_supplier') throw new Error('Item não está aguardando cotação');
+      if (item.quote_document_url) throw new Error('A cotação deste item já foi recebida');
+      if (!item.sent_to_supplier_at) throw new Error('Item sem data de envio ao fornecedor');
+
+      const channel = String(body.contact_channel || '').trim();
+      if (!QUOTE_CHANNELS.includes(channel)) throw new Error('Informe o meio de contato');
+      const followupObservation = String(observation || '').trim();
+      if (!followupObservation) throw new Error('Informe a observação do contato');
+      const contactResponsible =
+        String(body.contact_responsible || '').trim() || displayNameOf(user) || user.email;
+      const contactDate =
+        typeof body.contact_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.contact_date)
+          ? body.contact_date
+          : now.slice(0, 10);
+      const waitingDays = Math.max(
+        0,
+        Math.floor((Date.now() - new Date(item.sent_to_supplier_at).getTime()) / 86400000),
+      );
+
+      await base44.entities.QuoteFollowup.create({
+        item_id: item.id,
+        gdm_id: item.gdm_id,
+        vessel_id: item.vessel_id || null,
+        vessel_name: item.vessel_name || null,
+        supplier_id: item.supplier_id || null,
+        supplier_name: item.supplier_name || null,
+        equipment_name: item.equipment_name || null,
+        serial_number: item.serial_number || null,
+        contact_date: contactDate,
+        contact_channel: channel,
+        responsible: contactResponsible,
+        observation: followupObservation,
+        waiting_days: waitingDays,
+        registered_by: user.email,
+        registered_by_name: displayNameOf(user),
+        registered_at: now,
+      });
+
+      auditExtras.waiting_days = waitingDays;
+      auditExtras.contact_date = contactDate;
+      auditExtras.contact_channel = channel;
+      auditExtras.contact_channel_label = QUOTE_CHANNEL_LABELS[channel] || channel;
+      auditExtras.contact_responsible = contactResponsible;
+      next = prev;
     } else if (action === 'maintenance_decision') {
       // ANÁLISE TÉCNICA DA COTAÇÃO (Manutenção / Operações): aprovar ou
       // reprovar (com escolha obrigatória: outro fornecedor ou descarte).
@@ -1089,7 +1154,9 @@ export default async function (req: Request): Promise<Response> {
       previous_status: prev,
       new_status: next,
       observation: observation || null,
-      data: Object.keys(extra).length ? extra : null,
+      data: Object.keys({ ...extra, ...auditExtras }).length
+        ? { ...extra, ...auditExtras }
+        : null,
     });
 
     // Fluxo de Coordenação: quando o Coordenador conclui a análise, o próximo
@@ -1313,8 +1380,23 @@ export default async function (req: Request): Promise<Response> {
                 `OC ${extra.oc_number} emitida. Valor cotado: ${item.quote_value ?? '—'}. Valor final da OC: ${extra.oc_value}. Desconto obtido: ${extra.discount_value} (${Number(extra.discount_percent || 0).toFixed(1)}%).`,
               )
             : null;
+        // Follow-up de cotação: registrado no histórico da GDM com fornecedor,
+        // data, meio de contato, responsável e observação.
+        const followupEntry =
+          action === 'register_quote_followup'
+            ? baseEntry(
+                'quote_followup',
+                'Follow-up de Cotação',
+                `Follow-up realizado com o fornecedor ${item.supplier_name || '—'} para cobrança da cotação do item ${item.item_number} (${auditExtras.waiting_days} dias aguardando). Contato em ${auditExtras.contact_date} via ${auditExtras.contact_channel_label}. Responsável pelo contato: ${auditExtras.contact_responsible}.`,
+              )
+            : null;
         const specialEntry =
-          returnEntry || deadlineEntry || decisionEntry || servicesEntry || ocEntry;
+          returnEntry ||
+          deadlineEntry ||
+          decisionEntry ||
+          servicesEntry ||
+          ocEntry ||
+          followupEntry;
         const shouldUpdateStatus = !!target && target !== gdm.status && gdm.status !== 'rejected';
         if (shouldUpdateStatus || specialEntry) {
           await base44.asServiceRole.entities.GDM.update(gdm.id, {
