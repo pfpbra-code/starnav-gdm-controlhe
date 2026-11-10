@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { safeHref } from '@/lib/safeUrl';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -429,11 +430,11 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                             </div>
                           </>
                         )}
-                        {item.shipping_proof_url && (
+                        {safeHref(item.shipping_proof_url) && (
                           <div className="sm:col-span-2">
                             <span className="text-slate-500 text-xs">NF assinada</span>
                             <a
-                              href={item.shipping_proof_url}
+                              href={safeHref(item.shipping_proof_url)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="block text-sky-600 hover:underline text-sm font-medium"
@@ -442,11 +443,11 @@ export default function GDMItemsPanel({ gdmId, user, gdm }) {
                             </a>
                           </div>
                         )}
-                        {item.shipping_photo_url && (
+                        {safeHref(item.shipping_photo_url) && (
                           <div className="sm:col-span-2">
                             <span className="text-slate-500 text-xs">Foto do envio</span>
                             <a
-                              href={item.shipping_photo_url}
+                              href={safeHref(item.shipping_photo_url)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="block text-sky-600 hover:underline text-sm font-medium"

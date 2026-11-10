@@ -64,7 +64,21 @@
     },
     "ip_address": {
       "type": "string",
-      "description": "Endere\u00e7o IP do usu\u00e1rio no momento da assinatura (quando dispon\u00edvel)"
+      "description": "Endere\u00e7o IP do usu\u00e1rio no momento da assinatura (quando dispon\u00edvel) \u2014 vis\u00edvel apenas para o autor da assinatura e administradores",
+      "rls": {
+        "read": {
+          "$or": [
+            {
+              "created_by_id": "{{user.id}}"
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      }
     },
     "details": {
       "type": "object",

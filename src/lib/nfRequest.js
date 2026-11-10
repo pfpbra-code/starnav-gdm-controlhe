@@ -522,11 +522,11 @@ export function printNfRequest(request) {
   const rows = nfFormSections(request)
     .map(
       ([title, entries]) => `
-      <tr><td colspan="2" class="section">${title}</td></tr>
+      <tr><td colspan="2" class="section">${xmlEscape(title)}</td></tr>
       ${entries
         .map(
           ([label, value]) =>
-            `<tr><td class="label">${label}</td><td>${value ?? '—'}</td></tr>`,
+            `<tr><td class="label">${xmlEscape(label)}</td><td>${xmlEscape(value ?? '—')}</td></tr>`,
         )
         .join('')}`,
     )
@@ -536,7 +536,7 @@ export function printNfRequest(request) {
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Solicitação de Emissão de NF - ${request.gdm_number || ''}</title>
+<title>Solicitação de Emissão de NF - ${xmlEscape(request.gdm_number || '')}</title>
 <style>
   body { font-family: Arial, sans-serif; margin: 24px; color: #0a0a0a; }
   h1 { font-size: 16px; margin-bottom: 4px; }

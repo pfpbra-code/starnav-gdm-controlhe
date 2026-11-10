@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { safeHref } from '@/lib/safeUrl';
 import { createPageUrl } from '@/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -453,9 +454,9 @@ export default function RepairControlPanel() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            {item.return_receipt_nf_url && (
+                            {safeHref(item.return_receipt_nf_url) && (
                               <a
-                                href={item.return_receipt_nf_url}
+                                href={safeHref(item.return_receipt_nf_url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sky-600 hover:underline text-xs inline-flex items-center gap-1"
@@ -463,9 +464,9 @@ export default function RepairControlPanel() {
                                 <ExternalLink className="h-3 w-3" /> NF
                               </a>
                             )}
-                            {item.return_laudo_url && (
+                            {safeHref(item.return_laudo_url) && (
                               <a
-                                href={item.return_laudo_url}
+                                href={safeHref(item.return_laudo_url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sky-600 hover:underline text-xs inline-flex items-center gap-1"

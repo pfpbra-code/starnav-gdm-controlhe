@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { safeHref } from '@/lib/safeUrl';
 import { FileBadge, History, FileCheck2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -101,9 +102,9 @@ export default function CertifiedEquipmentTable({ records, canRegister, onRegist
                               Registrar certificado
                             </Button>
                           )}
-                          {r.currentCert?.document_url && (
+                          {safeHref(r.currentCert?.document_url) && (
                             <a
-                              href={r.currentCert.document_url}
+                              href={safeHref(r.currentCert.document_url)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-sky-600 hover:underline inline-flex items-center gap-1"

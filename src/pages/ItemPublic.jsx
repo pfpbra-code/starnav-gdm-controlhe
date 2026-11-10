@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { safeHref } from '@/lib/safeUrl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -242,7 +243,7 @@ export default function ItemPublic() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {gdm.photos.map((p, i) => (
-                    <a key={i} href={p} target="_blank" rel="noopener noreferrer">
+                    <a key={i} href={safeHref(p)} target="_blank" rel="noopener noreferrer">
                       <img
                         src={p}
                         alt={`Foto ${i + 1} do material`}
@@ -370,9 +371,9 @@ function CertificationCard({ certs }) {
             <DateLine label="Data da certificação" value={fmtDate(current.certificate_date)} />
             <DateLine label="Vencimento da certificação" value={fmtDate(current.expires_at)} />
             <div className="flex items-center gap-4 pt-1">
-              {current.document_url && (
+              {safeHref(current.document_url) && (
                 <a
-                  href={current.document_url}
+                  href={safeHref(current.document_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sky-600 hover:underline text-sm"
@@ -380,9 +381,9 @@ function CertificationCard({ certs }) {
                   Ver certificado (PDF)
                 </a>
               )}
-              {current.image_url && (
+              {safeHref(current.image_url) && (
                 <a
-                  href={current.image_url}
+                  href={safeHref(current.image_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sky-600 hover:underline text-sm"

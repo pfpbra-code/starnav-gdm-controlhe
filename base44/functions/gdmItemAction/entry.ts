@@ -11,6 +11,7 @@ import {
   sectorOfStatus,
   STATUS_LABELS,
 } from '../../shared/stepReturn.ts';
+import { sanitizeDocumentUrl } from '../../shared/safeUrl.ts';
 
 // Ações protegidas sobre itens de GDM: verificação de permissão, bloqueio de
 // saltos de etapa e registro automático no histórico (data, hora e usuário).
@@ -55,6 +56,26 @@ export default async function (req: Request): Promise<Response> {
     }
 
     const body = await req.json().catch(() => ({}));
+    // Documentos anexados chegam como URL no corpo: aceita apenas http(s) para
+    // que valores como javascript: jamais sejam persistidos e virem links.
+    const DOCUMENT_URL_FIELDS = [
+      'nf_url',
+      'photo_url',
+      'quote_document_url',
+      'return_nf_url',
+      'return_proof_url',
+      'laudo_url',
+      'pdf_url',
+      'image_url',
+    ];
+    for (const field of DOCUMENT_URL_FIELDS) {
+      const value = body?.[field];
+      if (value === undefined || value === null || value === '') continue;
+      const safe = sanitizeDocumentUrl(value);
+      if (!safe) throw new Error('Endereço de documento inválido: use um link https');
+      body[field] = safe;
+    }
+
     const itemId = body.item_id || body.itemId;
     const action = body.action;
     const observation = body.observation || null;

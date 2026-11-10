@@ -1,4 +1,5 @@
 import React from 'react';
+import { safeHref } from '@/lib/safeUrl';
 import {
   Dialog,
   DialogContent,
@@ -73,9 +74,9 @@ export default function CertificationHistoryDialog({ record, onClose }) {
                 <Row label="Vencimento" value={fmtDate(record.currentCert.expires_at)} />
                 <Row label="Registrado por" value={record.currentCert.registered_by || '—'} />
                 <div className="flex items-center gap-3 pt-1">
-                  {record.currentCert.document_url && (
+                  {safeHref(record.currentCert.document_url) && (
                     <a
-                      href={record.currentCert.document_url}
+                      href={safeHref(record.currentCert.document_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-sky-700 hover:underline inline-flex items-center gap-1 font-medium"
@@ -84,9 +85,9 @@ export default function CertificationHistoryDialog({ record, onClose }) {
                       Ver PDF
                     </a>
                   )}
-                  {record.currentCert.image_url && (
+                  {safeHref(record.currentCert.image_url) && (
                     <a
-                      href={record.currentCert.image_url}
+                      href={safeHref(record.currentCert.image_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-sky-700 hover:underline inline-flex items-center gap-1 font-medium"

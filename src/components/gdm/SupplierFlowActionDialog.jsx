@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { safeHref } from '@/lib/safeUrl';
 import {
   Dialog,
   DialogContent,
@@ -466,9 +467,9 @@ export default function SupplierFlowActionDialog({ pending, onClose, onRequestNf
                     <span className="text-slate-500">Prazo informado:</span>
                     <span className="font-medium">{item.quote_deadline || '—'}</span>
                   </p>
-                  {item.quote_document_url && (
+                  {safeHref(item.quote_document_url) && (
                     <a
-                      href={item.quote_document_url}
+                      href={safeHref(item.quote_document_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sky-600 hover:underline"

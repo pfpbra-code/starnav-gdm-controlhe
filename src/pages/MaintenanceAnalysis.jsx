@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { safeHref } from '@/lib/safeUrl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -265,9 +266,9 @@ export default function MaintenanceAnalysis({ embedded = false }) {
                     </TableCell>
                     <TableCell>{item.quote_deadline || '—'}</TableCell>
                     <TableCell>
-                      {item.quote_document_url ? (
+                      {safeHref(item.quote_document_url) ? (
                         <a
-                          href={item.quote_document_url}
+                          href={safeHref(item.quote_document_url)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sky-600 hover:text-sky-700"

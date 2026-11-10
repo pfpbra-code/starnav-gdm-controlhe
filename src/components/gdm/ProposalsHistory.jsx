@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { safeHref } from '@/lib/safeUrl';
 import {
   Table,
   TableBody,
@@ -68,9 +69,9 @@ export default function ProposalsHistory({ gdm }) {
                 </TableCell>
                 <TableCell className="text-sm text-slate-600">{p.registered_by || '-'}</TableCell>
                 <TableCell>
-                  {p.file_url ? (
+                  {safeHref(p.file_url) ? (
                     <a
-                      href={p.file_url}
+                      href={safeHref(p.file_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-sky-600 hover:underline text-sm"
