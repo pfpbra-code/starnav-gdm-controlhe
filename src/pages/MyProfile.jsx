@@ -105,9 +105,9 @@ export default function MyProfile() {
             {coverUrl ? 'Alterar capa' : 'Adicionar capa'}
           </Button>
         </div>
-        <CardContent className="p-6 -mt-14">
-          <div className="flex flex-col lg:flex-row lg:items-end gap-5">
-            <Avatar className="h-28 w-28 border-4 border-white shadow-lg">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row lg:items-start gap-5">
+            <Avatar className="h-28 w-28 shrink-0 -mt-20 border-4 border-white shadow-lg">
               {photoUrl ? <AvatarImage src={photoUrl} alt={displayNameOf(user)} /> : null}
               <AvatarFallback className="bg-sky-100 text-sky-700 text-2xl">
                 {initials}
